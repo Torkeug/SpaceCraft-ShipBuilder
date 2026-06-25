@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>SpaceCraft Ship Editor (beta) | SpaceCraft Planner</title>
+<meta name="robots" content="noindex"/>
+<style>
+  :root{--bg:#08101B;--bg2:#0D1825;--panel:#111D2E;--panel2:#18273A;--line:#223847;--text:#E0E8F0;--muted:#8B9AAA;--primary:#1A9FD8;--secondary:#E8A71D;--good:#4FD084;--bad:#D03A2E;}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:Inter,system-ui,sans-serif;overflow:hidden}
+  #app{display:grid;grid-template-columns:250px 1fr 270px;grid-template-rows:46px 1fr;height:100vh}
+  header{grid-column:1/4;display:flex;align-items:center;gap:14px;padding:0 16px;background:#0A1420;border-bottom:1px solid var(--line)}
+  header .logo{font-family:Orbitron,Rajdhani,sans-serif;font-weight:700;letter-spacing:.06em;font-size:15px}
+  header .logo b{color:var(--primary)} header .tag{color:var(--secondary);font-size:11px;font-weight:700;border:1px solid var(--secondary);border-radius:4px;padding:1px 6px;letter-spacing:.05em}
+  header .sp{flex:1}
+  header button{background:var(--panel2);border:1px solid var(--line);color:var(--text);font-family:Rajdhani,sans-serif;font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.05em;padding:7px 12px;border-radius:6px;cursor:pointer}
+  header button:hover{border-color:var(--primary);color:#fff}
+  header button.on{border-color:var(--bad);color:#fff;background:rgba(208,58,46,.2)}
+  header .tabs{display:flex;gap:2px;margin-left:6px;background:#0d1825;border:1px solid var(--line);border-radius:7px;padding:2px}
+  header .tab{background:transparent;border:0;color:var(--muted);font-family:Rajdhani,sans-serif;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.05em;padding:6px 14px;border-radius:5px;cursor:pointer}
+  header .tab.on{background:var(--primary);color:#06121e}
+  #shapes{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+  #shapes .shp{width:42px;height:42px;border:1px solid var(--line);background:var(--panel2);border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+  #shapes .shp img{width:34px;height:34px;image-rendering:auto;filter:brightness(1.1)}
+  #shapes .shp:hover{border-color:var(--text)}
+  #shapes .shp.on{border-color:var(--primary);background:rgba(26,159,216,.22);box-shadow:0 0 0 1px var(--primary)}
+  #shapes .lbl,#flips .lbl{width:100%;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:2px 0 1px}
+  #flips{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+  #flips .flipbtn{width:42px;height:42px;border:1px solid var(--line);background:var(--panel2);color:var(--muted);border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+  #flips .flipbtn svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.6}
+  #flips .flipbtn:hover{border-color:var(--text);color:var(--text)}
+  #flips .flipbtn.on{border-color:var(--primary);color:#fff;background:rgba(26,159,216,.22)}
+  .swatches{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;padding:6px 2px}
+  .sw-btn{height:38px;border:2px solid var(--line);border-radius:7px;cursor:pointer;padding:0;font-size:0}
+  .sw-btn:hover{border-color:var(--text)}
+  .sw-btn.on{border-color:var(--primary);box-shadow:0 0 0 2px rgba(26,159,216,.35)}
+  .sw-btn.gc{background:var(--panel2);color:var(--muted);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;line-height:1.15}
+  .sw-btn.gc.on{color:#fff}
+  header .clab{display:inline-flex;align-items:center;gap:6px;font-family:Rajdhani,sans-serif;font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+  header .clab input[type=color]{width:30px;height:26px;border:1px solid var(--line);border-radius:5px;background:var(--panel2);cursor:pointer;padding:1px}
+  aside{background:#0A1420;overflow-y:auto;border-right:1px solid var(--line)}
+  aside.right{border-right:0;border-left:1px solid var(--line)}
+  .palette{padding:8px}
+  .psearch{width:100%;background:var(--bg2);border:1px solid var(--line);color:var(--text);padding:8px;border-radius:6px;font-size:13px;margin-bottom:8px}
+  .psection{font-family:Rajdhani,sans-serif;font-weight:700;font-size:11px;letter-spacing:.04em;color:var(--secondary);background:rgba(232,167,29,.08);border:1px solid rgba(232,167,29,.3);border-radius:6px;padding:6px 8px;margin:12px 2px 4px}
+  .pitem .badge{font-family:Rajdhani,sans-serif;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#9b59d0;border:1px solid rgba(155,89,208,.5);border-radius:3px;padding:1px 5px;flex:none}
+  .pitem .badge.inside{color:var(--good);border-color:rgba(79,208,132,.5)}
+  .pitem .badge.outside{color:var(--secondary);border-color:rgba(232,167,29,.5)}
+  #loadout{padding:0 2px 4px}
+  #loadout h3{font-family:Rajdhani,sans-serif;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--secondary);margin:0 0 6px;border-bottom:1px solid var(--line);padding-bottom:6px}
+  .mod{display:flex;align-items:center;gap:7px;font-size:12px;padding:3px 0}
+  .mod .mn{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .mod button{width:20px;height:20px;border:1px solid var(--line);background:var(--panel2);color:var(--text);border-radius:4px;cursor:pointer;font-size:13px;line-height:1;padding:0}
+  .mod button:hover{border-color:var(--primary)}
+  .mod .mc{min-width:18px;text-align:center;font-family:"JetBrains Mono",monospace;font-size:11px}
+  .pgroup{font-family:Rajdhani,sans-serif;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:10px 4px 4px;display:flex;align-items:center;gap:6px}
+  .pgroup .dot{width:9px;height:9px;border-radius:2px}
+  .pitem{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;font-size:12.5px;border:1px solid transparent}
+  .pitem:hover{background:var(--panel2)} .pitem.sel{border-color:var(--primary);background:rgba(26,159,216,.12)}
+  .pitem .sw{width:11px;height:11px;border-radius:2px;flex:none}
+  .pitem .pic,.mod .pic{width:30px;height:30px;flex:none;border-radius:5px;background:#0b1623;border:1px solid var(--line);object-fit:contain}
+  .mod .pic{width:24px;height:24px}
+  .pitem .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pitem .dm{color:var(--muted);font-family:"JetBrains Mono",monospace;font-size:10px}
+  #view{position:relative} canvas{display:block}
+  #hint{position:absolute;left:12px;bottom:12px;background:rgba(10,20,32,.85);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:11.5px;color:var(--muted);line-height:1.6;max-width:420px}
+  #hint b{color:var(--text)}
+  #sel{position:absolute;left:12px;top:12px;background:rgba(10,20,32,.85);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:12px}
+  #sel .n{font-weight:600} #sel .g{color:var(--muted);font-size:11px}
+  .stats{padding:12px}
+  .stats h3{font-family:Rajdhani,sans-serif;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 8px;border-bottom:1px solid var(--line);padding-bottom:6px}
+  .verdict{border-radius:8px;padding:10px 12px;margin-bottom:12px;font-weight:700;font-size:13px;text-align:center;font-family:Rajdhani,sans-serif;letter-spacing:.04em}
+  .verdict.ok{background:rgba(79,208,132,.15);border:1px solid var(--good);color:var(--good)}
+  .verdict.no{background:rgba(208,58,46,.15);border:1px solid var(--bad);color:#ff8b80}
+  .check{display:flex;align-items:center;gap:8px;font-size:12px;margin:5px 0}
+  .check .i{width:16px;text-align:center} .check.pass .i{color:var(--good)} .check.fail .i{color:var(--bad)}
+  .check .v{margin-left:auto;color:var(--muted);font-family:"JetBrains Mono",monospace;font-size:11px}
+  .stat{display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid rgba(34,56,71,.5)}
+  .stat .k{color:var(--muted)} .stat .v{font-family:"JetBrains Mono",monospace}
+  .bar{height:6px;background:var(--bg2);border-radius:3px;overflow:hidden;margin:3px 0 8px}
+  .bar > i{display:block;height:100%;background:var(--primary)}
+  .bar.over > i{background:var(--bad)}
+  .empty{color:var(--muted);font-size:12px;text-align:center;padding:20px 0}
+  @media(max-width:820px){#app{grid-template-columns:0 1fr 0}} /* keep canvas usable on small screens */
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <span class="logo">SPACE<b>CRAFT</b> SHIP EDITOR</span><span class="tag">BETA</span>
+    <div class="tabs"><button class="tab on" data-mode="build">Assembly</button><button class="tab" data-mode="module">Modules</button><button class="tab" data-mode="custom">Customize</button></div>
+    <span class="sp"></span>
+    <label class="clab" title="Override with a custom paint colour (or use Customize → Game colours)">Paint <input id="ship-color" type="color" value="#2f7fb0"></label>
+    <button id="btn-rot" title="Rotate the part to place (R)">Rotate ⟳</button>
+    <button id="btn-del" title="Toggle delete mode">Delete mode</button>
+    <button id="btn-save">Save</button>
+    <button id="btn-load">Load</button>
+    <button id="btn-clear">Clear</button>
+  </header>
+  <aside class="left"><div class="palette"><input class="psearch" id="search" placeholder="Search parts…"><div id="plist"></div></div></aside>
+  <div id="view">
+    <div id="sel"><div class="n" id="sel-n">No part selected</div><div class="g" id="sel-g">Pick a part from the left, then click in the grid to place it.</div><div class="g" id="sel-rot" style="color:var(--secondary)"></div><div id="flips"></div><div id="shapes"></div></div>
+    <div id="hint"><b>Left-drag</b> orbit · <b>scroll</b> zoom · click a face to attach · <b>R</b> rotate / <b>[ ]</b> fine-turn · <b>Esc</b> then click a placed part to edit it · pick a <b>shape</b> &amp; <b>flip</b> in the panel · <b>Delete mode</b> to remove.</div>
+  </div>
+  <aside class="right"><div class="stats"><div id="loadout"></div><div id="statpanel"><div class="empty">Build the ship and install modules to see live stats.</div></div></div></aside>
+</div>
+
+<!-- ===== Under-development gate (shows on arrival) ===== -->
+<style>
+#devgate{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;font-family:Inter,system-ui,sans-serif}
+#devgate.hidden{display:none}
+#devgate .dg-bg{position:absolute;inset:0;background:rgba(4,8,14,.82);backdrop-filter:blur(3px)}
+#devgate .dg-panel{position:relative;max-width:450px;width:calc(100% - 40px);background:#111d2e;border:1px solid #223847;border-radius:14px;padding:26px 26px 22px;box-shadow:0 20px 60px rgba(0,0,0,.6);text-align:center;color:#e0e8f0}
+#devgate .dg-warn{border-color:#d03a2e;box-shadow:0 0 0 1px rgba(208,58,46,.45),0 20px 60px rgba(0,0,0,.6)}
+#devgate .dg-icon{font-size:42px;line-height:1;margin-bottom:4px}
+#devgate h2{font-family:Rajdhani,sans-serif;font-size:22px;letter-spacing:.04em;text-transform:uppercase;margin:0 0 10px;color:#ff8b80}
+#devgate .dg-feat h2{color:#1a9fd8}
+#devgate p{font-size:14px;line-height:1.55;color:#aab6c4;margin:0 0 18px}
+#devgate .dg-list{text-align:left;list-style:none;padding:0;margin:0 0 16px;display:flex;flex-direction:column;gap:11px}
+#devgate .dg-list li{font-size:13.5px;line-height:1.5;color:#cdd6e0;padding-left:24px;position:relative}
+#devgate .dg-list li:before{content:"\25B8";position:absolute;left:4px;color:#1a9fd8;font-weight:700}
+#devgate .dg-list b{color:#fff}
+#devgate .dg-steam{display:block;background:rgba(232,167,29,.12);border:1px solid #e8a71d;color:#e8a71d;border-radius:9px;padding:12px 14px;font-size:13px;font-weight:700;text-decoration:none;margin-bottom:18px;line-height:1.4}
+#devgate .dg-steam:hover{background:rgba(232,167,29,.22);color:#fff}
+#devgate .dg-btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+#devgate .dg-btn{font-family:Rajdhani,sans-serif;font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:.04em;padding:11px 18px;border-radius:8px;cursor:pointer;border:1px solid transparent}
+#devgate .dg-primary{background:#1a9fd8;color:#06121e;border-color:#1a9fd8}
+#devgate .dg-primary:hover{background:#33b3e8}
+#devgate .dg-warn .dg-primary{background:#d03a2e;border-color:#d03a2e;color:#fff}
+#devgate .dg-warn .dg-primary:hover{background:#e0594b}
+#devgate .dg-ghost{background:transparent;color:#aab6c4;border-color:#223847}
+#devgate .dg-ghost:hover{border-color:#1a9fd8;color:#fff}
+</style>
+<div id="devgate" role="dialog" aria-modal="true" aria-labelledby="dg-title">
+  <div class="dg-bg"></div>
+  <div class="dg-panel dg-warn" id="dg-warn">
+    <div class="dg-icon">&#9888;&#65039;</div>
+    <h2 id="dg-title">Under Development</h2>
+    <p>The Ship Editor is still being built. Parts, tools and behaviour are incomplete and may change or break.</p>
+    <div class="dg-btns">
+      <button class="dg-btn dg-primary" id="dg-continue" type="button">Continue anyway</button>
+      <button class="dg-btn dg-ghost" id="dg-seefeat" type="button">See future features</button>
+    </div>
+  </div>
+  <div class="dg-panel dg-feat" id="dg-feat" hidden>
+    <div class="dg-icon">&#128640;</div>
+    <h2>Coming to the Ship Editor</h2>
+    <ul class="dg-list">
+      <li><b>Design ships</b> in 3D from real in-game parts.</li>
+      <li><b>Save &amp; share</b> your designs with anyone.</li>
+      <li>A <b>community blueprint board</b>, post and share your builds with photos.</li>
+      <li><b>Auto build-guides</b>, every design becomes step-by-step instructions for easy replication in-game.</li>
+    </ul>
+    <a class="dg-steam" id="dg-steam" href="https://steamcommunity.com/sharedfiles/filedetails/?id=3743678968" target="_blank" rel="noopener">&#128077; Wanna help us? Support us with a thumbs-up on our Steam guide, it really helps!</a>
+    <div class="dg-btns">
+      <button class="dg-btn dg-primary" id="dg-continue2" type="button">Continue to the editor</button>
+      <button class="dg-btn dg-ghost" id="dg-back" type="button">&#9664; Back</button>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  var g=document.getElementById("devgate"); if(!g) return;
+  var warn=document.getElementById("dg-warn"), feat=document.getElementById("dg-feat");
+  function close(){ g.classList.add("hidden"); }
+  document.getElementById("dg-continue").onclick=close;
+  document.getElementById("dg-continue2").onclick=close;
+  document.getElementById("dg-seefeat").onclick=function(){ warn.hidden=true; feat.hidden=false; };
+  document.getElementById("dg-back").onclick=function(){ feat.hidden=true; warn.hidden=false; };
+})();
+</script>
+
+<script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+
+const GRID = 40, HALF = GRID/2;
+const ASSETVER = "20260620g";   // bump on any data/mesh-format change, busts stale browser/CDN cache of .bin/.json
+let PARTS = [], BYID = {};
+let scene, camera, renderer, controls, raycaster, ground, ghost, sel = null, rot = 0, delMode = false;
+let MESHMAN = {}, MESHCACHE = {};  // real-mesh manifest + geometry cache (BufferGeometry per part id)
+let PALETTE = [];                  // the game's ship-paint swatches (from data.palette)
+let paintColor = null;             // null = render each part in its own GAME colours; else a single paint hex
+let mode = "build";                // "build" (assembly/drag-place) | "module" (install) | "custom" (colours)
+let selShape = 0;                  // index into sel.shapes (the chosen hull shape variant)
+let partRot = {};                  // part.id -> saved default rotation in DEGREES; persisted per browser
+try { partRot = JSON.parse(localStorage.getItem("sc_partRotDeg")||"{}") || {}; } catch(e){ partRot = {}; }
+let partFlip = {};                 // part.id -> [flipX,flipY,flipZ] booleans (mirror), persisted per browser
+try { partFlip = JSON.parse(localStorage.getItem("sc_partFlip")||"{}") || {}; } catch(e){ partFlip = {}; }
+function flipOf(id){ return partFlip[id] || [false,false,false]; }
+function selMeshKey(){ if(!sel) return null; if(sel.shapes && sel.shapes[selShape]) return sel.shapes[selShape].m; return sel.m||null; }  // modules carry .m directly
+function isInsideMod(p){ return !!(p && p.kind==="module" && p.mount==="inside"); }  // housed in the hull -> hidden, shown as a slot box
+const placed = [];                 // {id, x,y,z, w,h,d, mesh}  (BUILD parts, placed in 3D)
+const occ = new Set();             // occupied voxels "x,y,z" (every placed build part)
+let SHIP_SLOTS = [];               // fixed inside-module slot positions [{x,y,z}], rebuilt from placed storage parts
+let slotGroup = null, SLOT_EDGES = null, SLOT_MAT = null;   // "empty slot" boxes shown when installing an inside module
+function providesStorage(part){ return !!(part && part.kind!=="module" && (part.stats && part.stats.StorageUnits)>0); }
+// A frame's StorageUnits is a flat tier (20 = standard, 50 = big). Slots per part: 20su->1, 50su->2 (Alloy X/none->0).
+function nSlots(part){ const su=(part&&part.stats&&part.stats.StorageUnits)||0; return su>0 ? Math.max(1, Math.round(su/30)) : 0; }
+function slotPositionsFor(rec){    // distribute the part's slots along its longest horizontal axis, mid-height, inside the volume
+  const n=nSlots(BYID[rec.id]); if(n<=0) return [];
+  const cy=rec.y+Math.floor(rec.h/2), out=[];
+  for(let i=0;i<n;i++){ const f=(i+1)/(n+1);
+    out.push(rec.w>=rec.d ? {x:rec.x+Math.floor(f*rec.w), y:cy, z:rec.z+Math.floor(rec.d/2)}
+                          : {x:rec.x+Math.floor(rec.w/2), y:cy, z:rec.z+Math.floor(f*rec.d)}); }
+  return out;
+}
+function rebuildSlots(){ SHIP_SLOTS=[]; placed.forEach(r=>{ if(!r.isModule && providesStorage(BYID[r.id])) SHIP_SLOTS.push(...slotPositionsFor(r)); }); }
+function filledSlotSet(){ return new Set(placed.filter(r=>r.isModule && isInsideMod(BYID[r.id])).map(r=>key(r.x,r.y,r.z))); }
+function nearestEmptySlot(p){ const fl=filledSlotSet(); let best=null,bd=1e9;
+  for(const s of SHIP_SLOTS){ if(fl.has(key(s.x,s.y,s.z))) continue;
+    const dx=p.x-(s.x+0.5),dy=p.y-(s.y+0.5),dz=p.z-(s.z+0.5),dd=dx*dx+dy*dy+dz*dz; if(dd<bd){bd=dd;best=s;} }
+  return best;
+}
+const pointer = new THREE.Vector2();
+
+init();
+
+async function init(){
+  const data = await (await fetch("ship_editor_data.json?v="+ASSETVER)).json();
+  // body default colour: frames/plating use their tier colour (steel/titanium/alloy look distinct, since
+  // they share one in-game gradient); other parts use their real gradient body tone.
+  PARTS = data.parts; PARTS.forEach(p=>{ BYID[p.id]=p;
+    p._paintHex = (/frames|plating/i.test(p.group||"") ? p.color : (gradMainHex(p.grad)||p.color)) || "#5e7ca2";
+    p._dimd = /\d+x\d+x\d+/.test(p.name||""); });
+  PALETTE = data.palette || [];
+  try { MESHMAN = await (await fetch("ship_meshes/_manifest.json?v="+ASSETVER)).json(); } catch(e){ MESHMAN = {}; }
+  buildPalette(data.groupOrder || data.groups);
+  setupThree();
+  wire();
+  updateStats();
+  animate();
+  window.__place = (id,c)=>{ sel=BYID[id]; rot=0; selShape=0; placePart(BYID[id], c, selMeshKey(), 0); return __ed(); };  // debug: place a part at a cell
+  window.__pick  = (id)=>{ selectPart(id); return { sel:sel&&sel.id, mount:sel&&sel.mount, slots: slotGroup?slotGroup.children.length:0 }; };  // debug: select + slot count
+  window.__slots = ()=>slotGroup?slotGroup.children.length:0;
+  window.__meshTypes = ()=>placed.map(r=>({id:r.id, mount:(BYID[r.id].mount||BYID[r.id].kind), type:r.mesh.geometry.type, verts:r.mesh.geometry.attributes.position.count}));
+  window.__grpNormals = ()=>{ const r=placed[placed.length-1]; if(!r) return null; const g=r.mesh.geometry; const nor=g.attributes.normal, idx=g.index; if(!nor) return 'no normals';
+    return (g.groups||[]).map(gr=>{ let nx=0,ny=0,nz=0; for(let i=gr.start;i<gr.start+gr.count;i++){ const v=idx.getX(i); nx+=nor.getX(v);ny+=nor.getY(v);nz+=nor.getZ(v);} const n=gr.count||1; return {start:gr.start,count:gr.count,avgN:[+(nx/n).toFixed(2),+(ny/n).toFixed(2),+(nz/n).toFixed(2)]}; }); };
+  window.__dumpLast = ()=>{ const r=placed[placed.length-1]; if(!r) return null; const m=r.mesh,g=m.geometry; const mats=Array.isArray(m.material)?m.material:[m.material]; return { id:r.id, idx:g.index?g.index.count:0, verts:g.attributes.position.count, groups:(g.groups||[]).map(gr=>({start:gr.start,count:gr.count,mi:gr.materialIndex})), mats:mats.map(mm=>({c:'#'+mm.color.getHexString(),op:mm.opacity,tr:mm.transparent,vis:mm.visible,side:mm.side})) }; };
+  window.__shipSlots = ()=>SHIP_SLOTS.length;
+  window.__fillSlot = (id)=>{ const fl=filledSlotSet(); const s=SHIP_SLOTS.find(p=>!fl.has(key(p.x,p.y,p.z))); if(!s) return 'no empty slot'; sel=BYID[id]; rot=0; selShape=0; placePart(BYID[id],{x:s.x,y:s.y,z:s.z,w:1,h:1,d:1},selMeshKey(),0); return {placed:placed.length, shipSlots:SHIP_SLOTS.length, lastBox:window.__lastKind().box}; };
+  window.__lastKind = ()=>{ const r=placed[placed.length-1]; if(!r) return null; const g=r.mesh.geometry; g.computeBoundingBox(); const s=new THREE.Vector3(); g.boundingBox.getSize(s); return { id:r.id, isModule:r.isModule, hasBadge:!!r.badge, box:[+s.x.toFixed(2),+s.y.toFixed(2),+s.z.toFixed(2)], verts:g.attributes.position.count }; };
+  window.__ed = ()=>({ placed: placed.length, meshes: Object.keys(MESHMAN).length, paint: paintColor,
+    ghostVerts: (ghost&&ghost.geometry&&ghost.geometry.attributes.position)?ghost.geometry.attributes.position.count:0,
+    last: placed.length ? (()=>{ const ms=placed[placed.length-1].mesh, g=ms.geometry, mat=Array.isArray(ms.material)?ms.material:[ms.material];
+      const paint=mat.find(m=>m.userData&&m.userData.paint); g.computeBoundingBox(); const sz=new THREE.Vector3(); g.boundingBox.getSize(sz);
+      return { id:placed[placed.length-1].id, type:g.type, verts:g.attributes.position.count, groups:mat.length, paintColor: paint?"#"+paint.color.getHexString():null,
+        box:[+sz.x.toFixed(2),+sz.y.toFixed(2),+sz.z.toFixed(2)],
+        mats: mat.map(m=>({p:!!(m.userData&&m.userData.paint), c:"#"+m.color.getHexString()})) }; })() : null });
+}
+
+// ---- GAME PAINT: meshes carry per-sub-mesh material ROLES (0 PAINT,1 METAL,2 DARK,3 LIGHT,4 EMISSIVE,
+// 5 GLASS,6 ACCENT). Panel_Principal etc = PAINT (the player-recolourable body); everything else keeps its
+// game tone. The part's own colour gradient sets the default body tint (so steel/titanium/alloy differ);
+// paintColor!=null overrides the PAINT zones with one chosen hue, exactly like the game's customisation.
+function gradMainHex(g){          // a visible representative body colour from the part's gradient
+  if(!g || !g.c || !g.c.length) return null;
+  const n=g.c.length, pos=g.p||[]; let i=0;
+  while(i<n-1 && (pos[i+1]!=null?pos[i+1]:(i+1)/(n-1)) < 0.6) i++;
+  return g.c[i];
+}
+function roleMaterial(role, hex, part){
+  let m;
+  if(role===0){                                  // PAINT, player body colour (default from the gradient)
+    const def = part._paintHex || hex;
+    m=new THREE.MeshStandardMaterial({color:new THREE.Color(paintColor!=null?paintColor:def), metalness:0.55, roughness:0.5});
+    m.userData={paint:true, def:def};
+  } else if(role===4){                            // EMISSIVE, lamps/screens glow
+    m=new THREE.MeshStandardMaterial({color:0x0c0f13, emissive:new THREE.Color(hex), emissiveIntensity:1.25, metalness:0.2, roughness:0.4});
+    m.userData={};
+  } else if(role===5){                            // GLASS, translucent
+    m=new THREE.MeshStandardMaterial({color:new THREE.Color(hex), metalness:0.1, roughness:0.08, transparent:true, opacity:0.42});
+    m.userData={};
+  } else {
+    const pr = role===1?{metalness:0.9,roughness:0.42} : role===2?{metalness:0.35,roughness:0.72} : role===3?{metalness:0.25,roughness:0.6} : {metalness:0.45,roughness:0.5};
+    m=new THREE.MeshStandardMaterial(Object.assign({color:new THREE.Color(hex)}, pr)); m.userData={};
+  }
+  // Modules (tools/solar/lights) have thin panels with inconsistent winding from the source FBX, render
+  // BOTH faces so no panel gets backface-culled (the "only the base shows, panels missing" bug).
+  if(part && part.kind==="module") m.side=THREE.DoubleSide;
+  return m;
+}
+function setPaint(c){   // c = hex string to paint the body, or null to restore per-part game colours
+  paintColor=c; recolorAll();
+  if(mode==="custom") renderPalette((document.getElementById("search").value||"").toLowerCase());
+  const cc=document.getElementById("ship-color"); if(c && cc) cc.value=c;
+}
+function recolorAll(){   // only the PAINT-role materials follow the player paint; metals/decals/glass stay
+  placed.forEach(r=>{ const part=BYID[r.id]; const ms=Array.isArray(r.mesh.material)?r.mesh.material:[r.mesh.material];
+    ms.forEach(m=>{ if(m.userData && m.userData.paint){ m.color.set(paintColor!=null?paintColor:(part._paintHex||m.userData.def)); m.needsUpdate=true; } }); });
+}
+
+function setupThree(){
+  const view = document.getElementById("view");
+  scene = new THREE.Scene(); scene.background = new THREE.Color(0x0a1420);
+  scene.fog = new THREE.Fog(0x0a1420, 60, 140);
+  camera = new THREE.PerspectiveCamera(55, view.clientWidth/view.clientHeight, 0.1, 1000);
+  camera.position.set(26, 24, 30);
+  renderer = new THREE.WebGLRenderer({antialias:true}); renderer.setPixelRatio(devicePixelRatio);
+  renderer.setSize(view.clientWidth, view.clientHeight); view.appendChild(renderer.domElement);
+  controls = new OrbitControls(camera, renderer.domElement); controls.enableDamping = true; controls.target.set(0,2,0);
+  scene.add(new THREE.AmbientLight(0x86a0c0, 0.7));
+  const d1 = new THREE.DirectionalLight(0xffffff, 1.1); d1.position.set(20,40,15); scene.add(d1);
+  const d2 = new THREE.DirectionalLight(0x88bbff, 0.4); d2.position.set(-20,10,-20); scene.add(d2);
+  const g = new THREE.GridHelper(GRID, GRID, 0x2a4258, 0x1a2a3a); scene.add(g);
+  addDirMarkers();   // FRONT/REAR/PORT/STBD arrows so you can see which way parts should face
+  // invisible ground plane for raycasting
+  ground = new THREE.Mesh(new THREE.PlaneGeometry(GRID,GRID), new THREE.MeshBasicMaterial({visible:false}));
+  ground.rotation.x = -Math.PI/2; ground.name="ground"; scene.add(ground);
+  ghost = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshBasicMaterial({color:0x4fd084,transparent:true,opacity:0.4}));
+  ghost.visible = false; scene.add(ghost);
+  raycaster = new THREE.Raycaster();
+  addEventListener("resize", ()=>{ camera.aspect=view.clientWidth/view.clientHeight; camera.updateProjectionMatrix(); renderer.setSize(view.clientWidth,view.clientHeight); });
+}
+function makeTextSprite(txt, color){
+  const cv=document.createElement("canvas"); cv.width=256; cv.height=80; const x=cv.getContext("2d");
+  x.fillStyle=color; x.font="bold 52px Rajdhani, Inter, sans-serif"; x.textAlign="center"; x.textBaseline="middle";
+  x.fillText(txt, 128, 42);
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv), transparent:true, depthTest:false, depthWrite:false}));
+  sp.scale.set(7,2.2,1); return sp;
+}
+function addDirMarkers(){
+  // Parts are designed to face FORWARD = -Z. Big green arrow shows it; labels mark all four edges.
+  const E=HALF-1.2;
+  const fwd=new THREE.ArrowHelper(new THREE.Vector3(0,0,-1), new THREE.Vector3(0,0.15,E), GRID-3, 0x4fd084, 3.2, 2.2);
+  fwd.line.material.linewidth=2; scene.add(fwd);
+  const mk=(t,c,x,z)=>{ const s=makeTextSprite(t,c); s.position.set(x,2.2,z); scene.add(s); };
+  mk("FRONT","#4fd084", 0, -E);
+  mk("REAR","#6f8296", 0,  E);
+  mk("PORT","#6f8296", -E, 0);
+  mk("STBD","#6f8296",  E, 0);
+}
+
+let GROUPS = [];
+function buildPalette(groups){
+  GROUPS = groups;
+  document.getElementById("search").oninput=e=>renderPalette(e.target.value.toLowerCase());
+  renderPalette("");
+}
+function renderPalette(filter){
+  const list = document.getElementById("plist");
+  if(mode==="custom"){
+    let h='<div class="psection">CUSTOMIZE, paint your ship with the game’s colours, or pick any hue in the top bar.</div><div class="swatches">';
+    h+=`<button class="sw-btn gc ${paintColor===null?'on':''}" data-c="">Game<br>colours</button>`;
+    PALETTE.forEach(c=>{ h+=`<button class="sw-btn ${paintColor===c?'on':''}" data-c="${c}" style="background:${c}" title="${c}"></button>`; });
+    h+='</div>';
+    list.innerHTML=h;
+    list.querySelectorAll(".sw-btn").forEach(b=>b.onclick=()=>setPaint(b.dataset.c||null));
+    return;
+  }
+  const wantKind = mode==="module" ? "module" : "build";
+  list.innerHTML="";
+  GROUPS.forEach(g=>{
+    const items = PARTS.filter(p=>p.group===g && p.kind===wantKind && (!filter || p.name.toLowerCase().includes(filter)));
+    if(!items.length) return;
+    const h=document.createElement("div"); h.className="pgroup";
+    h.innerHTML=`<span class="dot" style="background:${items[0].color}"></span>${g} (${items.length})`; list.appendChild(h);
+    items.forEach(p=>{
+      const el=document.createElement("div"); el.className="pitem"; el.dataset.id=p.id;
+      const right = p.kind==="build" ? `<span class="dm">${p.dims.join("×")}</span>` : `<span class="badge ${p.mount}">${p.mount==="inside"?"inside":"surface"}</span>`;
+      el.innerHTML=`<img class="pic" src="ship_icons/${p.id}.webp?v=${ASSETVER}" alt="" loading="lazy"><span class="nm">${p.name}</span>${right}`;
+      el.onclick=()=>selectPart(p.id);   // both assembly parts and modules are placed in 3D
+      list.appendChild(el);
+    });
+  });
+}
+function switchMode(m){
+  mode=m;
+  document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("on", t.dataset.mode===m));
+  if(m!=="build"){ sel=null; ghost.visible=false;
+    document.getElementById("sel-n").textContent = m==="module"?"Modules":"Customize";
+    document.getElementById("sel-g").textContent = m==="module"
+      ? "Pick a module, then click the ship to mount it · green = inside the hull · amber = surface-mounted."
+      : "Use the colour picker / swatches to paint the ship.";
+    document.getElementById("shapes").innerHTML=""; document.getElementById("flips").innerHTML=""; document.getElementById("sel-rot").textContent="";
+    document.querySelectorAll(".pitem").forEach(e=>e.classList.remove("sel")); }
+  document.getElementById("btn-rot").style.display = m==="custom"?"none":"";   // modules can rotate too
+  document.getElementById("btn-del").style.display = m==="custom"?"none":"";
+  renderPalette((document.getElementById("search").value||"").toLowerCase());
+}
+function renderLoadout(){   // read-only summary of placed modules (grouped by type)
+  const el=document.getElementById("loadout");
+  const mods=placed.filter(r=>r.isModule); if(!mods.length){ el.innerHTML=""; return; }
+  const by={}; mods.forEach(r=>by[r.id]=(by[r.id]||0)+1);
+  let h='<h3>Modules on ship ('+mods.length+')</h3>';
+  Object.keys(by).forEach(id=>{ const p=BYID[id]; h+=`<div class="mod"><img class="pic" src="ship_icons/${id}.webp?v=${ASSETVER}" alt=""><span class="mn" title="${p.name}">${p.name}</span><span class="mc">×${by[id]}</span></div>`; });
+  el.innerHTML=h;
+}
+
+function selectPart(id){
+  sel = BYID[id]; rot = partRot[id]||0; selShape = 0; delMode=false; document.getElementById("btn-del").classList.remove("on");
+  document.querySelectorAll(".pitem").forEach(e=>e.classList.toggle("sel", e.dataset.id===id));
+  document.getElementById("sel-n").textContent = sel.name;
+  document.getElementById("sel-g").textContent = `${sel.group} · ${dimsR().join("×")}${sel.price?" · "+sel.price+" cr":""}`;
+  showRot();
+  renderFlips();
+  renderShapePicker();
+  updateGhostGeo();
+  const mk=selMeshKey(); if(mk && !isInsideMod(sel)) loadGeom(mk).then(()=>{ if(selMeshKey()===mk) updateGhostGeo(); });  // load mesh, then shape the ghost (inside modules need no model)
+  refreshSlots();   // show open hull slots when an inside module is selected
+}
+function renderShapePicker(){
+  const el=document.getElementById("shapes");
+  const shapes=(sel&&sel.shapes)||[];
+  if(shapes.length<=1){ el.innerHTML=""; return; }
+  let h='<span class="lbl">Shape</span>';
+  shapes.forEach((s,i)=>{ const ic = s.s ? `<img src="ship_shapes/${s.s}.webp?v=${ASSETVER}" alt="${s.s}">` : (i+1);
+    h+=`<button class="shp ${i===selShape?'on':''}" data-i="${i}" title="Shape ${s.s||(i+1)}">${ic}</button>`; });
+  el.innerHTML=h;
+  el.querySelectorAll(".shp").forEach(b=>b.onclick=()=>{ selShape=+b.dataset.i; renderShapePicker(); updateGhostGeo(); const mk=selMeshKey(); if(mk) loadGeom(mk).then(()=>{ if(selMeshKey()===mk) updateGhostGeo(); }); });
+}
+function renderFlips(){
+  const el=document.getElementById("flips"); if(!el) return;
+  if(!sel){ el.innerHTML=""; return; }
+  const f=flipOf(sel.id);
+  const svg=d=>`<svg viewBox="0 0 24 24">${d}</svg>`;
+  const ic=[ svg('<path d="M12 3v18"/><path d="M8 8l-4 4 4 4"/><path d="M16 8l4 4-4 4"/>'),    // mirror left-right
+             svg('<path d="M3 12h18"/><path d="M8 8l4-4 4 4"/><path d="M8 16l4 4 4-4"/>'),      // mirror up-down
+             svg('<path d="M4 20L20 4"/><path d="M9 4H4v5"/><path d="M15 20h5v-5"/>') ];        // mirror front-back
+  const lbl=["Mirror left ↔ right","Mirror up ↕ down","Mirror front ↔ back"];
+  let h='<span class="lbl">Flip</span>';
+  [0,1,2].forEach(i=>{ h+=`<button class="flipbtn ${f[i]?'on':''}" data-ax="${i}" title="${lbl[i]}">${ic[i]}</button>`; });
+  el.innerHTML=h;
+  el.querySelectorAll(".flipbtn").forEach(b=>b.onclick=()=>{ const i=+b.dataset.ax; const cur=flipOf(sel.id).slice(); cur[i]=!cur[i];
+    partFlip[sel.id]=cur; try{ localStorage.setItem("sc_partFlip", JSON.stringify(partFlip)); }catch(e){}
+    rebuildType(sel.id); renderFlips(); updateGhostGeo(); });
+}
+
+// fetch + dequantize a part's binary mesh -> {geom (w/ material groups), groups:[{role,hex}]} (cached).
+function loadGeom(id){
+  if(!MESHMAN[id]) return Promise.resolve(null);
+  if(MESHCACHE[id] && MESHCACHE[id].then) return MESHCACHE[id];
+  if(MESHCACHE[id]) return Promise.resolve(MESHCACHE[id]);
+  const p = fetch("ship_meshes/"+id+".bin?v="+ASSETVER).then(r=>r.arrayBuffer()).then(buf=>{
+    const dv=new DataView(buf); let o=0;
+    const vc=dv.getUint32(o,true);o+=4; const ic=dv.getUint32(o,true);o+=4; const gc=dv.getUint8(o);o+=1;
+    if(gc<1 || gc>64){ MESHCACHE[id]=null; return null; }   // sanity: reject a stale/old-format file
+    const b=[]; for(let k=0;k<6;k++){ b.push(dv.getFloat32(o,true)); o+=4; }
+    const sx=(b[3]-b[0])||1, sy=(b[4]-b[1])||1, sz=(b[5]-b[2])||1;
+    const pos=new Float32Array(vc*3);
+    for(let v=0;v<vc;v++){ const qx=dv.getUint16(o,true);o+=2; const qy=dv.getUint16(o,true);o+=2; const qz=dv.getUint16(o,true);o+=2;
+      pos[v*3]=b[0]+qx/65535*sx; pos[v*3+1]=b[1]+qy/65535*sy; pos[v*3+2]=b[2]+qz/65535*sz; }
+    const groups=[];
+    for(let k=0;k<gc;k++){ const role=dv.getUint8(o);o+=1; const r=dv.getUint8(o);o+=1; const gg=dv.getUint8(o);o+=1; const bl=dv.getUint8(o);o+=1;
+      const start=dv.getUint32(o,true);o+=4; const count=dv.getUint32(o,true);o+=4;
+      groups.push({role, hex:"#"+[r,gg,bl].map(x=>x.toString(16).padStart(2,"0")).join(""), start, count}); }
+    const i32=MESHMAN[id].i32; const idx = i32 ? new Uint32Array(ic) : new Uint16Array(ic);
+    for(let k=0;k<ic;k++){ idx[k]= i32 ? dv.getUint32(o,true) : dv.getUint16(o,true); o += i32?4:2; }
+    const g=new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.BufferAttribute(pos,3));
+    g.setIndex(new THREE.BufferAttribute(idx,1));
+    groups.forEach((gr,i)=>g.addGroup(gr.start, gr.count, i));   // sub-mesh i -> material slot i
+    g.computeVertexNormals(); g.computeBoundingBox();
+    const res={ geom:g, groups:groups.map(gr=>({role:gr.role, hex:gr.hex})) };
+    MESHCACHE[id]=res; return res;
+  }).catch(()=>{ MESHCACHE[id]=null; return null; });
+  MESHCACHE[id]=p; return p;
+}
+function dimsR(){ const dd = isInsideMod(sel) ? [1,1,1] : sel.dims; const [w,h,d]=dd; return (Math.round((rot||0)/90)%2) ? [d,h,w] : [w,h,d]; }
+function updateGhostGeo(){   // ghost takes the SHAPE of the selected part (fitted to the cell), not a plain box
+  if(!sel) return;
+  const [w,h,d]=dimsR();
+  ghost.geometry.dispose();
+  if(isInsideMod(sel)){ const g=new THREE.BoxGeometry(0.9,0.9,0.9); g.translate(w/2,h/2,d/2); ghost.geometry=g; return; }  // inside module -> a single hull slot (model stays hidden)
+  const mk=selMeshKey(), cached=(mk && MESHCACHE[mk] && !MESHCACHE[mk].then) ? MESHCACHE[mk] : null;
+  if(cached){ ghost.geometry=fitGeom(cached.geom, {x:0,y:0,z:0,w,h,d}, rot, sel); }   // real silhouette
+  else { const g=new THREE.BoxGeometry(w,h,d); g.translate(w/2,h/2,d/2); ghost.geometry=g; }  // box until mesh loads
+}
+
+function key(x,y,z){ return x+","+y+","+z; }
+function footprint(x,y,z,w,h,d){ const c=[]; for(let i=0;i<w;i++)for(let j=0;j<h;j++)for(let k=0;k<d;k++)c.push(key(x+i,y+j,z+k)); return c; }
+function free(cells){ return cells.every(c=>!occ.has(c)); }
+function inBounds(x,y,z,w,h,d){ return x>=-HALF && z>=-HALF && x+w<=HALF && z+d<=HALF && y>=0 && y+h<=GRID; }
+
+// Compute the min-corner grid cell for the part, snapping like the in-game designer: the part butts up
+// against the hovered face (normal axis), and SLIDES centred on the cursor along the other two axes.
+function placeCell(hit, inside){
+  const [w,h,d]=dimsR();
+  let n = (hit.object!==ground && hit.face) ? hit.face.normal.clone().transformDirection(hit.object.matrixWorld).round() : new THREE.Vector3(0,1,0);
+  const p = hit.point;
+  if(inside){   // INSIDE modules sit WITHIN the clicked part: centre on the cell just inside the surface
+    const x = Math.round(p.x - n.x*0.5 - w/2);
+    const y = Math.max(0, Math.round(p.y - n.y*0.5 - h/2));
+    const z = Math.round(p.z - n.z*0.5 - d/2);
+    return {x, y, z, w, h, d};
+  }
+  // along the face normal: stack flush against the surface; off-axis: centre the footprint on the cursor
+  const x = n.x!==0 ? (n.x>0 ? Math.round(p.x) : Math.round(p.x)-w) : Math.round(p.x - w/2);
+  let   y = n.y!==0 ? (n.y>0 ? Math.round(p.y) : Math.round(p.y)-h) : Math.round(p.y - h/2);
+  const z = n.z!==0 ? (n.z>0 ? Math.round(p.z) : Math.round(p.z)-d) : Math.round(p.z - d/2);
+  y = Math.max(0, y);                                            // never below the floor
+  return {x, y, z, w, h, d};
+}
+
+function castUnderPointer(){
+  raycaster.setFromCamera(pointer, camera);
+  const hits = raycaster.intersectObjects([ground, ...placed.map(p=>p.mesh)], false);
+  return hits.length ? hits[0] : null;
+}
+
+function onMove(e){
+  const r=renderer.domElement.getBoundingClientRect();
+  pointer.x=((e.clientX-r.left)/r.width)*2-1; pointer.y=-((e.clientY-r.top)/r.height)*2+1;
+  if(mode==="custom"){ ghost.visible=false; return; }
+  if(delMode){ ghost.visible=false; const hit=castUnderPointer(); document.getElementById("view").style.cursor = (hit&&hit.object!==ground)?"pointer":"default"; return; }
+  if(!sel){ ghost.visible=false; return; }
+  const hit=castUnderPointer(); if(!hit){ ghost.visible=false; return; }
+  const isMod = sel.kind==="module";
+  if(isInsideMod(sel)){   // inside modules snap to the nearest EMPTY frame slot (not free placement)
+    const s=nearestEmptySlot(hit.point);
+    if(!s){ ghost.visible=false; document.getElementById("view").style.cursor="not-allowed"; return; }
+    document.getElementById("view").style.cursor="default";
+    ghost.visible=true; ghost.position.set(s.x,s.y,s.z); ghost.material.color.set(0x4fd084); ghost._cell={x:s.x,y:s.y,z:s.z,w:1,h:1,d:1};
+    return;
+  }
+  const c=placeCell(hit, false);
+  let ok, col;
+  if(isMod){ ok = (hit.object!==ground) && inBounds(c.x,c.y,c.z,c.w,c.h,c.d);   // outside modules mount on the surface
+    col = ok ? 0xe8a71d : 0xd03a2e; }
+  else { ok = free(footprint(c.x,c.y,c.z,c.w,c.h,c.d)) && inBounds(c.x,c.y,c.z,c.w,c.h,c.d); col = ok?0x4fd084:0xd03a2e; }
+  ghost.visible=true; ghost.position.set(c.x, c.y, c.z);
+  ghost.material.color.set(col); ghost._cell=ok?c:null;
+}
+
+function recOf(o){ while(o && !o._rec && o!==scene) o=o.parent; return o&&o._rec; }
+function onClick(e){
+  if(e.button!==0 || mode==="custom") return;
+  const hit=castUnderPointer(); if(!hit) return;
+  if(delMode){ if(hit.object!==ground){ removePart(hit.object); } return; }
+  if(!sel){ const rec=hit.object!==ground && recOf(hit.object); if(rec) editPlaced(rec); return; }  // click a placed part to edit it
+  if(!ghost.visible || !ghost._cell) return;
+  placePart(sel, ghost._cell, selMeshKey(), rot);
+}
+function editPlaced(rec){   // load the clicked part into the panel so you can change its shape / flip / rotation
+  selectPart(rec.id);
+  const sh=BYID[rec.id].shapes;
+  if(sh){ const i=sh.findIndex(s=>s.m===rec.m); if(i>=0){ selShape=i; renderShapePicker(); } }
+  rot=(rec.rot!=null?rec.rot:(partRot[rec.id]||0)); showRot(); updateGhostGeo();
+}
+function deselectPart(){   // Esc: stop placing so you can click a placed part to edit it
+  sel=null; selShape=0; ghost.visible=false;
+  document.querySelectorAll(".pitem").forEach(e=>e.classList.remove("sel"));
+  document.getElementById("sel-n").textContent="No part selected";
+  document.getElementById("sel-g").textContent="Click a placed part to edit it, or pick a part from the left.";
+  document.getElementById("sel-rot").textContent=""; document.getElementById("flips").innerHTML=""; document.getElementById("shapes").innerHTML="";
+  refreshSlots();   // hide the open-slot preview
+}
+
+function reverseWinding(g){ const idx=g.getIndex(); if(!idx) return; const a=idx.array; for(let i=0;i+2<a.length;i+=3){ const t=a[i+1]; a[i+1]=a[i+2]; a[i+2]=t; } idx.needsUpdate=true; }
+function fitGeom(base, c, rot, part){
+  // orient + size the real geometry. rot = DEGREES about Y (R=90° steps, [ ] = fine). Dimensioned hull parts
+  // FILL the cell (snap to 90° to avoid aniso skew); everything else scales UNIFORMLY (any angle is fine).
+  const g = base.clone();
+  if(part){ const f=flipOf(part.id); if(f[0]||f[1]||f[2]){   // mirror (flip) axes; reverse winding if odd so faces stay outward
+    g.scale(f[0]?-1:1, f[1]?-1:1, f[2]?-1:1);
+    if(((f[0]?1:0)+(f[1]?1:0)+(f[2]?1:0))%2===1) reverseWinding(g);
+  } }
+  let deg = rot||0;
+  if(part && part._dimd) deg = Math.round(deg/90)*90;
+  if(deg) g.rotateY(deg*Math.PI/180);
+  g.computeBoundingBox(); const bb=g.boundingBox; const sp=new THREE.Vector3(); bb.getSize(sp);
+  g.translate(-bb.min.x, -bb.min.y, -bb.min.z);          // origin -> min corner
+  if(part && part._dimd){
+    g.scale(c.w/(sp.x||1), c.h/(sp.y||1), c.d/(sp.z||1));
+  } else {
+    const s = Math.min(c.w/(sp.x||1), c.h/(sp.y||1), c.d/(sp.z||1));
+    g.scale(s,s,s);
+    g.translate((c.w-sp.x*s)/2, 0, (c.d-sp.z*s)/2);       // centre X/Z, sit on the cell floor
+  }
+  return g;
+}
+function makeSlotBox(c){   // an empty hull slot: faint cube + white edges (the in-game "blank box"); the module model is NOT drawn
+  const m=new THREE.Mesh(new THREE.BoxGeometry(0.86,0.86,0.86),
+    new THREE.MeshBasicMaterial({color:0xbcd4e6, transparent:true, opacity:0.16, depthWrite:false}));
+  m.add(new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry), new THREE.LineBasicMaterial({color:0xdfeaf4, depthTest:false})));  // outline stays visible through the hull
+  m.position.set(c.x+0.5, c.y+0.5, c.z+0.5);
+  return m;
+}
+// Show the empty inside-module slots ("blank boxes"), the fixed slot positions of placed storage parts
+// (frames/plating: 1 per standard frame, 2 per big) not yet taken by a module. Mirrors the in-game install view.
+function refreshSlots(){
+  if(slotGroup){ scene.remove(slotGroup); slotGroup=null; }
+  if(!isInsideMod(sel)) return;
+  if(!SLOT_EDGES){ const g=new THREE.BoxGeometry(0.82,0.82,0.82); g.translate(0.5,0.5,0.5); SLOT_EDGES=new THREE.EdgesGeometry(g); g.dispose();
+    SLOT_MAT=new THREE.LineBasicMaterial({color:0x9fc2da, transparent:true, opacity:0.5, depthTest:false}); }   // always-visible overlay (the in-game blank boxes)
+  const filled=filledSlotSet();
+  slotGroup=new THREE.Group();
+  for(const s of SHIP_SLOTS){ if(filled.has(key(s.x,s.y,s.z))) continue;
+    const ls=new THREE.LineSegments(SLOT_EDGES, SLOT_MAT); ls.position.set(s.x,s.y,s.z); slotGroup.add(ls); }
+  scene.add(slotGroup);
+}
+function buildMesh(part, c, meshKey, rotQ){
+  if(isInsideMod(part)) return makeSlotBox(c);   // housed inside the hull -> hidden model, shown as a slot box + icon
+  const cached = (meshKey && MESHCACHE[meshKey] && !MESHCACHE[meshKey].then) ? MESHCACHE[meshKey] : null;
+  let mesh;
+  if(cached){
+    const g=fitGeom(cached.geom, c, rotQ||0, part);
+    const mats=cached.groups.map(gr=>roleMaterial(gr.role, gr.hex, part));   // one material per role group
+    mesh=new THREE.Mesh(g, mats);
+    mesh.position.set(c.x, c.y, c.z);
+  } else {
+    const g=new THREE.BoxGeometry(c.w,c.h,c.d);
+    mesh=new THREE.Mesh(g, roleMaterial(0, part._paintHex||"#5e7ca2", part));  // body-coloured box until mesh loads
+    mesh.position.set(c.x+c.w/2, c.y+c.h/2, c.z+c.d/2);
+    mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry), new THREE.LineBasicMaterial({color:0x0a1420})));
+  }
+  return mesh;
+}
+function placePart(part, c, meshKey, rotQ){
+  rotQ = rotQ||0;
+  const isMod = part.kind==="module";
+  let mesh=buildMesh(part, c, meshKey, rotQ);
+  scene.add(mesh);
+  const rec={id:part.id, m:meshKey, rot:rotQ, isModule:isMod, ...c, mesh}; mesh._rec=rec; placed.push(rec);
+  if(!isMod){ footprint(c.x,c.y,c.z,c.w,c.h,c.d).forEach(k=>occ.add(k)); rebuildSlots(); }   // modules don't reserve grid; storage parts (re)generate slots
+  if(isMod) addBadge(rec);                                                // floating icon over the module
+  // if the real mesh wasn't loaded yet, swap the box for it once it arrives (inside modules stay a slot box)
+  if(meshKey && !isInsideMod(part) && MESHMAN[meshKey] && !(MESHCACHE[meshKey] && !MESHCACHE[meshKey].then)){
+    loadGeom(meshKey).then(g=>{ if(g && rec.mesh===mesh && placed.indexOf(rec)>=0){ scene.remove(mesh); const nm=buildMesh(part,c,meshKey,rec.rot); nm._rec=rec; rec.mesh=nm; scene.add(nm); } });
+  }
+  updateStats(); refreshSlots();   // new assembly cells -> new open slots; a placed module fills one
+}
+function removePart(mesh){
+  const rec=mesh._rec; if(!rec) return;
+  if(!rec.isModule){ footprint(rec.x,rec.y,rec.z,rec.w,rec.h,rec.d).forEach(k=>occ.delete(k)); }
+  if(rec.badge) scene.remove(rec.badge);
+  scene.remove(mesh); const i=placed.indexOf(rec); if(i>=0) placed.splice(i,1);
+  rebuildSlots(); updateStats(); refreshSlots();
+}
+function clearAll(){ placed.slice().forEach(r=>{ scene.remove(r.mesh); if(r.badge) scene.remove(r.badge); }); placed.length=0; occ.clear(); SHIP_SLOTS=[]; updateStats(); refreshSlots(); }
+
+// floating icon badge above a placed module (matches the in-game module markers)
+const BADGE_TEX={};
+function addBadge(rec){
+  const id=rec.id;
+  let tex=BADGE_TEX[id];
+  if(!tex){
+    const cv=document.createElement("canvas"); cv.width=cv.height=80; const x=cv.getContext("2d");
+    const r=16,w=80; const rr=()=>{ x.beginPath(); x.moveTo(r,3); x.arcTo(w-3,3,w-3,w-3,r); x.arcTo(w-3,w-3,3,w-3,r); x.arcTo(3,w-3,3,3,r); x.arcTo(3,3,w-3,3,r); x.closePath(); };
+    x.fillStyle="rgba(12,22,34,.92)"; rr(); x.fill(); x.lineWidth=4; x.strokeStyle="#dfeaf4"; rr(); x.stroke();
+    tex=new THREE.CanvasTexture(cv); BADGE_TEX[id]=tex;
+    const img=new Image(); img.onload=()=>{ x.drawImage(img,12,12,56,56); tex.needsUpdate=true; }; img.src="ship_icons/"+id+".webp?v="+ASSETVER;
+  }
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex, depthTest:false, depthWrite:false, transparent:true}));
+  sp.scale.set(1.4,1.4,1);
+  sp.position.set(rec.x+rec.w/2, rec.y+rec.h+1.1, rec.z+rec.d/2);
+  scene.add(sp); rec.badge=sp;
+}
+
+function sumStat(k){ return placed.reduce((a,r)=>a+((BYID[r.id].stats[k])||0),0); }   // build parts + placed modules
+function moduleHas(k){ return placed.some(r=>r.isModule && BYID[r.id].stats[k]); }
+
+function updateStats(){
+  renderLoadout();
+  const el=document.getElementById("statpanel");
+  if(!placed.length){ el.innerHTML='<div class="empty">Build the ship (place parts) and mount modules to see live stats.</div>'; return; }
+  const nMods=placed.filter(r=>r.isModule).length;
+  const frame=sumStat("Frame"), support=sumStat("SystemSupport"), req=sumStat("SystemRequirement");
+  const weight=sumStat("ShipWeight"), force=sumStat("EngineForce"), thrust=sumStat("EngineThrust");
+  const hull=sumStat("Hull"), powProd=sumStat("PowerProduction"), powUse=sumStat("PowerUsage");
+  const ftlCap=Math.max(0,...placed.map(r=>BYID[r.id].stats.FakeFTLOptimalMaxWeight||0));
+  const suProvided=placed.filter(r=>!r.isModule).reduce((a,r)=>a+(BYID[r.id].stats.StorageUnits||0),0);   // frames/plating
+  const suUsed=placed.filter(r=>r.isModule).reduce((a,r)=>a+(BYID[r.id].stats.StorageUnits||0),0);          // installed modules
+  const hasCockpit=placed.some(r=>BYID[r.id].group==="Cockpits");
+  const hasEngine=placed.some(r=>BYID[r.id].stats.EngineThrust);
+  const hasFTL=moduleHas("FTOilStorage")||moduleHas("FakeFTLOptimalMaxWeight");
+  const checks=[
+    ["Has a cockpit", hasCockpit, hasCockpit?"yes":"add one"],
+    ["Has an engine", hasEngine, hasEngine?"yes":"add one"],
+    ["Thrust moves the mass", force>=weight, `${fmt(force)} / ${fmt(weight)} t`],
+    ["System power supported", support>=req, `${fmt(support)} / ${fmt(req)}`],
+    ["FTL can carry the ship", !hasFTL||ftlCap>=weight, hasFTL?`${fmt(ftlCap)} / ${fmt(weight)} t`:"no FTL"],
+    ["Power balance", powProd>=powUse, `${fmt(powProd)} / ${fmt(powUse)}`],
+    ["Inventory space fits modules", suProvided>=suUsed, `${fmt(suUsed)} / ${fmt(suProvided)} su`],
+  ];
+  const flyable=hasCockpit&&hasEngine&&force>=weight&&support>=req;
+  let h=`<div class="verdict ${flyable?'ok':'no'}">${flyable?'✓ FLIGHT-READY':'✗ NOT FLIGHT-READY'}</div>`;
+  h+='<h3>Validation</h3>';
+  checks.forEach(([n,ok,v])=>{ h+=`<div class="check ${ok?'pass':'fail'}"><span class="i">${ok?'✓':'✗'}</span><span>${n}</span><span class="v">${v}</span></div>`; });
+  h+='<h3 style="margin-top:14px">System load</h3>';
+  h+=bar(req,support,"Requirement / Support");
+  h+=bar(suUsed,suProvided,"Inventory space (su)");
+  h+='<h3 style="margin-top:14px">Ship stats</h3>';
+  const cost=placed.reduce((s,r)=>s+(BYID[r.id].price||0),0);
+  const rows=[["Structure parts",placed.filter(r=>!r.isModule).length],["Modules",nMods],["Weight",fmt(weight)+" t"],["Frame (integrity)",fmt(frame)],["Hull (HP)",fmt(hull)],
+    ["Engine thrust",fmt(thrust)+" np/s"],["Engine force",fmt(force)+" t"],["Power gen / use",fmt(powProd)+" / "+fmt(powUse)],
+    ["Inventory space",fmt(suUsed)+" / "+fmt(suProvided)+" su"],
+    ["Cargo (solid)",fmt(sumStat("SolidStorage"))+" su"],["Fluid storage",fmt(sumStat("FluidStorage"))+" L"],["FTL oil",fmt(sumStat("FTOilStorage"))+" L"],["Build cost",fmt(cost)+" cr"]];
+  rows.forEach(([k,v])=>{ h+=`<div class="stat"><span class="k">${k}</span><span class="v">${v}</span></div>`; });
+  el.innerHTML=h;
+}
+function bar(used,cap,label){ const pct=cap>0?Math.min(100,used/cap*100):(used>0?100:0); const over=used>cap;
+  return `<div style="font-size:11px;color:var(--muted);display:flex;justify-content:space-between"><span>${label}</span><span>${fmt(used)} / ${fmt(cap)}</span></div><div class="bar ${over?'over':''}"><i style="width:${pct}%"></i></div>`; }
+function fmt(n){ n=Math.round(n*100)/100; return n.toLocaleString(); }
+
+function wire(){
+  const cv=renderer.domElement;
+  cv.addEventListener("pointermove", onMove);
+  cv.addEventListener("pointerdown", e=>{ if(e.button===0) cv._down={x:e.clientX,y:e.clientY}; });
+  cv.addEventListener("pointerup", e=>{ if(e.button===0 && cv._down){ const dx=Math.abs(e.clientX-cv._down.x),dy=Math.abs(e.clientY-cv._down.y); if(dx<4&&dy<4) onClick(e); cv._down=null; } });
+  cv.addEventListener("contextmenu", e=>e.preventDefault());
+  addEventListener("keydown", e=>{
+    if(e.key==="r"||e.key==="R"){ turnSel(90); }
+    else if(e.key==="["){ turnSel(-5); }
+    else if(e.key==="]"){ turnSel(5); }
+    else if(e.key==="Delete"||e.key==="Backspace"){ toggleDel(true); }
+    else if(e.key==="Escape"){ deselectPart(); }
+  });
+  document.getElementById("btn-rot").onclick=()=>turnSel(90);
+  document.getElementById("btn-del").onclick=()=>toggleDel();
+  document.getElementById("btn-clear").onclick=()=>{ if(confirm("Clear the whole build?")) clearAll(); };
+  document.getElementById("btn-save").onclick=save;
+  document.getElementById("btn-load").onclick=load;
+  document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>switchMode(t.dataset.mode));
+  const cc=document.getElementById("ship-color");
+  cc.oninput=()=>setPaint(cc.value);   // top-bar picker = single custom paint hue (overrides game colours)
+}
+function toggleDel(force){ delMode=(force!==undefined)?force:!delMode; document.getElementById("btn-del").classList.toggle("on",delMode); if(delMode) ghost.visible=false; }
+// turn the selected part by `delta` degrees, SAVE it as that part's default, re-orient placed copies, update ghost.
+function turnSel(delta){
+  rot = (((rot+delta)%360)+360)%360;
+  if(sel){ partRot[sel.id]=rot; try{ localStorage.setItem("sc_partRotDeg", JSON.stringify(partRot)); }catch(e){} rebuildType(sel.id); showRot(); }
+  updateGhostGeo();
+}
+function rebuildType(id){   // re-orient placed copies of this part to the new rotation
+  const base=BYID[id].dims; const q=Math.round(rot/90)%2;
+  placed.filter(r=>r.id===id).forEach(r=>{
+    scene.remove(r.mesh); r.rot=rot;
+    const wd = q ? [base[2],base[1],base[0]] : [base[0],base[1],base[2]];
+    r.w=wd[0]; r.h=wd[1]; r.d=wd[2];
+    const nm=buildMesh(BYID[id], r, r.m, r.rot); nm._rec=r; r.mesh=nm; scene.add(nm);
+  });
+}
+function showRot(){ const el=document.getElementById("sel-rot"); if(!el) return; el.textContent = sel ? ("↻ facing "+Math.round(partRot[sel.id]||0)+"°, R = 90°, [ ] = fine 5° (saved)") : ""; }
+function save(){ try{ localStorage.setItem("sc_ship_build", JSON.stringify({placed:placed.map(r=>({id:r.id,m:r.m,rot:r.rot,x:r.x,y:r.y,z:r.z,w:r.w,h:r.h,d:r.d}))})); alert("Build saved."); }catch(e){ alert("Save failed."); } }
+function load(){ try{
+    const raw=JSON.parse(localStorage.getItem("sc_ship_build")||"null"); if(!raw){ alert("No saved build."); return; }
+    const pl=Array.isArray(raw)?raw:(raw.placed||[]);
+    if(!pl.length){ alert("No saved build."); return; }
+    clearAll();
+    pl.forEach(c=>{ if(BYID[c.id]) placePart(BYID[c.id], c, c.m || (BYID[c.id].m) || (BYID[c.id].shapes&&BYID[c.id].shapes[0]&&BYID[c.id].shapes[0].m), c.rot||0); });
+    updateStats();
+  }catch(e){ alert("Load failed."); } }
+
+function animate(){ requestAnimationFrame(animate); controls.update(); renderer.render(scene,camera); }
+</script>
+</body>
+</html>

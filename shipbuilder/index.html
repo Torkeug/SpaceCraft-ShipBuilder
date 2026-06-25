@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Ship Builder</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.158.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div id="palette">
+    <div id="palette-header">
+      <input id="search" type="text" placeholder="Search pieces…" autocomplete="off">
+    </div>
+    <div id="piece-list"></div>
+  </div>
+
+  <div id="viewport">
+    <canvas id="c"></canvas>
+    <div id="hud">
+      <button id="btn-erase" title="Erase mode (E)">✕ Erase</button>
+      <span class="sep"></span>
+      <button id="btn-save" title="Save design">💾 Save</button>
+      <button id="btn-load" title="Load design">📂 Load</button>
+      <button id="btn-clear" title="Clear all">🗑 Clear</button>
+    </div>
+    <div id="hint">Left-click: place • Right-drag: orbit • ZQSD: move • Space/Ctrl: up/down • Shift: fast • E: erase</div>
+  </div>
+
+  <div id="inspector">
+    <div id="piece-name">Select a piece</div>
+    <div id="piece-dims"></div>
+    <div class="inspector-section-label">Shape</div>
+    <div id="shape-picker"></div>
+    <div class="inspector-section-label">Symmetry</div>
+    <div id="symmetry-picker">
+      <button class="sym-btn" data-axis="x">↔ X</button>
+      <button class="sym-btn" data-axis="y">↕ Y</button>
+      <button class="sym-btn" data-axis="z">↔ Z</button>
+    </div>
+    <div class="inspector-section-label">Specs</div>
+    <div id="specs"></div>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,217 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  background: #0d1117;
+  color: #c9d1d9;
+  font: 13px/1.4 'Segoe UI', system-ui, sans-serif;
+}
+
+/* ── Palette (left) ── */
+#palette {
+  width: 220px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: #161b22;
+  border-right: 1px solid #30363d;
+  overflow: hidden;
+}
+
+#palette-header {
+  padding: 8px;
+  border-bottom: 1px solid #30363d;
+}
+
+#search {
+  width: 100%;
+  padding: 5px 8px;
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  color: #c9d1d9;
+  font-size: 12px;
+  outline: none;
+}
+#search:focus { border-color: #4488cc; }
+
+#piece-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.category-header {
+  padding: 6px 10px 3px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #8b949e;
+  text-transform: uppercase;
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.category-header::before { content: '▾'; font-size: 9px; }
+.category-header.collapsed::before { content: '▸'; }
+
+.piece-item {
+  padding: 5px 10px 5px 20px;
+  font-size: 12px;
+  cursor: pointer;
+  border-left: 2px solid transparent;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.piece-item:hover { background: #1f2937; }
+.piece-item.selected {
+  background: #1c2d3f;
+  border-left-color: #4488cc;
+  color: #79b8ff;
+}
+
+/* ── Viewport (center) ── */
+#viewport {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+#c {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+#hud {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(13,17,23,0.85);
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 5px 8px;
+}
+
+#hud button {
+  padding: 3px 8px;
+  background: #21262d;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  color: #c9d1d9;
+  font-size: 11px;
+  cursor: pointer;
+}
+#hud button:hover { background: #30363d; }
+#hud button.active { background: #1c2d3f; border-color: #4488cc; color: #79b8ff; }
+#hud button.danger.active { background: #3d1c1c; border-color: #cc4444; color: #ff8888; }
+
+#layer-label {
+  font-size: 12px;
+  min-width: 36px;
+  text-align: center;
+  color: #8b949e;
+}
+
+.sep { width: 1px; height: 16px; background: #30363d; }
+
+#hint {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 11px;
+  color: #8b949e;
+  background: rgba(13,17,23,0.7);
+  padding: 3px 10px;
+  border-radius: 10px;
+  pointer-events: none;
+}
+
+/* ── Inspector (right) ── */
+#inspector {
+  width: 200px;
+  flex-shrink: 0;
+  background: #161b22;
+  border-left: 1px solid #30363d;
+  overflow-y: auto;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+#piece-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e6edf3;
+  line-height: 1.3;
+}
+
+#piece-dims {
+  font-size: 11px;
+  color: #8b949e;
+}
+
+.inspector-section-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #8b949e;
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+
+#shape-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.shape-btn {
+  padding: 4px 7px;
+  font-size: 11px;
+  background: #21262d;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  color: #c9d1d9;
+  cursor: pointer;
+}
+.shape-btn:hover { background: #30363d; }
+.shape-btn.active { background: #1c2d3f; border-color: #4488cc; color: #79b8ff; }
+
+#symmetry-picker {
+  display: flex;
+  gap: 4px;
+}
+
+.sym-btn {
+  flex: 1;
+  padding: 4px 2px;
+  font-size: 11px;
+  background: #21262d;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  color: #c9d1d9;
+  cursor: pointer;
+  text-align: center;
+}
+.sym-btn:hover { background: #30363d; }
+.sym-btn:active { background: #1c2d3f; }
+
+#specs {
+  font-size: 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.spec-row { display: flex; justify-content: space-between; color: #8b949e; }
+.spec-row span:last-child { color: #c9d1d9; }
