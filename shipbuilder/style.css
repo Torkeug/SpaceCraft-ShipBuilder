@@ -20,6 +20,11 @@ body {
   background: #161b22;
   border-right: 1px solid #30363d;
   overflow: hidden;
+  transition: border-color 0.1s, box-shadow 0.1s;
+}
+#palette.drop-target {
+  border-right-color: #cc4444;
+  box-shadow: inset -3px 0 0 #cc4444;
 }
 
 #palette-header {

@@ -289,12 +289,22 @@ function disposeMesh(mesh) {
 
 // ── Ghost management ──────────────────────────────────────────────────────────
 
-// Ghost is always a simple box (correct footprint). Geometry updated on selection/rotation change.
+// Update ghost geometry — real mesh if cached, box fallback while loading.
 function refreshGhostGeo() {
   if (!state.selected) { ghost.visible = false; return; }
-  const dims = effDims(partDims(state.selected), state.rotDeg);
+  const part = state.selected;
+  const dims = effDims(partDims(part), state.rotDeg);
+  const mk = getMeshKey(part, state.shapeIdx);
+  const cached = mk ? getCached(mk) : null;
   ghost.geometry.dispose();
-  ghost.geometry = boxGeom(...dims);
+  if (cached) {
+    ghost.geometry = fitGeom(cached.geom, dims, state.rotDeg, part, [state.mx, state.my, state.mz]);
+  } else {
+    ghost.geometry = boxGeom(...dims);
+    if (mk) loadGeom(mk).then(c => {
+      if (c && state.selected === part && getMeshKey(part, state.shapeIdx) === mk) refreshGhostGeo();
+    });
+  }
 }
 
 function clearGhost() { ghost.visible = false; state.ghostGx = null; state.ghostGy = null; state.ghostGz = null; }
@@ -310,7 +320,10 @@ function positionGhost(gx, gy, gz) {
 // Update ghost geo to match the entry being dragged.
 function refreshGhostForDrag(entry) {
   ghost.geometry.dispose();
-  ghost.geometry = boxGeom(...entry.dims);
+  const cached = entry.meshKey ? getCached(entry.meshKey) : null;
+  ghost.geometry = cached
+    ? fitGeom(cached.geom, entry.dims, entry.rotDeg, entry.part, [entry.mx, entry.my, entry.mz])
+    : boxGeom(...entry.dims);
 }
 
 // ── Placement ─────────────────────────────────────────────────────────────────
@@ -535,21 +548,13 @@ function getGridPos(baseDims = null, excludeEntry = null, rotDeg = state.rotDeg)
         n.x = Math.round(n.x); n.y = Math.round(n.y); n.z = Math.round(n.z);
         const p = hit.point;
         const [exl, eyl, ezl] = entry.dims;
-        const rayGoingUp = raycaster.ray.direction.y > 0;
         if (n.y < 0) {
           gx = snap(p.x - elx / 2); gz = snap(p.z - elz / 2); gy = entry.gy - ely;
-        } else if (n.y > 0 || !rayGoingUp) {
+        } else if (n.y > 0) {
+          gx = snap(p.x - elx / 2); gy = entry.gy + eyl; gz = snap(p.z - elz / 2);
+        } else {
           gx = n.x !== 0 ? (n.x > 0 ? entry.gx + exl : entry.gx - elx) : snap(p.x - elx / 2);
-          if (n.y > 0) {
-            gy = entry.gy + eyl;
-          } else {
-            const cursor_gy = snap(p.y - ely / 2);
-            const fgx = snap(p.x - elx / 2), fgz = snap(p.z - elz / 2);
-            const xo = Math.min(fgx + elx, entry.gx + exl) - Math.max(fgx, entry.gx);
-            const zo = Math.min(fgz + elz, entry.gz + ezl) - Math.max(fgz, entry.gz);
-            const floor_gy = (xo > 0 && zo > 0) ? entry.gy + snap(xo <= zo ? xo : zo) : 0;
-            gy = Math.max(cursor_gy, floor_gy);
-          }
+          gy = snap(p.y - ely / 2);
           gz = n.z !== 0 ? (n.z > 0 ? entry.gz + ezl : entry.gz - elz) : snap(p.z - elz / 2);
         }
       }
@@ -557,17 +562,37 @@ function getGridPos(baseDims = null, excludeEntry = null, rotDeg = state.rotDeg)
   }
 
   if (gx == null) {
-    const planeHits = raycaster.intersectObject(buildPlane);
-    if (!planeHits.length) return null;
-    const p = planeHits[0].point;
-    const raw_gx = snap(p.x - elx / 2), raw_gz = snap(p.z - elz / 2);
-    gx = raw_gx; gz = raw_gz; gy = 0;
     const camDir = new THREE.Vector3(); camera.getWorldDirection(camDir);
-    if (camDir.y < -0.5) {
-      gy = stackHeight(gx, gz, [elx, ely, elz], excludeEntry);
-    } else if (camDir.y > 0.5) {
-      gy = stackDepth(gx, gz, [elx, ely, elz], excludeEntry);
+    const hLen = Math.sqrt(camDir.x * camDir.x + camDir.z * camDir.z);
+    if (!excludeEntry && hLen < 0.5) {
+      // New placement, top-down or bottom-up: cast against the ground plane.
+      const planeHits = raycaster.intersectObject(buildPlane);
+      if (!planeHits.length) return null;
+      const p = planeHits[0].point;
+      gx = snap(p.x - elx / 2); gz = snap(p.z - elz / 2);
+      gy = camDir.y < 0
+        ? stackHeight(gx, gz, [elx, ely, elz], excludeEntry)
+        : stackDepth(gx, gz, [elx, ely, elz], excludeEntry);
     } else {
+      // Side view or drag: cast against a plane facing the camera.
+      // Top-down drag uses a horizontal plane at the piece's height;
+      // side view uses a vertical plane through the reference point.
+      let snapPlane;
+      if (excludeEntry && hLen < 0.5) {
+        snapPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -(excludeEntry.gy + ely / 2));
+      } else {
+        const hDir = new THREE.Vector3(camDir.x, 0, camDir.z).normalize();
+        const ref = excludeEntry
+          ? new THREE.Vector3(excludeEntry.gx + elx / 2, excludeEntry.gy + ely / 2, excludeEntry.gz + elz / 2)
+          : controls.target;
+        snapPlane = new THREE.Plane().setFromNormalAndCoplanarPoint(hDir, ref);
+      }
+      const t = new THREE.Vector3();
+      if (!raycaster.ray.intersectPlane(snapPlane, t)) return null;
+      const raw_gx = snap(t.x - elx / 2), raw_gz = snap(t.z - elz / 2);
+      gx = raw_gx; gz = raw_gz;
+      gy = (excludeEntry && hLen < 0.5) ? excludeEntry.gy : snap(t.y - ely / 2);
+      // Snap X or Z to the nearest overlapping piece edge.
       let best = null, bestMin = Infinity;
       for (const entry of state.placed) {
         if (entry === excludeEntry) continue;
@@ -580,18 +605,12 @@ function getGridPos(baseDims = null, excludeEntry = null, rotDeg = state.rotDeg)
       }
       if (best) {
         const { entry, xo, zo } = best;
-        const [exl, eyl, ezl] = entry.dims;
-        let climb;
+        const [exl, , ezl] = entry.dims;
         if (xo <= zo) {
           gx = (raw_gx + elx / 2) < (entry.gx + exl / 2) ? entry.gx - elx : entry.gx + exl;
-          climb = entry.gy + snap(xo);
         } else {
           gz = (raw_gz + elz / 2) < (entry.gz + ezl / 2) ? entry.gz - elz : entry.gz + ezl;
-          climb = entry.gy + snap(zo);
         }
-        if (climb >= entry.gy + eyl) {
-          gx = raw_gx; gz = raw_gz; gy = stackHeight(raw_gx, raw_gz, [elx, ely, elz], excludeEntry);
-        } else { gy = climb; }
       }
     }
   }
@@ -619,6 +638,7 @@ renderer.domElement.addEventListener('pointermove', e => {
   if (drag.pending) {
     if (Math.hypot(e.clientX - drag.pending.x, e.clientY - drag.pending.y) > 5) {
       drag.active = true; drag.entry = drag.pending.entry; drag.pending = null; _pDown = null;
+      state.inspected = drag.entry; updateInspector();
       occupyCells(drag.entry, false);
       drag.entry.mesh.visible = false;
       if (drag.entry.edges) drag.entry.edges.visible = false;
@@ -635,6 +655,7 @@ renderer.domElement.addEventListener('pointermove', e => {
       ghost.material = isFree(gx, gy, gz, drag.entry.dims) ? ghostMatOk : ghostMatBad;
       ghost.position.set(gx, gy, gz);
       ghost.visible = true;
+      selOutline.position.set(gx, gy, gz);
     }
     return;
   }
@@ -661,10 +682,20 @@ renderer.domElement.addEventListener('pointerup', e => {
   drag.pending = null;
   if (drag.active) {
     drag.active = false;
+    _palette.classList.remove('drop-target');
     const entry = drag.entry; drag.entry = null;
     entry.mesh.visible = true;
     if (entry.edges) entry.edges.visible = true;
     clearGhost();
+    const palRect = _palette.getBoundingClientRect();
+    const onPalette = e.clientX >= palRect.left && e.clientX <= palRect.right
+                   && e.clientY >= palRect.top  && e.clientY <= palRect.bottom;
+    if (onPalette) {
+      drag.gx = null; drag.gy = null; drag.gz = null;
+      removeEntry(entry);
+      updateSelOutline();
+      return;
+    }
     if (drag.gx !== null && isFree(drag.gx, drag.gy, drag.gz, entry.dims)) {
       entry.gx = drag.gx; entry.gy = drag.gy; entry.gz = drag.gz;
       entry.mesh.position.set(entry.gx, entry.gy, entry.gz);
@@ -678,7 +709,15 @@ renderer.domElement.addEventListener('pointerup', e => {
     drag.gx = null; drag.gy = null; drag.gz = null;
     return;
   }
-  if (!_pDown) return;
+  if (!_pDown) {
+    // Palette drag released on canvas: place the selected part.
+    if (e.button === 0 && state.selected && !state.eraseMode && !isInsideMod(state.selected)) {
+      updatePointer(e);
+      const pos = getGridPos();
+      if (pos) placePiece(pos.gx, pos.gy, pos.gz);
+    }
+    return;
+  }
   const moved = Math.hypot(e.clientX - _pDown.x, e.clientY - _pDown.y) > 5;
   const btn = _pDown.btn; _pDown = null;
   if (moved) return;
@@ -732,6 +771,29 @@ renderer.domElement.addEventListener('pointerleave', () => {
     clearGhost();
     if (_hoveredSlot) setSlotHighlight(_hoveredSlot, false);
   }
+});
+
+const _palette = document.getElementById('palette');
+
+window.addEventListener('pointermove', e => {
+  if (!drag.active) return;
+  const overPalette = e.clientX <= _palette.getBoundingClientRect().right;
+  _palette.classList.toggle('drop-target', overPalette);
+  ghost.visible = !overPalette;
+});
+
+window.addEventListener('pointerup', () => {
+  // Fallback: clean up any stuck drag (e.g. released outside browser window).
+  if (!drag.active) return;
+  _palette.classList.remove('drop-target');
+  drag.active = false;
+  const entry = drag.entry; drag.entry = null;
+  drag.gx = null; drag.gy = null; drag.gz = null;
+  entry.mesh.visible = true;
+  if (entry.edges) entry.edges.visible = true;
+  clearGhost();
+  occupyCells(entry, true);
+  updateSelOutline();
 });
 
 // ── Keyboard + camera ─────────────────────────────────────────────────────────
@@ -884,7 +946,7 @@ function buildPalette(filter = '') {
       if (p.kind === 'module') {
         el.innerHTML += `<span class="mount-badge ${p.mount === 'inside' ? 'inside' : 'surface'}">${p.mount === 'inside' ? 'in' : 'out'}</span>`;
       }
-      el.addEventListener('click', () => selectPart(state.selected?.id === p.id ? null : p));
+      el.addEventListener('pointerdown', () => selectPart(state.selected?.id === p.id ? null : p));
       group.appendChild(el);
     });
     list.appendChild(group);
@@ -956,7 +1018,8 @@ function updateShapePicker(part) {
         rebuildPlacedMesh(state.inspected, i, state.inspected.rotDeg, state.inspected.mx, state.inspected.my, state.inspected.mz);
       } else {
         state.shapeIdx = i;
-        // Ghost stays same size (dims unchanged); mesh key changes but ghost is always a box.
+        refreshGhostGeo();
+        if (state.ghostGx !== null) positionGhost(state.ghostGx, state.ghostGy, state.ghostGz);
       }
     });
     el.appendChild(btn);
