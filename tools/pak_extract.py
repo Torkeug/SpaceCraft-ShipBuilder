@@ -1,0 +1,200 @@
+"""
+Heaps.io res.pak extractor for SpaceCraft game assets.
+
+Usage:
+    python pak_extract.py                          # list all files
+    python pak_extract.py --extract Ships          # extract files matching path pattern
+    python pak_extract.py --extract .fbx           # extract all .fbx primary files
+    python pak_extract.py --out D:/out --extract Ships/Hulls
+    python pak_extract.py --extract Vehicules      # extract disc=0x02 production HMDs
+
+PAK format (empirically determined from res.pak):
+
+  Header (13 bytes):
+    magic(4)="PAK\0" + dir_size(int32 LE) + hash(int32) + pad(1)
+
+  Directory tree (starts at byte 13, length=dir_size):
+    Root node:  discriminator(1)=0x01 + count(int32) + count children
+    Each child: name_len(1) + name(name_len bytes) + discriminator(1) + payload
+      discriminator=0x01 → directory:  count(int32) + count children
+      discriminator=0x00 → uncompressed file: pos(int32) + size(int32) + hash(int32)
+      discriminator=0x02 → production file:   16 bytes (bsphere_x/4 + bsphere_r/4 + size/4 + hash/4)
+
+  Data section layout:
+    disc=0x00 files: addressed by pos relative to data_offset (byte 13+dir_size)
+    disc=0x02 files: stored sequentially from D02_DATA_START in directory order,
+                     each file padded to 16-byte alignment.
+
+  Disc=0x02 layout constants (confirmed for current res.pak):
+    D02_BASE      = 2_156_306_928   absolute byte offset where disc=0x02 section starts
+    D02_DRIFT     = 8_464           fixed offset from D02_BASE to first file byte
+    D02_DATA_START = D02_BASE + D02_DRIFT = 2_156_315_392
+
+  All extracted positions stored in results are ABSOLUTE byte offsets in the PAK file.
+"""
+
+import struct
+import os
+import argparse
+
+PAK_PATH = r'D:\SteamLibrary\steamapps\common\SpaceCraft\res.pak'
+HEADER_SIZE = 13  # magic(4) + dir_size(4) + hash(4) + pad(1)
+
+# Disc=0x02 section layout (empirically confirmed by HMD magic verification).
+# D02_BASE: absolute byte offset in PAK where the disc=0x02 block starts.
+# D02_DRIFT: gap from D02_BASE to the actual first file byte (8,464 bytes of padding/header).
+D02_BASE       = 2_156_306_928
+D02_DRIFT      = 8_464
+D02_DATA_START = D02_BASE + D02_DRIFT   # = 2_156_315_392
+
+
+class PakReader:
+    def __init__(self, path):
+        self.f = open(path, 'rb')
+        magic = self.f.read(4)
+        assert magic == b'PAK\x00', f'Bad magic: {magic!r}'
+        self.dir_size = struct.unpack('<I', self.f.read(4))[0]
+        self.f.read(5)  # hash(4) + pad(1)
+        self.data_offset = HEADER_SIZE + self.dir_size
+
+    def _u8(self):
+        return struct.unpack('B', self.f.read(1))[0]
+
+    def _u32(self):
+        return struct.unpack('<I', self.f.read(4))[0]
+
+    def _parse_children(self, count, path_parts, d00_results, d02_order):
+        """Parse `count` named child nodes into d00_results and d02_order."""
+        for _ in range(count):
+            name_len = self._u8()
+            name = self.f.read(name_len).decode('utf-8', errors='replace')
+            disc = self._u8()
+            child_path = path_parts + [name]
+
+            if disc == 0x01:
+                # Directory: recurse
+                child_count = self._u32()
+                self._parse_children(child_count, child_path, d00_results, d02_order)
+            elif disc == 0x00:
+                # Uncompressed file: pos relative to data_offset
+                pos  = self._u32()
+                size = self._u32()
+                self.f.read(4)  # hash
+                abs_pos = self.data_offset + pos
+                d00_results.append(('/'.join(child_path), abs_pos, size))
+            elif disc == 0x02:
+                # Production file: bsphere_x(4) + bsphere_r(4) + size(4) + hash(4)
+                self.f.read(4)   # bounding sphere x (float32)
+                self.f.read(4)   # bounding sphere radius (float32)
+                size = self._u32()
+                self.f.read(4)   # hash
+                # Position is calculated after full directory scan (cumulative offsets)
+                d02_order.append(('/'.join(child_path), size))
+            else:
+                raise ValueError(
+                    f'Unknown discriminator 0x{disc:02X} at offset '
+                    f'{self.f.tell()-1} for {"/".join(child_path)!r}'
+                )
+
+    def list_files(self):
+        """Parse the entire directory tree.
+
+        Returns list of (path, abs_pos, size, is_d02) tuples.
+        abs_pos is an absolute byte offset in the PAK file (valid for both disc types).
+        is_d02 is True for disc=0x02 (production) files.
+        """
+        self.f.seek(HEADER_SIZE)
+        disc = self._u8()
+        assert disc == 0x01, f'Root must be directory, got 0x{disc:02X}'
+        root_count = self._u32()
+
+        d00_results = []   # (path, abs_pos, size)
+        d02_order   = []   # (path, size) in directory order
+
+        self._parse_children(root_count, [], d00_results, d02_order)
+
+        # Compute absolute positions for disc=0x02 files by accumulating aligned sizes.
+        d02_results = []
+        cum = 0
+        for path, size in d02_order:
+            abs_pos = D02_DATA_START + cum
+            d02_results.append((path, abs_pos, size, True))
+            cum += (size + 15) & ~15   # align to 16 bytes
+
+        # Combine: mark disc=0x00 results and append disc=0x02 results
+        results = [(p, pos, sz, False) for p, pos, sz in d00_results]
+        results.extend(d02_results)
+        return results
+
+    def extract_file(self, abs_pos, size, out_path):
+        """Read `size` bytes from absolute PAK position `abs_pos`; write to `out_path`."""
+        self.f.seek(abs_pos)
+        data = self.f.read(size)
+        os.makedirs(os.path.dirname(out_path) or '.', exist_ok=True)
+        with open(out_path, 'wb') as fout:
+            fout.write(data)
+        return len(data)
+
+    def close(self):
+        self.f.close()
+
+
+def main():
+    ap = argparse.ArgumentParser(description='SpaceCraft res.pak extractor')
+    ap.add_argument('--pak', default=PAK_PATH)
+    ap.add_argument('--out', default='pak_out', help='Output root directory')
+    ap.add_argument('--extract', metavar='PATTERN',
+                    help='Extract files whose path contains PATTERN (case-insensitive)')
+    ap.add_argument('--list', action='store_true', help='List all files (no extraction)')
+    ap.add_argument('--d02-only', action='store_true',
+                    help='When listing, show only disc=0x02 (production) files')
+    args = ap.parse_args()
+
+    reader = PakReader(args.pak)
+    print(f'PAK data section starts at byte {reader.data_offset:,}  '
+          f'(dir tree: {reader.dir_size:,} bytes)')
+    print(f'disc=0x02 data starts at byte {D02_DATA_START:,}')
+
+    print('Parsing directory tree...')
+    files = reader.list_files()
+    d00_count = sum(1 for f in files if not f[3])
+    d02_count = sum(1 for f in files if f[3])
+    print(f'Found {len(files):,} file entries  ({d00_count:,} disc=0x00,  {d02_count:,} disc=0x02)')
+
+    if args.list or not args.extract:
+        for path, abs_pos, size, is_d02 in sorted(files, key=lambda t: t[0]):
+            if args.d02_only and not is_d02:
+                continue
+            flag = ' [D02]' if is_d02 else ''
+            line = f'  {size:>12,}{flag}  {path}'
+            print(line.encode('ascii', 'replace').decode())
+        reader.close()
+        return
+
+    pattern = args.extract.lower()
+    matched = [(p, pos, size, d02) for p, pos, size, d02 in files if pattern in p.lower()]
+    print(f'Matched {len(matched):,} files for pattern {args.extract!r}')
+
+    if not matched:
+        reader.close()
+        return
+
+    extracted = errors = 0
+    for path, abs_pos, size, is_d02 in matched:
+        rel = path.replace('/', os.sep).lstrip(os.sep)
+        out_path = os.path.join(args.out, rel)
+        tag = '[D02]' if is_d02 else '[D00]'
+        try:
+            n = reader.extract_file(abs_pos, size, out_path)
+            print(f'  OK {tag}  {n:>10,}  {path}')
+            extracted += 1
+        except OSError as e:
+            print(f'  ERR {str(e)[:60]}  {path}')
+            errors += 1
+
+    print(f'\nExtracted {extracted} files ({errors} errors) -> {args.out!r}')
+    reader.close()
+
+
+if __name__ == '__main__':
+    main()

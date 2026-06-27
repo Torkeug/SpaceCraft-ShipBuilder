@@ -16,7 +16,11 @@
 <body>
   <div id="palette">
     <div id="palette-header">
-      <input id="search" type="text" placeholder="Search pieces…" autocomplete="off">
+      <div id="palette-tabs">
+        <button class="pal-tab active" data-kind="build">Hull</button>
+        <button class="pal-tab" data-kind="module">Modules</button>
+      </div>
+      <input id="search" type="text" placeholder="Search parts…" autocomplete="off">
     </div>
     <div id="piece-list"></div>
   </div>
@@ -30,22 +34,34 @@
       <button id="btn-load" title="Load design">📂 Load</button>
       <button id="btn-clear" title="Clear all">🗑 Clear</button>
     </div>
-    <div id="hint">Left-click: place • Right-drag: orbit • ZQSD: move • Space/Ctrl: up/down • Shift: fast • E: erase</div>
+    <div id="hint">Left-click: place · Right-drag: orbit · WASD: move · Space/Ctrl: up/down · R: rotate · [ ]: fine rotate · E: erase</div>
   </div>
 
   <div id="inspector">
-    <div id="piece-name">Select a piece</div>
-    <div id="piece-dims"></div>
+    <div id="piece-name">Select a part</div>
+    <div id="piece-meta">
+      <span id="piece-dims"></span>
+      <span id="piece-rot"></span>
+      <button class="rot-btn" id="rot-left"  title="Rotate left 90°">◄</button>
+      <button class="rot-btn" id="rot-right" title="Rotate right 90°">►</button>
+    </div>
+
     <div class="inspector-section-label">Shape</div>
     <div id="shape-picker"></div>
-    <div class="inspector-section-label">Symmetry</div>
+
+    <div class="inspector-section-label">Flip</div>
     <div id="symmetry-picker">
-      <button class="sym-btn" data-axis="x">↔ X</button>
-      <button class="sym-btn" data-axis="y">↕ Y</button>
-      <button class="sym-btn" data-axis="z">↔ Z</button>
+      <button class="sym-btn" data-axis="0" title="Mirror left ↔ right">↔ X</button>
+      <button class="sym-btn" data-axis="1" title="Mirror up ↕ down">↕ Y</button>
+      <button class="sym-btn" data-axis="2" title="Mirror front ↔ back">⇄ Z</button>
     </div>
-    <div class="inspector-section-label">Specs</div>
+
+    <div class="inspector-section-label">Part stats</div>
     <div id="specs"></div>
+
+    <div class="inspector-divider"></div>
+    <div class="inspector-section-label">Ship viability</div>
+    <div id="ship-stats"><div class="ship-empty">Place parts to see stats</div></div>
   </div>
 
   <script type="module" src="js/main.js"></script>
