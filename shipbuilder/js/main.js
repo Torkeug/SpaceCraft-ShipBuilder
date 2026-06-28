@@ -19,7 +19,7 @@ camera.position.set(20, 16, 20);
 camera.lookAt(0, 0, 0);
 
 const controls = new OrbitControls(camera, renderer.domElement);
-controls.mouseButtons = { LEFT: null, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE };
+controls.mouseButtons = { LEFT: null, MIDDLE: THREE.MOUSE.PAN, RIGHT: THREE.MOUSE.ROTATE };
 controls.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
 controls.enableDamping = true;
 controls.dampingFactor = 0.08;
@@ -1335,7 +1335,7 @@ function updateInspector() {
   document.getElementById('piece-name').textContent = part ? part.name : 'Select a part';
   const rz = entry ? entry.rz : state.rz;
   const dims = part ? (entry ? entry.dims : effDims(partDims(part), state.rotDeg, state.rz)) : null;
-  document.getElementById('piece-dims').textContent = dims ? dims.join('×') : '';
+  document.getElementById('piece-dims').textContent = part?.dims ? part.dims.join('×') : '';
   document.getElementById('piece-rot').textContent  = part ? ((entry ? entry.rotDeg : state.rotDeg) ? `${entry ? entry.rotDeg : state.rotDeg}°` : '') : '';
   const showRot = !!entry;
   document.getElementById('rot-left') .style.display = showRot ? '' : 'none';
