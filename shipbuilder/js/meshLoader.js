@@ -104,7 +104,7 @@ export function fitGeom(base, dims, rotDeg, part, flip, rz) {
   let deg = rotDeg || 0;
   if (part && part._dimd) deg = Math.round(deg / 90) * 90;
   if (deg) g.rotateY(deg * Math.PI / 180);
-  if (rz) g.rotateZ(Math.PI / 2);
+  if (rz) g.rotateX(Math.PI / 2);
   g.computeBoundingBox();
   const bb = g.boundingBox;
   const sp = new THREE.Vector3(); bb.getSize(sp);

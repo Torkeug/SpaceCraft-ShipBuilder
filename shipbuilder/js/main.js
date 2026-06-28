@@ -167,7 +167,7 @@ function effDims(dims, rotDeg, rz) {
   let [w, h, d] = dims;
   const q = Math.round((((rotDeg || 0) % 360) + 360) % 360 / 90) % 2;
   if (q) [w, d] = [d, w];
-  if (rz) [w, h] = [h, w];
+  if (rz) [h, d] = [d, h];
   return [w, h, d];
 }
 
