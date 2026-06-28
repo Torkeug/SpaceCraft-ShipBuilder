@@ -146,7 +146,7 @@ const state = {
   groupSel: new Set(),
   shapeIdx: 0,
   rotDeg: 0,
-  mx: false, my: false, mz: false,
+  mx: false, my: false, mz: false, rz: false,
   eraseMode: false,
   ghostGx: null, ghostGy: null, ghostGz: null,
 };
@@ -162,11 +162,13 @@ const _dragging = new Set();
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-// Dims with Y-rotation applied: 90° swaps X and Z.
-function effDims(dims, rotDeg) {
-  const [w, h, d] = dims;
+// Dims with rotations applied: Y 90° swaps X↔Z; Z 90° swaps X↔Y.
+function effDims(dims, rotDeg, rz) {
+  let [w, h, d] = dims;
   const q = Math.round((((rotDeg || 0) % 360) + 360) % 360 / 90) % 2;
-  return q ? [d, h, w] : [w, h, d];
+  if (q) [w, d] = [d, w];
+  if (rz) [w, h] = [h, w];
+  return [w, h, d];
 }
 
 // Inside modules sit in 1×1×1 hull slots.
@@ -304,7 +306,7 @@ function stackDepth(gx, gz, dims, exclude = null) {
 
 // Build a mesh synchronously (box fallback if real mesh not cached yet).
 // Geometry origin is at min corner [0..w, 0..h, 0..d].
-function buildPartMesh(part, dims, meshKey, rotDeg, mx, my, mz) {
+function buildPartMesh(part, dims, meshKey, rotDeg, mx, my, mz, rz) {
   const [w, h, d] = dims;
 
   if (isInsideMod(part)) {
@@ -316,7 +318,7 @@ function buildPartMesh(part, dims, meshKey, rotDeg, mx, my, mz) {
 
   const cached = meshKey ? getCached(meshKey) : null;
   if (cached) {
-    const g = fitGeom(cached.geom, dims, rotDeg, part, [mx, my, mz]);
+    const g = fitGeom(cached.geom, dims, rotDeg, part, [mx, my, mz], rz);
     const mats = cached.groups.map(gr => roleMaterial(gr.role, gr.hex, part));
     return { mesh: new THREE.Mesh(g, mats), edges: null, needsSwap: false };
   }
@@ -334,7 +336,7 @@ function swapToRealMesh(entry, cached) {
   scene.remove(entry.mesh);
   if (entry.edges) { scene.remove(entry.edges); entry.edges.geometry.dispose(); entry.edges = null; }
   disposeMesh(entry.mesh);
-  const g = fitGeom(cached.geom, entry.dims, entry.rotDeg, entry.part, [entry.mx, entry.my, entry.mz]);
+  const g = fitGeom(cached.geom, entry.dims, entry.rotDeg, entry.part, [entry.mx, entry.my, entry.mz], entry.rz);
   const mats = cached.groups.map(gr => roleMaterial(gr.role, gr.hex, entry.part));
   const mesh = new THREE.Mesh(g, mats);
   mesh.position.set(entry.gx, entry.gy, entry.gz);
@@ -362,12 +364,12 @@ function disposeMesh(mesh) {
 function refreshGhostGeo() {
   if (!state.selected) { ghost.visible = false; return; }
   const part = state.selected;
-  const dims = effDims(partDims(part), state.rotDeg);
+  const dims = effDims(partDims(part), state.rotDeg, state.rz);
   const mk = getMeshKey(part, state.shapeIdx);
   const cached = mk ? getCached(mk) : null;
   ghost.geometry.dispose();
   if (cached) {
-    ghost.geometry = fitGeom(cached.geom, dims, state.rotDeg, part, [state.mx, state.my, state.mz]);
+    ghost.geometry = fitGeom(cached.geom, dims, state.rotDeg, part, [state.mx, state.my, state.mz], state.rz);
   } else {
     ghost.geometry = boxGeom(...dims);
     if (mk) loadGeom(mk).then(c => {
@@ -379,7 +381,7 @@ function refreshGhostGeo() {
 function clearGhost() { ghost.visible = false; state.ghostGx = null; state.ghostGy = null; state.ghostGz = null; }
 
 function positionGhost(gx, gy, gz) {
-  const dims = state.selected ? effDims(partDims(state.selected), state.rotDeg) : [1, 1, 1];
+  const dims = state.selected ? effDims(partDims(state.selected), state.rotDeg, state.rz) : [1, 1, 1];
   ghost.material = isFree(gx, gy, gz, dims) ? ghostMatOk : ghostMatBad;
   ghost.position.set(gx, gy, gz);
   ghost.visible = true;
@@ -391,7 +393,7 @@ function refreshGhostForDrag(entry) {
   ghost.geometry.dispose();
   const cached = entry.meshKey ? getCached(entry.meshKey) : null;
   ghost.geometry = cached
-    ? fitGeom(cached.geom, entry.dims, entry.rotDeg, entry.part, [entry.mx, entry.my, entry.mz])
+    ? fitGeom(cached.geom, entry.dims, entry.rotDeg, entry.part, [entry.mx, entry.my, entry.mz], entry.rz)
     : boxGeom(...entry.dims);
 }
 
@@ -401,14 +403,14 @@ function placePiece(gx, gy, gz) {
   if (!state.selected || state.eraseMode) return;
   const part = state.selected;
   if (isInsideMod(part)) return;
-  const dims = effDims(partDims(part), state.rotDeg);
+  const dims = effDims(partDims(part), state.rotDeg, state.rz);
   if (!isFree(gx, gy, gz, dims)) return;
   const meshKey = getMeshKey(part, state.shapeIdx);
-  const { mesh, edges, needsSwap } = buildPartMesh(part, dims, meshKey, state.rotDeg, state.mx, state.my, state.mz);
+  const { mesh, edges, needsSwap } = buildPartMesh(part, dims, meshKey, state.rotDeg, state.mx, state.my, state.mz, state.rz);
   mesh.position.set(gx, gy, gz);
   if (edges) { edges.position.set(gx, gy, gz); scene.add(edges); }
   scene.add(mesh);
-  const entry = { part, shapeIdx: state.shapeIdx, meshKey, rotDeg: state.rotDeg, dims, mx: state.mx, my: state.my, mz: state.mz, gx, gy, gz, mesh, edges };
+  const entry = { part, shapeIdx: state.shapeIdx, meshKey, rotDeg: state.rotDeg, dims, mx: state.mx, my: state.my, mz: state.mz, rz: state.rz, gx, gy, gz, mesh, edges };
   mesh._entry = entry;
   entry.hitMesh = makeHitMesh(dims, gx, gy, gz, entry);
   scene.add(entry.hitMesh);
@@ -424,14 +426,14 @@ function placePiece(gx, gy, gz) {
 }
 
 // Used by load/undo — place without consuming state.selected.
-function placePieceDirect(part, gx, gy, gz, shapeIdx, rotDeg, mx, my, mz) {
-  const dims = effDims(partDims(part), rotDeg);
+function placePieceDirect(part, gx, gy, gz, shapeIdx, rotDeg, mx, my, mz, rz) {
+  const dims = effDims(partDims(part), rotDeg, rz);
   const meshKey = getMeshKey(part, shapeIdx);
-  const { mesh, edges, needsSwap } = buildPartMesh(part, dims, meshKey, rotDeg, mx, my, mz);
+  const { mesh, edges, needsSwap } = buildPartMesh(part, dims, meshKey, rotDeg, mx, my, mz, rz);
   mesh.position.set(gx, gy, gz);
   if (edges) { edges.position.set(gx, gy, gz); scene.add(edges); }
   scene.add(mesh);
-  const entry = { part, shapeIdx, meshKey, rotDeg, dims, mx, my, mz, gx, gy, gz, mesh, edges };
+  const entry = { part, shapeIdx, meshKey, rotDeg, dims, mx, my, mz, rz: rz || false, gx, gy, gz, mesh, edges };
   mesh._entry = entry;
   entry.hitMesh = makeHitMesh(dims, gx, gy, gz, entry);
   scene.add(entry.hitMesh);
@@ -440,16 +442,16 @@ function placePieceDirect(part, gx, gy, gz, shapeIdx, rotDeg, mx, my, mz) {
   return entry;
 }
 
-function rebuildPlacedMesh(entry, shapeIdx, rotDeg, mx, my, mz) {
+function rebuildPlacedMesh(entry, shapeIdx, rotDeg, mx, my, mz, rz) {
   scene.remove(entry.mesh);
   if (entry.edges) { scene.remove(entry.edges); entry.edges.geometry.dispose(); entry.edges = null; }
   disposeMesh(entry.mesh);
   if (entry.hitMesh) { scene.remove(entry.hitMesh); entry.hitMesh.geometry.dispose(); }
-  const dims = effDims(partDims(entry.part), rotDeg);
+  const dims = effDims(partDims(entry.part), rotDeg, rz);
   const meshKey = getMeshKey(entry.part, shapeIdx);
   entry.shapeIdx = shapeIdx; entry.rotDeg = rotDeg; entry.dims = dims;
-  entry.meshKey = meshKey; entry.mx = mx; entry.my = my; entry.mz = mz;
-  const { mesh, edges, needsSwap } = buildPartMesh(entry.part, dims, meshKey, rotDeg, mx, my, mz);
+  entry.meshKey = meshKey; entry.mx = mx; entry.my = my; entry.mz = mz; entry.rz = rz || false;
+  const { mesh, edges, needsSwap } = buildPartMesh(entry.part, dims, meshKey, rotDeg, mx, my, mz, rz);
   mesh.position.set(entry.gx, entry.gy, entry.gz);
   if (edges) { edges.position.set(entry.gx, entry.gy, entry.gz); scene.add(edges); }
   mesh._entry = entry;
@@ -598,7 +600,8 @@ function makeHitMesh(dims, gx, gy, gz, entry) {
 // Return {gx, gy, gz} for the current pointer. baseDims = unrotated part dims.
 function getGridPos(baseDims = null, excludeEntry = null, rotDeg = state.rotDeg) {
   baseDims = baseDims ?? partDims(state.selected) ?? [1, 1, 1];
-  const [elx, ely, elz] = effDims(baseDims, rotDeg);
+  const rz = excludeEntry ? excludeEntry.rz : state.rz;
+  const [elx, ely, elz] = effDims(baseDims, rotDeg, rz);
   raycaster.setFromCamera(pointer, camera);
 
   const go = (excludeEntry && drag.grabOffset) ? drag.grabOffset : { x: elx / 2, y: ely / 2, z: elz / 2 };
@@ -734,7 +737,7 @@ function buildGroupGhosts() {
   for (const en of state.groupSel) {
     if (en.slotOwner || en === anchor) continue;
     const cached = en.meshKey ? getCached(en.meshKey) : null;
-    const geom = cached ? fitGeom(cached.geom, en.dims, en.rotDeg, en.part, [en.mx, en.my, en.mz]) : boxGeom(...en.dims);
+    const geom = cached ? fitGeom(cached.geom, en.dims, en.rotDeg, en.part, [en.mx, en.my, en.mz], en.rz) : boxGeom(...en.dims);
     const m = new THREE.Mesh(geom, ghostMatOk);
     m.position.set(en.gx, en.gy, en.gz);
     m._groupEntry = en;
@@ -1098,7 +1101,7 @@ function turnSel(delta) {
     try { localStorage.setItem('sc_partRotDeg', JSON.stringify(partRot)); } catch (e) {}
     // Rebuild all already-placed copies to the new rotation.
     state.placed.filter(en => en.part.id === state.selected.id)
-      .forEach(en => rebuildPlacedMesh(en, en.shapeIdx, state.rotDeg, en.mx, en.my, en.mz));
+      .forEach(en => rebuildPlacedMesh(en, en.shapeIdx, state.rotDeg, en.mx, en.my, en.mz, en.rz));
   }
   refreshGhostGeo();
   if (state.ghostGx !== null) positionGhost(state.ghostGx, state.ghostGy, state.ghostGz);
@@ -1109,7 +1112,7 @@ function rotateInspected(delta) {
   if (!state.inspected) return;
   const e = state.inspected;
   const newRot = (((e.rotDeg + delta) % 360) + 360) % 360;
-  rebuildPlacedMesh(e, e.shapeIdx, newRot, e.mx, e.my, e.mz);
+  rebuildPlacedMesh(e, e.shapeIdx, newRot, e.mx, e.my, e.mz, e.rz);
   updateInspector();
 }
 document.getElementById('rot-left') .addEventListener('click', () => rotateInspected(-90));
@@ -1134,7 +1137,7 @@ document.querySelectorAll('.sym-btn').forEach(btn => {
     if (state.inspected) {
       const f = [state.inspected.mx, state.inspected.my, state.inspected.mz];
       f[axis] = !f[axis];
-      rebuildPlacedMesh(state.inspected, state.inspected.shapeIdx, state.inspected.rotDeg, f[0], f[1], f[2]);
+      rebuildPlacedMesh(state.inspected, state.inspected.shapeIdx, state.inspected.rotDeg, f[0], f[1], f[2], state.inspected.rz);
     } else {
       const keys = ['mx', 'my', 'mz']; state[keys[axis]] = !state[keys[axis]];
       if (state.selected) {
@@ -1146,10 +1149,28 @@ document.querySelectorAll('.sym-btn').forEach(btn => {
   });
 });
 
+// ── Thruster orientation toggle ───────────────────────────────────────────────
+
+document.querySelectorAll('.orient-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const newRz = btn.id === 'orient-v';
+    if (state.inspected) {
+      rebuildPlacedMesh(state.inspected, state.inspected.shapeIdx, state.inspected.rotDeg,
+        state.inspected.mx, state.inspected.my, state.inspected.mz, newRz);
+      updateInspector();
+    } else {
+      state.rz = newRz;
+      refreshGhostGeo();
+      if (state.ghostGx !== null) positionGhost(state.ghostGx, state.ghostGy, state.ghostGz);
+      updateInspector();
+    }
+  });
+});
+
 // ── Save / Load / Clear ───────────────────────────────────────────────────────
 
 document.getElementById('btn-save').addEventListener('click', () => {
-  const data = state.placed.map((e, _, arr) => ({ partId: e.part.id, shapeIdx: e.shapeIdx, rotDeg: e.rotDeg, mx: e.mx, my: e.my, mz: e.mz, gx: e.gx, gy: e.gy, gz: e.gz, ...(e.slotOwner != null ? { slotOwnerIdx: arr.indexOf(e.slotOwner) } : {}) }));
+  const data = state.placed.map((e, _, arr) => ({ partId: e.part.id, shapeIdx: e.shapeIdx, rotDeg: e.rotDeg, mx: e.mx, my: e.my, mz: e.mz, rz: e.rz || false, gx: e.gx, gy: e.gy, gz: e.gz, ...(e.slotOwner != null ? { slotOwnerIdx: arr.indexOf(e.slotOwner) } : {}) }));
   navigator.clipboard.writeText(JSON.stringify(data, null, 2)).then(() => alert('Build copied to clipboard.'));
 });
 
@@ -1158,10 +1179,10 @@ document.getElementById('btn-load').addEventListener('click', () => {
   try {
     const data = JSON.parse(raw); clearAll();
     const savedEntries = [];
-    data.forEach(({ partId, shapeIdx, rotDeg, mx, my, mz, gx, gy, gz, slotOwnerIdx }) => {
+    data.forEach(({ partId, shapeIdx, rotDeg, mx, my, mz, rz, gx, gy, gz, slotOwnerIdx }) => {
       const part = BYID[partId];
       if (!part) { savedEntries.push(null); return; }
-      const e = placePieceDirect(part, gx, gy, gz, shapeIdx || 0, rotDeg || 0, mx || false, my || false, mz || false);
+      const e = placePieceDirect(part, gx, gy, gz, shapeIdx || 0, rotDeg || 0, mx || false, my || false, mz || false, rz || false);
       e._loadSlotIdx = slotOwnerIdx;
       savedEntries.push(e);
     });
@@ -1233,6 +1254,7 @@ function selectPart(part) {
   if (part) {
     state.rotDeg  = partRot[part.id] || 0;
     const f = flipOf(part.id); state.mx = f[0]; state.my = f[1]; state.mz = f[2];
+    state.rz = false;
     state.shapeIdx = 0;
   }
   if (_hoveredSlot) setSlotHighlight(_hoveredSlot, false);
@@ -1242,17 +1264,26 @@ function selectPart(part) {
   updateInspector();
 }
 
+function isThruster(part) { return !!(part && part.group === 'Engines & thrusters'); }
+
 function updateInspector() {
   updateSelOutline();
   const part = state.inspected?.part ?? state.selected;
   const entry = state.inspected;
   document.getElementById('piece-name').textContent = part ? part.name : 'Select a part';
-  const dims = part ? (entry ? entry.dims : effDims(partDims(part), state.rotDeg)) : null;
+  const rz = entry ? entry.rz : state.rz;
+  const dims = part ? (entry ? entry.dims : effDims(partDims(part), state.rotDeg, state.rz)) : null;
   document.getElementById('piece-dims').textContent = dims ? dims.join('×') : '';
   document.getElementById('piece-rot').textContent  = part ? ((entry ? entry.rotDeg : state.rotDeg) ? `${entry ? entry.rotDeg : state.rotDeg}°` : '') : '';
   const showRot = !!entry;
   document.getElementById('rot-left') .style.display = showRot ? '' : 'none';
   document.getElementById('rot-right').style.display = showRot ? '' : 'none';
+  const showOrient = isThruster(part);
+  document.getElementById('orient-section').style.display = showOrient ? '' : 'none';
+  if (showOrient) {
+    document.getElementById('orient-h').classList.toggle('active', !rz);
+    document.getElementById('orient-v').classList.toggle('active',  rz);
+  }
   updateShapePicker(part);
   updateFlipButtons([state.mx, state.my, state.mz]);
   renderPartStats(part);
@@ -1276,7 +1307,7 @@ function updateShapePicker(part) {
     btn.addEventListener('click', () => {
       el.querySelectorAll('.shape-btn').forEach((b, j) => b.classList.toggle('active', j === i));
       if (state.inspected) {
-        rebuildPlacedMesh(state.inspected, i, state.inspected.rotDeg, state.inspected.mx, state.inspected.my, state.inspected.mz);
+        rebuildPlacedMesh(state.inspected, i, state.inspected.rotDeg, state.inspected.mx, state.inspected.my, state.inspected.mz, state.inspected.rz);
       } else {
         state.shapeIdx = i;
         refreshGhostGeo();

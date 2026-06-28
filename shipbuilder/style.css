@@ -241,6 +241,23 @@ body {
 .shape-btn:hover { border-color: #c9d1d9; }
 .shape-btn.active { border-color: #4488cc; background: rgba(68,136,204,.2); }
 
+#orient-picker { display: flex; gap: 6px; }
+.orient-btn {
+  width: 44px; height: 38px;
+  background: #21262d;
+  border: 1px solid #30363d;
+  border-radius: 5px;
+  color: #8b949e;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px;
+}
+.orient-btn svg { width: 100%; height: 100%; }
+.orient-btn:hover { border-color: #c9d1d9; color: #c9d1d9; }
+.orient-btn.active { background: #1c2d3f; border-color: #4488cc; color: #00d4ff; }
+
 #symmetry-picker { display: flex; gap: 4px; }
 .sym-btn {
   flex: 1;

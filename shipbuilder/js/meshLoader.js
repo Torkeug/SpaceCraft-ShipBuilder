@@ -89,7 +89,7 @@ function reverseWinding(g) {
 
 // Fit a raw geometry into a cell [0..w, 0..h, 0..d] with rotation + flip applied.
 // Dimensioned parts (frames) fill the cell exactly; others scale uniformly.
-export function fitGeom(base, dims, rotDeg, part, flip) {
+export function fitGeom(base, dims, rotDeg, part, flip, rz) {
   const [w, h, d] = dims;
   const g = base.clone();
   // Game meshes stored in Z-up; rotate to Y-up for all parts except cockpits.
@@ -104,6 +104,7 @@ export function fitGeom(base, dims, rotDeg, part, flip) {
   let deg = rotDeg || 0;
   if (part && part._dimd) deg = Math.round(deg / 90) * 90;
   if (deg) g.rotateY(deg * Math.PI / 180);
+  if (rz) g.rotateZ(Math.PI / 2);
   g.computeBoundingBox();
   const bb = g.boundingBox;
   const sp = new THREE.Vector3(); bb.getSize(sp);

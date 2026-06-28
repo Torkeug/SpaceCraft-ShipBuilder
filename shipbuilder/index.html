@@ -49,6 +49,24 @@
     <div class="inspector-section-label">Shape</div>
     <div id="shape-picker"></div>
 
+    <div id="orient-section" style="display:none">
+      <div class="inspector-section-label">Orientation</div>
+      <div id="orient-picker">
+        <button class="orient-btn active" id="orient-h" title="Horizontal (default)">
+          <svg viewBox="0 0 28 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="1" y="5" width="26" height="10" rx="2" stroke="currentColor" stroke-width="1.5" fill="rgba(0,212,255,0.15)"/>
+            <line x1="9" y1="5" x2="9" y2="15" stroke="currentColor" stroke-width="1" opacity="0.5"/>
+          </svg>
+        </button>
+        <button class="orient-btn" id="orient-v" title="Vertical (rotated 90° on Z)">
+          <svg viewBox="0 0 20 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="5" y="1" width="10" height="26" rx="2" stroke="currentColor" stroke-width="1.5" fill="rgba(0,212,255,0.15)"/>
+            <line x1="5" y1="9" x2="15" y2="9" stroke="currentColor" stroke-width="1" opacity="0.5"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
     <div class="inspector-section-label">Flip</div>
     <div id="symmetry-picker">
       <button class="sym-btn" data-axis="0" title="Mirror left ↔ right">↔ X</button>
