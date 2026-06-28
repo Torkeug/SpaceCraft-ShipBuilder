@@ -498,10 +498,10 @@ function refreshSlotSprites() {
       scene.remove(spr); spr.material.dispose(); _slotSprites.delete(entry);
     }
   }
-  const show = paletteTab === 'module';
+  const show = paletteTab === 'module' || slotDrag.active;
   for (const entry of state.placed) {
     if (entry.part.kind !== 'build') continue;
-    const occupant = state.placed.find(e => e.slotOwner === entry);
+    const occupant = state.placed.find(e => e.slotOwner === entry && e !== slotDrag.entry);
     const [w, h, d] = entry.dims;
     if (!_slotSprites.has(entry)) {
       const mat = new THREE.SpriteMaterial({ map: TEX_SLOT_EMPTY, depthTest: false, transparent: true });
@@ -565,6 +565,7 @@ function placeInSlot(part, hullEntry) {
   scene.add(entry.hitMesh);
   state.placed.push(entry);
   if (_hoveredSlot) _hoveredSlot = null;
+  hideModCursor();
   state.selected = null;
   state.inspected = entry;
   clearGhost();
@@ -695,6 +696,7 @@ function getGridPos(baseDims = null, excludeEntry = null, rotDeg = state.rotDeg)
 const drag = { pending: null, active: false, entry: null, gx: null, gy: null, gz: null, grabOffset: null };
 const groupDrag = { pending: null, active: false, anchorEntry: null, startPos: new Map(), gx: null, gy: null, gz: null };
 const marquee = { active: false, x0: 0, y0: 0 };
+const slotDrag = { pending: null, active: false, entry: null, origOwner: null, _prevSelected: null };
 let _pDown = null;
 
 // Marquee selection rectangle (DOM overlay)
@@ -707,6 +709,25 @@ function showMarquee(x0, y0, x1, y1) {
     left: Math.min(x0,x1)+'px', top: Math.min(y0,y1)+'px',
     width: Math.abs(x1-x0)+'px', height: Math.abs(y1-y0)+'px' });
 }
+
+const _modCursorEl = document.createElement('div');
+Object.assign(_modCursorEl.style, {
+  display: 'none', position: 'fixed', pointerEvents: 'none', zIndex: '1000',
+  width: '48px', height: '48px', borderRadius: '6px',
+  border: '2px solid rgba(0,212,255,0.7)', background: 'rgba(0,0,0,0.55)',
+  transform: 'translate(-50%,-50%)', boxShadow: '0 0 12px rgba(0,212,255,0.4)',
+});
+const _modCursorImg = document.createElement('img');
+Object.assign(_modCursorImg.style, { width: '100%', height: '100%', display: 'block', borderRadius: '4px' });
+_modCursorEl.appendChild(_modCursorImg);
+document.body.appendChild(_modCursorEl);
+function showModCursor(part, x, y) {
+  _modCursorImg.src = `ship_icons/${part.id}.webp`;
+  _modCursorEl.style.left = x + 'px';
+  _modCursorEl.style.top  = y + 'px';
+  _modCursorEl.style.display = 'block';
+}
+function hideModCursor() { _modCursorEl.style.display = 'none'; }
 
 // Group selection highlight outlines (one LineSegments per selected entry)
 const _groupOutlines = [];
@@ -775,6 +796,18 @@ renderer.domElement.addEventListener('pointerdown', e => {
   if (e.button !== 0 || state.eraseMode || state.selected) return;
   updatePointer(e);
   raycaster.setFromCamera(pointer, camera);
+  // Sprite-based slot drag initiation (Module tab only, where sprites are visible).
+  if (paletteTab === 'module') {
+    const visSprites = [..._slotSprites.values()].filter(s => s.visible);
+    if (visSprites.length) {
+      const sprHits = raycaster.intersectObjects(visSprites);
+      if (sprHits.length) {
+        const hullEntry = sprHits[0].object._hullEntry;
+        const occupant = hullEntry ? state.placed.find(e => e.slotOwner === hullEntry) : null;
+        if (occupant) { slotDrag.pending = { entry: occupant, x: e.clientX, y: e.clientY }; return; }
+      }
+    }
+  }
   const hits = raycaster.intersectObjects(state.placed.map(p => p.mesh));
   if (!hits.length) {
     // Start marquee selection on empty canvas space
@@ -878,6 +911,35 @@ renderer.domElement.addEventListener('pointermove', e => {
       ghost.position.set(gx, gy, gz);
       ghost.visible = true;
       selOutline.position.set(gx, gy, gz);
+      // Keep slot sprite glued to the ghost position while dragging the hull piece.
+      const _spr = _slotSprites.get(drag.entry);
+      if (_spr) { const [_w, _h, _d] = drag.entry.dims; _spr.position.set(gx + _w/2, gy + _h + 0.3, gz + _d/2); }
+    }
+    return;
+  }
+  if (slotDrag.pending) {
+    if (Math.hypot(e.clientX - slotDrag.pending.x, e.clientY - slotDrag.pending.y) > 5) {
+      slotDrag.active = true;
+      slotDrag.entry = slotDrag.pending.entry;
+      slotDrag.origOwner = slotDrag.pending.entry.slotOwner;
+      slotDrag._prevSelected = state.selected;
+      state.selected = slotDrag.entry.part;
+      slotDrag.pending = null;
+      _pDown = null;
+      document.body.style.userSelect = 'none';
+      refreshSlotSprites();
+    }
+  }
+  if (slotDrag.active) {
+    showModCursor(slotDrag.entry.part, e.clientX, e.clientY);
+    updatePointer(e);
+    raycaster.setFromCamera(pointer, camera);
+    const visSprites = [..._slotSprites.values()].filter(s => s.visible);
+    const spHits = visSprites.length ? raycaster.intersectObjects(visSprites) : [];
+    const newHov = spHits.length ? spHits[0].object._hullEntry : null;
+    if (newHov !== _hoveredSlot) {
+      if (_hoveredSlot) setSlotHighlight(_hoveredSlot, false);
+      setSlotHighlight(newHov, !!newHov);
     }
     return;
   }
@@ -981,18 +1043,61 @@ renderer.domElement.addEventListener('pointerup', e => {
     drag.gx = null; drag.gy = null; drag.gz = null;
     return;
   }
+  const _sdPending = slotDrag.pending; slotDrag.pending = null;
+  if (slotDrag.active) {
+    slotDrag.active = false;
+    document.body.style.userSelect = '';
+    hideModCursor();
+    _palette.classList.remove('drop-target');
+    if (_hoveredSlot) setSlotHighlight(_hoveredSlot, false);
+    state.selected = slotDrag._prevSelected;
+    slotDrag._prevSelected = null;
+    const sdEntry = slotDrag.entry; slotDrag.entry = null;
+    const sdOrigOwner = slotDrag.origOwner; slotDrag.origOwner = null;
+    const palRect2 = _palette.getBoundingClientRect();
+    const onPalette2 = e.clientX >= palRect2.left && e.clientX <= palRect2.right && e.clientY >= palRect2.top && e.clientY <= palRect2.bottom;
+    if (onPalette2) {
+      removeEntry(sdEntry);
+    } else {
+      updatePointer(e);
+      raycaster.setFromCamera(pointer, camera);
+      const visSprites = [..._slotSprites.values()].filter(s => s.visible);
+      const spHits = visSprites.length ? raycaster.intersectObjects(visSprites) : [];
+      if (spHits.length && spHits[0].object._hullEntry !== sdOrigOwner) {
+        const part = sdEntry.part;
+        removeEntry(sdEntry);
+        placeInSlot(part, spHits[0].object._hullEntry);
+        return;
+      }
+    }
+    refreshSlotSprites();
+    updateInspector();
+    updateShipStats();
+    return;
+  }
   if (!_pDown) {
     // Palette drag released on canvas: place the selected part.
-    if (e.button === 0 && state.selected && !state.eraseMode && !isInsideMod(state.selected)) {
+    if (e.button === 0 && state.selected && !state.eraseMode) {
       updatePointer(e);
-      const pos = getGridPos();
-      if (pos) placePiece(pos.gx, pos.gy, pos.gz);
+      if (isInsideMod(state.selected)) {
+        raycaster.setFromCamera(pointer, camera);
+        const visSprites = [..._slotSprites.values()].filter(s => s.visible);
+        const spHits = visSprites.length ? raycaster.intersectObjects(visSprites) : [];
+        if (spHits.length) placeInSlot(state.selected, spHits[0].object._hullEntry);
+      } else {
+        const pos = getGridPos();
+        if (pos) placePiece(pos.gx, pos.gy, pos.gz);
+      }
     }
     return;
   }
   const moved = Math.hypot(e.clientX - _pDown.x, e.clientY - _pDown.y) > 5;
   const btn = _pDown.btn; _pDown = null;
   if (moved) return;
+  // Short click on an occupied slot sprite → inspect the module.
+  if (_sdPending && btn === 0 && !state.eraseMode) {
+    state.inspected = _sdPending.entry; updateInspector(); return;
+  }
   updatePointer(e);
   if (btn === 0) {
     if (state.eraseMode) {
@@ -1039,19 +1144,30 @@ renderer.domElement.addEventListener('pointerup', e => {
 
 renderer.domElement.addEventListener('contextmenu', e => e.preventDefault());
 renderer.domElement.addEventListener('pointerleave', () => {
-  if (!drag.active) {
+  if (!drag.active && !slotDrag.active) {
     clearGhost();
     if (_hoveredSlot) setSlotHighlight(_hoveredSlot, false);
+  } else if (slotDrag.active && _hoveredSlot) {
+    setSlotHighlight(_hoveredSlot, false);
   }
 });
 
 const _palette = document.getElementById('palette');
 
 window.addEventListener('pointermove', e => {
-  if (!drag.active) return;
-  const overPalette = e.clientX <= _palette.getBoundingClientRect().right;
-  _palette.classList.toggle('drop-target', overPalette);
-  ghost.visible = !overPalette;
+  if (drag.active) {
+    const overPalette = e.clientX <= _palette.getBoundingClientRect().right;
+    _palette.classList.toggle('drop-target', overPalette);
+    ghost.visible = !overPalette;
+  }
+  if (slotDrag.active) {
+    const overPalette = e.clientX <= _palette.getBoundingClientRect().right;
+    _palette.classList.toggle('drop-target', overPalette);
+    showModCursor(slotDrag.entry.part, e.clientX, e.clientY);
+  }
+  if (state.selected && isInsideMod(state.selected) && !slotDrag.active) {
+    showModCursor(state.selected, e.clientX, e.clientY);
+  }
 });
 
 window.addEventListener('pointerup', () => {
@@ -1071,6 +1187,16 @@ window.addEventListener('pointerup', () => {
     groupDrag.startPos.clear(); groupDrag.anchorEntry = null;
     groupDrag.gx = null; groupDrag.gy = null; groupDrag.gz = null;
     updateGroupOutlines(); refreshSlotSprites();
+  }
+  if (slotDrag.active) {
+    slotDrag.active = false; slotDrag.pending = null;
+    document.body.style.userSelect = '';
+    hideModCursor();
+    _palette.classList.remove('drop-target');
+    if (_hoveredSlot) setSlotHighlight(_hoveredSlot, false);
+    state.selected = slotDrag._prevSelected; slotDrag._prevSelected = null;
+    slotDrag.entry = null; slotDrag.origOwner = null;
+    refreshSlotSprites(); updateInspector(); updateShipStats();
   }
   if (!drag.active) return;
   _palette.classList.remove('drop-target');
@@ -1345,6 +1471,7 @@ function selectPart(part) {
     state.rz = false;
     state.shapeIdx = 0;
   }
+  if (!part || !isInsideMod(part)) hideModCursor();
   if (_hoveredSlot) setSlotHighlight(_hoveredSlot, false);
   buildPalette(document.getElementById('search').value);
   clearGhost();
