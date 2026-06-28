@@ -143,6 +143,7 @@ const state = {
   placed: [],
   selected: null,   // part from BYID
   inspected: null,  // placed entry
+  groupSel: new Set(),
   shapeIdx: 0,
   rotDeg: 0,
   mx: false, my: false, mz: false,
@@ -155,7 +156,9 @@ try { partRot  = JSON.parse(localStorage.getItem('sc_partRotDeg') || '{}'); } ca
 try { partFlip = JSON.parse(localStorage.getItem('sc_partFlip')   || '{}'); } catch (e) {}
 function flipOf(id) { return partFlip[id] || [false, false, false]; }
 
-const occupation = new Map();
+// Entries currently being dragged; excluded from AABB collision checks so a
+// piece doesn't block its own placement while it's in motion.
+const _dragging = new Set();
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -257,22 +260,15 @@ function partDims(part) {
   return [l, h, w];     // game LxWxH → Three.js X,Y,Z
 }
 
-function occupyCells(entry, set) {
-  const [elx, ely, elz] = entry.dims;
-  for (let dx = 0; dx < elx; dx += 0.5)
-  for (let dy = 0; dy < ely; dy += 0.5)
-  for (let dz = 0; dz < elz; dz += 0.5) {
-    const key = `${entry.gx + dx},${entry.gy + dy},${entry.gz + dz}`;
-    if (set) occupation.set(key, entry); else occupation.delete(key);
-  }
-}
-
 function isFree(gx, gy, gz, dims) {
   const [elx, ely, elz] = dims;
-  for (let dx = 0; dx < elx; dx += 0.5)
-  for (let dy = 0; dy < ely; dy += 0.5)
-  for (let dz = 0; dz < elz; dz += 0.5)
-    if (occupation.has(`${gx + dx},${gy + dy},${gz + dz}`)) return false;
+  for (const entry of state.placed) {
+    if (_dragging.has(entry) || isInsideMod(entry.part)) continue;
+    const [ex, ey, ez] = entry.dims;
+    if (gx < entry.gx + ex && gx + elx > entry.gx &&
+        gy < entry.gy + ey && gy + ely > entry.gy &&
+        gz < entry.gz + ez && gz + elz > entry.gz) return false;
+  }
   return true;
 }
 
@@ -417,7 +413,6 @@ function placePiece(gx, gy, gz) {
   entry.hitMesh = makeHitMesh(dims, gx, gy, gz, entry);
   scene.add(entry.hitMesh);
   state.placed.push(entry);
-  occupyCells(entry, true);
   if (needsSwap) asyncLoad(entry);
   state.selected = null;
   state.inspected = entry;
@@ -441,13 +436,11 @@ function placePieceDirect(part, gx, gy, gz, shapeIdx, rotDeg, mx, my, mz) {
   entry.hitMesh = makeHitMesh(dims, gx, gy, gz, entry);
   scene.add(entry.hitMesh);
   state.placed.push(entry);
-  if (!isInsideMod(part)) occupyCells(entry, true);
   if (needsSwap) asyncLoad(entry);
   return entry;
 }
 
 function rebuildPlacedMesh(entry, shapeIdx, rotDeg, mx, my, mz) {
-  occupyCells(entry, false);
   scene.remove(entry.mesh);
   if (entry.edges) { scene.remove(entry.edges); entry.edges.geometry.dispose(); entry.edges = null; }
   disposeMesh(entry.mesh);
@@ -464,7 +457,6 @@ function rebuildPlacedMesh(entry, shapeIdx, rotDeg, mx, my, mz) {
   entry.mesh = mesh; entry.edges = edges;
   entry.hitMesh = makeHitMesh(dims, entry.gx, entry.gy, entry.gz, entry);
   scene.add(entry.hitMesh);
-  occupyCells(entry, true);
   if (needsSwap) asyncLoad(entry);
   syncSlotModule(entry);
   refreshSlotSprites();
@@ -479,7 +471,6 @@ function removeEntry(entry) {
   }
   const spr = _slotSprites.get(entry);
   if (spr) { scene.remove(spr); spr.material.dispose(); _slotSprites.delete(entry); }
-  if (!isInsideMod(entry.part)) occupyCells(entry, false);
   scene.remove(entry.mesh);
   if (entry.edges) { scene.remove(entry.edges); entry.edges.geometry.dispose(); }
   disposeMesh(entry.mesh);
@@ -696,7 +687,77 @@ function getGridPos(baseDims = null, excludeEntry = null, rotDeg = state.rotDeg)
 // ── Pointer events ────────────────────────────────────────────────────────────
 
 const drag = { pending: null, active: false, entry: null, gx: null, gy: null, gz: null, grabOffset: null };
+const groupDrag = { pending: null, active: false, anchorEntry: null, startPos: new Map(), gx: null, gy: null, gz: null };
+const marquee = { active: false, x0: 0, y0: 0 };
 let _pDown = null;
+
+// Marquee selection rectangle (DOM overlay)
+const marqueeEl = document.createElement('div');
+Object.assign(marqueeEl.style, { display: 'none', position: 'fixed', border: '1px solid #95faf3',
+  background: 'rgba(149,250,243,0.07)', pointerEvents: 'none', zIndex: '999' });
+document.body.appendChild(marqueeEl);
+function showMarquee(x0, y0, x1, y1) {
+  Object.assign(marqueeEl.style, { display: 'block',
+    left: Math.min(x0,x1)+'px', top: Math.min(y0,y1)+'px',
+    width: Math.abs(x1-x0)+'px', height: Math.abs(y1-y0)+'px' });
+}
+
+// Group selection highlight outlines (one LineSegments per selected entry)
+const _groupOutlines = [];
+function updateGroupOutlines() {
+  _groupOutlines.forEach(o => { o.geometry.dispose(); scene.remove(o); });
+  _groupOutlines.length = 0;
+  for (const en of state.groupSel) {
+    if (en.slotOwner) continue;
+    const ol = new THREE.LineSegments(
+      new THREE.EdgesGeometry(boxGeom(...en.dims)),
+      new THREE.LineBasicMaterial({ color: 0x95faf3, transparent: true, opacity: 0.7, depthTest: true })
+    );
+    ol.position.set(en.gx, en.gy, en.gz);
+    ol.renderOrder = 2;
+    scene.add(ol);
+    _groupOutlines.push(ol);
+  }
+}
+
+function isFreeForGroup(dgx, dgy, dgz) {
+  for (const [en, s] of groupDrag.startPos)
+    if (!isFree(s.gx + dgx, s.gy + dgy, s.gz + dgz, en.dims)) return false;
+  return true;
+}
+
+// Extra ghost meshes for non-anchor group members during group drag
+const _groupGhosts = [];
+function buildGroupGhosts() {
+  clearGroupGhosts();
+  const anchor = groupDrag.anchorEntry;
+  for (const en of state.groupSel) {
+    if (en.slotOwner || en === anchor) continue;
+    const cached = en.meshKey ? getCached(en.meshKey) : null;
+    const geom = cached ? fitGeom(cached.geom, en.dims, en.rotDeg, en.part, [en.mx, en.my, en.mz]) : boxGeom(...en.dims);
+    const m = new THREE.Mesh(geom, ghostMatOk);
+    m.position.set(en.gx, en.gy, en.gz);
+    m._groupEntry = en;
+    scene.add(m);
+    _groupGhosts.push(m);
+  }
+}
+function updateGroupGhostPositions(dgx, dgy, dgz, mat) {
+  for (const m of _groupGhosts) {
+    const s = groupDrag.startPos.get(m._groupEntry);
+    if (s) m.position.set(s.gx + dgx, s.gy + dgy, s.gz + dgz);
+    m.material = mat;
+  }
+}
+function clearGroupGhosts() {
+  _groupGhosts.forEach(m => { m.geometry.dispose(); scene.remove(m); });
+  _groupGhosts.length = 0;
+}
+
+function clearGroupSel() {
+  state.groupSel.clear();
+  updateGroupOutlines();
+}
 
 renderer.domElement.addEventListener('pointerdown', e => {
   _pDown = { x: e.clientX, y: e.clientY, btn: e.button };
@@ -704,20 +765,76 @@ renderer.domElement.addEventListener('pointerdown', e => {
   updatePointer(e);
   raycaster.setFromCamera(pointer, camera);
   const hits = raycaster.intersectObjects(state.placed.map(p => p.mesh));
-  if (!hits.length) return;
+  if (!hits.length) {
+    // Start marquee selection on empty canvas space
+    marquee.active = true; marquee.x0 = e.clientX; marquee.y0 = e.clientY;
+    if (!e.shiftKey) clearGroupSel();
+    return;
+  }
   const entry = hits[0].object._entry ?? state.placed.find(p => p.mesh === hits[0].object);
-  if (entry && !entry.slotOwner) drag.pending = { entry, x: e.clientX, y: e.clientY, hitPoint: hits[0].point.clone() };
+  if (!entry || entry.slotOwner) return;
+  if (state.groupSel.size > 1 && state.groupSel.has(entry)) {
+    // Initiate group drag
+    groupDrag.pending = { entry, x: e.clientX, y: e.clientY, hitPoint: hits[0].point.clone() };
+  } else {
+    if (!e.shiftKey) clearGroupSel();
+    drag.pending = { entry, x: e.clientX, y: e.clientY, hitPoint: hits[0].point.clone() };
+  }
 });
 
 renderer.domElement.addEventListener('pointermove', e => {
+  if (marquee.active) {
+    showMarquee(marquee.x0, marquee.y0, e.clientX, e.clientY);
+    return;
+  }
+  if (groupDrag.pending) {
+    if (Math.hypot(e.clientX - groupDrag.pending.x, e.clientY - groupDrag.pending.y) > 5) {
+      const pending = groupDrag.pending;
+      groupDrag.pending = null; _pDown = null;
+      groupDrag.active = true;
+      groupDrag.anchorEntry = pending.entry;
+      groupDrag.startPos.clear();
+      document.body.style.userSelect = 'none';
+      for (const en of state.groupSel) {
+        if (en.slotOwner) continue;
+        groupDrag.startPos.set(en, { gx: en.gx, gy: en.gy, gz: en.gz });
+        _dragging.add(en);
+        en.mesh.visible = false;
+        if (en.edges) en.edges.visible = false;
+        if (en.hitMesh) en.hitMesh.visible = false;
+      }
+      updateGroupOutlines(); // clear outlines while dragging
+      drag.grabOffset = { x: pending.hitPoint.x - pending.entry.gx, y: pending.hitPoint.y - pending.entry.gy, z: pending.hitPoint.z - pending.entry.gz };
+      refreshGhostForDrag(pending.entry);
+      buildGroupGhosts();
+    }
+  }
+  if (groupDrag.active) {
+    updatePointer(e);
+    const pos = getGridPos(partDims(groupDrag.anchorEntry.part), groupDrag.anchorEntry, groupDrag.anchorEntry.rotDeg);
+    if (!pos) return;
+    const { gx, gy, gz } = pos;
+    if (gx !== groupDrag.gx || gy !== groupDrag.gy || gz !== groupDrag.gz) {
+      groupDrag.gx = gx; groupDrag.gy = gy; groupDrag.gz = gz;
+      const s = groupDrag.startPos.get(groupDrag.anchorEntry);
+      const dgx = gx - s.gx, dgy = gy - s.gy, dgz = gz - s.gz;
+      const mat = isFreeForGroup(dgx, dgy, dgz) ? ghostMatOk : ghostMatBad;
+      ghost.material = mat;
+      ghost.position.set(gx, gy, gz);
+      ghost.visible = true;
+      updateGroupGhostPositions(dgx, dgy, dgz, mat);
+    }
+    return;
+  }
   if (drag.pending) {
     if (Math.hypot(e.clientX - drag.pending.x, e.clientY - drag.pending.y) > 5) {
       const pending = drag.pending;
       drag.active = true; drag.entry = pending.entry; drag.pending = null; _pDown = null;
+      document.body.style.userSelect = 'none';
       const de = drag.entry;
       drag.grabOffset = { x: pending.hitPoint.x - de.gx, y: pending.hitPoint.y - de.gy, z: pending.hitPoint.z - de.gz };
       state.inspected = drag.entry; updateInspector();
-      occupyCells(drag.entry, false);
+      _dragging.add(drag.entry);
       drag.entry.mesh.visible = false;
       if (drag.entry.edges) drag.entry.edges.visible = false;
       refreshGhostForDrag(drag.entry);
@@ -757,9 +874,58 @@ renderer.domElement.addEventListener('pointermove', e => {
 });
 
 renderer.domElement.addEventListener('pointerup', e => {
+  if (marquee.active) {
+    marquee.active = false;
+    marqueeEl.style.display = 'none';
+    const x0 = Math.min(marquee.x0, e.clientX), x1 = Math.max(marquee.x0, e.clientX);
+    const y0 = Math.min(marquee.y0, e.clientY), y1 = Math.max(marquee.y0, e.clientY);
+    if (x1 - x0 > 4 || y1 - y0 > 4) {
+      const rect = renderer.domElement.getBoundingClientRect();
+      const v = new THREE.Vector3();
+      for (const en of state.placed) {
+        if (en.slotOwner) continue;
+        v.set(en.gx + en.dims[0]/2, en.gy + en.dims[1]/2, en.gz + en.dims[2]/2).project(camera);
+        const sx = (v.x * 0.5 + 0.5) * rect.width + rect.left;
+        const sy = (-v.y * 0.5 + 0.5) * rect.height + rect.top;
+        if (sx >= x0 && sx <= x1 && sy >= y0 && sy <= y1) state.groupSel.add(en);
+      }
+      updateGroupOutlines();
+    }
+    _pDown = null;
+    return;
+  }
+  groupDrag.pending = null;
+  if (groupDrag.active) {
+    groupDrag.active = false;
+    document.body.style.userSelect = '';
+    clearGhost();
+    clearGroupGhosts();
+    const anchorStart = groupDrag.startPos.get(groupDrag.anchorEntry);
+    const dgx = groupDrag.gx !== null ? groupDrag.gx - anchorStart.gx : 0;
+    const dgy = groupDrag.gx !== null ? groupDrag.gy - anchorStart.gy : 0;
+    const dgz = groupDrag.gx !== null ? groupDrag.gz - anchorStart.gz : 0;
+    const canPlace = groupDrag.gx !== null && isFreeForGroup(dgx, dgy, dgz);
+    for (const [en, s] of groupDrag.startPos) {
+      en.gx = canPlace ? s.gx + dgx : s.gx;
+      en.gy = canPlace ? s.gy + dgy : s.gy;
+      en.gz = canPlace ? s.gz + dgz : s.gz;
+      en.mesh.visible = true; en.mesh.position.set(en.gx, en.gy, en.gz);
+      if (en.edges) { en.edges.visible = true; en.edges.position.set(en.gx, en.gy, en.gz); }
+      if (en.hitMesh) { en.hitMesh.visible = true; en.hitMesh.position.set(en.gx, en.gy, en.gz); }
+      _dragging.delete(en);
+      syncSlotModule(en);
+    }
+    groupDrag.anchorEntry = null;
+    groupDrag.gx = null; groupDrag.gy = null; groupDrag.gz = null;
+    groupDrag.startPos.clear();
+    updateGroupOutlines();
+    refreshSlotSprites();
+    return;
+  }
   drag.pending = null;
   if (drag.active) {
     drag.active = false;
+    document.body.style.userSelect = '';
     _palette.classList.remove('drop-target');
     const entry = drag.entry; drag.entry = null;
     entry.mesh.visible = true;
@@ -783,7 +949,7 @@ renderer.domElement.addEventListener('pointerup', e => {
       refreshSlotSprites();
     }
     updateSelOutline();
-    occupyCells(entry, true);
+    _dragging.delete(entry);
     drag.gx = null; drag.gy = null; drag.gz = null;
     return;
   }
@@ -861,16 +1027,32 @@ window.addEventListener('pointermove', e => {
 });
 
 window.addEventListener('pointerup', () => {
-  // Fallback: clean up any stuck drag (e.g. released outside browser window).
+  // Fallback: clean up any stuck drag/marquee (e.g. released outside browser window).
+  if (marquee.active) { marquee.active = false; marqueeEl.style.display = 'none'; }
+  if (groupDrag.active) {
+    groupDrag.active = false; document.body.style.userSelect = '';
+    clearGhost(); clearGroupGhosts();
+    for (const [en, s] of groupDrag.startPos) {
+      en.gx = s.gx; en.gy = s.gy; en.gz = s.gz;
+      en.mesh.visible = true; en.mesh.position.set(en.gx, en.gy, en.gz);
+      if (en.edges) { en.edges.visible = true; en.edges.position.set(en.gx, en.gy, en.gz); }
+      if (en.hitMesh) { en.hitMesh.visible = true; en.hitMesh.position.set(en.gx, en.gy, en.gz); }
+      _dragging.delete(en);
+    }
+    groupDrag.startPos.clear(); groupDrag.anchorEntry = null;
+    groupDrag.gx = null; groupDrag.gy = null; groupDrag.gz = null;
+    updateGroupOutlines(); refreshSlotSprites();
+  }
   if (!drag.active) return;
   _palette.classList.remove('drop-target');
   drag.active = false;
+  document.body.style.userSelect = '';
   const entry = drag.entry; drag.entry = null;
   drag.gx = null; drag.gy = null; drag.gz = null;
   entry.mesh.visible = true;
   if (entry.edges) entry.edges.visible = true;
   clearGhost();
-  occupyCells(entry, true);
+  _dragging.delete(entry);
   updateSelOutline();
 });
 
@@ -885,7 +1067,7 @@ window.addEventListener('keydown', e => {
   if (e.code === 'Space') e.preventDefault();
   if (e.repeat) return;
   if (e.code === 'KeyE')          toggleErase();
-  if (e.code === 'Escape')        selectPart(null);
+  if (e.code === 'Escape')        { selectPart(null); clearGroupSel(); }
   if (e.code === 'KeyR')          turnSel(90);
   if (e.code === 'BracketLeft')   turnSel(-5);
   if (e.code === 'BracketRight')  turnSel(5);
@@ -1046,6 +1228,7 @@ document.getElementById('palette-tabs').addEventListener('click', e => {
 
 function selectPart(part) {
   state.selected = part;
+  document.body.style.userSelect = part ? 'none' : '';
   state.inspected = null;
   if (part) {
     state.rotDeg  = partRot[part.id] || 0;
