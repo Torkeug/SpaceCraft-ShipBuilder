@@ -585,8 +585,9 @@ function updatePointer(e) {
   pointer.y = -((e.clientY - r.top)  / r.height) * 2 + 1;
 }
 
-function snapH(v) { return Math.round(v * 1.5) / 1.5; } // X/Z: 2/3-unit grid
-function snapV(v) { return Math.round(v * 2)   / 2;   } // Y:   1/2-unit grid
+function snapH(v) { return Math.round(v * 1.5) / 1.5; }        // X: 2/3-unit grid (8 units → 13 pts)
+function snapV(v) { return Math.round(v * 2)   / 2;   }        // Y: 1/2-unit grid (2 units → 5 pts)
+function snapZ(v) { return Math.round(v / 0.75) * 0.75; }      // Z: 3/4-unit grid (3 units → 5 pts)
 
 // Invisible axis-aligned box used for raycasting instead of the visual mesh,
 // so face normals are always perfectly axis-aligned regardless of mesh detail.
@@ -619,13 +620,13 @@ function getGridPos(baseDims = null, excludeEntry = null, rotDeg = state.rotDeg)
         const p = hit.point;
         const [exl, eyl, ezl] = entry.dims;
         if (n.y < 0) {
-          gx = snapH(p.x - go.x); gz = snapH(p.z - go.z); gy = entry.gy - ely;
+          gx = snapH(p.x - go.x); gz = snapZ(p.z - go.z); gy = entry.gy - ely;
         } else if (n.y > 0) {
-          gx = snapH(p.x - go.x); gy = entry.gy + eyl; gz = snapH(p.z - go.z);
+          gx = snapH(p.x - go.x); gy = entry.gy + eyl; gz = snapZ(p.z - go.z);
         } else {
           gx = n.x !== 0 ? (n.x > 0 ? entry.gx + exl : entry.gx - elx) : snapH(p.x - go.x);
           gy = snapV(p.y - go.y);
-          gz = n.z !== 0 ? (n.z > 0 ? entry.gz + ezl : entry.gz - elz) : snapH(p.z - go.z);
+          gz = n.z !== 0 ? (n.z > 0 ? entry.gz + ezl : entry.gz - elz) : snapZ(p.z - go.z);
         }
       }
     }
@@ -639,7 +640,7 @@ function getGridPos(baseDims = null, excludeEntry = null, rotDeg = state.rotDeg)
       const planeHits = raycaster.intersectObject(buildPlane);
       if (!planeHits.length) return null;
       const p = planeHits[0].point;
-      gx = snapH(p.x - go.x); gz = snapH(p.z - go.z);
+      gx = snapH(p.x - go.x); gz = snapZ(p.z - go.z);
       gy = camDir.y < 0
         ? stackHeight(gx, gz, [elx, ely, elz], excludeEntry)
         : stackDepth(gx, gz, [elx, ely, elz], excludeEntry);
@@ -659,7 +660,7 @@ function getGridPos(baseDims = null, excludeEntry = null, rotDeg = state.rotDeg)
       }
       const t = new THREE.Vector3();
       if (!raycaster.ray.intersectPlane(snapPlane, t)) return null;
-      const raw_gx = snapH(t.x - go.x), raw_gz = snapH(t.z - go.z);
+      const raw_gx = snapH(t.x - go.x), raw_gz = snapZ(t.z - go.z);
       gx = raw_gx; gz = raw_gz;
       gy = (excludeEntry && hLen < 0.5) ? excludeEntry.gy : snapV(t.y - go.y);
       // Snap X or Z to the nearest overlapping piece edge.
@@ -669,7 +670,7 @@ function getGridPos(baseDims = null, excludeEntry = null, rotDeg = state.rotDeg)
         const [exl, , ezl] = entry.dims;
         const xo = Math.min(raw_gx + elx, entry.gx + exl) - Math.max(raw_gx, entry.gx);
         const zo = Math.min(raw_gz + elz, entry.gz + ezl) - Math.max(raw_gz, entry.gz);
-        if (xo <= 0 || zo <= 0) continue;
+        if (xo < 0 || zo < 0) continue;
         const m = Math.min(xo, zo);
         if (m < bestMin) { bestMin = m; best = { entry, xo, zo }; }
       }
