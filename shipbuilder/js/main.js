@@ -28,7 +28,79 @@ scene.add(new THREE.AmbientLight(0x86a0c0, 0.7));
 const sun = new THREE.DirectionalLight(0xffffff, 1.1); sun.position.set(20, 40, 15); scene.add(sun);
 const fill = new THREE.DirectionalLight(0x88bbff, 0.4); fill.position.set(-20, 10, -20); scene.add(fill);
 
-scene.add(new THREE.GridHelper(100, 200, 0x1a2a3a, 0x151c28));
+const _gridMat = new THREE.ShaderMaterial({
+  uniforms: {
+    uPeriod:       { value: 10.0 },
+    uCrossThick:   { value: 0.05 },
+    uCrossLen:     { value: 0.22 },
+    uDiamondSize:  { value: 0.40 },
+    uDiamondThick: { value: 0.09 },
+    uMinorAlpha:   { value: 0.30 },
+    uMajorAlpha:   { value: 0.60 },
+    uFade:         { value: 50.0 },
+  },
+  vertexShader: `
+    varying vec2 vW;
+    void main() {
+      vW = (modelMatrix * vec4(position, 1.0)).xz;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragmentShader: `
+    uniform float uPeriod, uCrossThick, uCrossLen;
+    uniform float uDiamondSize, uDiamondThick, uMinorAlpha, uMajorAlpha, uFade;
+    varying vec2 vW;
+    void main() {
+      float fade = 1.0 - smoothstep(uFade * 0.5, uFade, length(vW));
+      if (fade < 0.001) discard;
+
+      // Nearest 1-unit grid point
+      vec2 snap1 = round(vW);
+      // Position of that grid point within the 10-unit period
+      vec2 pm = mod(snap1 + 1000.0 * uPeriod, uPeriod);
+      // Skip: diamond lines (pm == 0) and mid-gap lines (pm == 5)
+      float onDiamondLine = max(step(pm.x, 0.1), step(pm.y, 0.1));
+      float onMidLine     = max(step(abs(pm.x - uPeriod * 0.5), 0.1),
+                                step(abs(pm.y - uPeriod * 0.5), 0.1));
+      float canCross = (1.0 - onDiamondLine) * (1.0 - onMidLine);
+
+      // + cross shape around snap1
+      vec2 d1 = vW - snap1;
+      float cross = max(
+        step(abs(d1.x), uCrossThick) * step(abs(d1.y), uCrossLen),
+        step(abs(d1.y), uCrossThick) * step(abs(d1.x), uCrossLen)
+      ) * canCross;
+
+      // 4 isosceles trapezoid segments at nearest 10-unit grid point.
+      // Each is a square side with 45°-beveled ends and a gap at each corner.
+      vec2 snap10 = round(vW / uPeriod) * uPeriod;
+      vec2 d10 = vW - snap10;
+      float R = uDiamondSize;
+      float T = uDiamondThick;
+      float hLen = R * 0.68;
+      vec2 rd = vec2(d10.x + d10.y, d10.x - d10.y) * 0.7071;
+      float dyT = R - rd.y;
+      float dyB = rd.y + R;
+      float dxR = R - rd.x;
+      float dxL = rd.x + R;
+      float top   = step(0.0,dyT)*step(dyT,T)*step(abs(rd.x)+dyT,hLen);
+      float bot   = step(0.0,dyB)*step(dyB,T)*step(abs(rd.x)+dyB,hLen);
+      float right = step(0.0,dxR)*step(dxR,T)*step(abs(rd.y)+dxR,hLen);
+      float left  = step(0.0,dxL)*step(dxL,T)*step(abs(rd.y)+dxL,hLen);
+      float diamond = max(max(top,bot),max(right,left));
+
+      float alpha = max(cross * uMinorAlpha, diamond * uMajorAlpha) * fade;
+      if (alpha < 0.001) discard;
+      gl_FragColor = vec4(0.13, 0.22, 0.32, alpha);
+    }
+  `,
+  transparent: true,
+  depthWrite: false,
+});
+const _gridMesh = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), _gridMat);
+_gridMesh.rotation.x = -Math.PI / 2;
+_gridMesh.position.y = -0.001;
+scene.add(_gridMesh);
 
 // Forward direction marker
 const buildPlane = new THREE.Mesh(
