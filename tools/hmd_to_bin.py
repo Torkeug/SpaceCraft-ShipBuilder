@@ -265,9 +265,49 @@ def _find_hmd_data(data):
     return None
 
 
+def _find_ibuf_start(data, vc, ic):
+    """
+    Scan data for the LOD0 index buffer: ic consecutive uint16 LE values all < vc.
+    Returns the absolute byte offset of the index buffer within data, or None.
+
+    Used to correct ring-buffer files where geom_start in the HMD trailer is wrong
+    (off by 16–62 bytes), causing vbuf_start / ibuf_start to be misaligned.
+    """
+    results = []
+    for start in range(0, len(data) - ic * 2 + 1, 2):
+        ok = True
+        for check in range(min(ic, 8)):
+            if struct.unpack_from('<H', data, start + check * 2)[0] >= vc:
+                ok = False
+                break
+        if not ok:
+            continue
+        try:
+            if all(v < vc for v in struct.unpack_from(f'<{ic}H', data, start)):
+                results.append(start)
+                if len(results) > 2:
+                    return None
+        except Exception:
+            pass
+    return results[0] if len(results) == 1 else None
+
+
 def _finish_prod_conversion(raw, data, lod0, blocks, geom_start, out_path, label='Production'):
     """Shared final stage: read verts/indices, build groups, write .bin."""
     from hmd_parse_prod import (read_verts_f16, read_indices_le_u16, parse_material_groups)
+
+    # For ring-buffer files, geom_start in the HMD header can be wrong by 16–62 bytes.
+    # Locate the true index buffer by scanning for ic consecutive uint16s all < vc,
+    # then back-compute the true vbuf_start.
+    ibuf_found = _find_ibuf_start(data, lod0['vc'], lod0['ic'])
+    if ibuf_found is not None:
+        true_vbuf = ibuf_found - lod0['vc'] * lod0['stride']
+        if true_vbuf >= 0 and true_vbuf != lod0['vbuf_start']:
+            print(f"  Correcting vbuf_start {lod0['vbuf_start']} -> {true_vbuf} "
+                  f"(ibuf at {ibuf_found}, delta={true_vbuf - lod0['vbuf_start']})")
+            lod0 = dict(lod0)
+            lod0['vbuf_start'] = true_vbuf
+            lod0['ibuf_start'] = ibuf_found
 
     verts = read_verts_f16(data, lod0['vbuf_start'], lod0['vc'], lod0['stride'])
     raw_indices = read_indices_le_u16(data, lod0['ibuf_start'], lod0['ic'])

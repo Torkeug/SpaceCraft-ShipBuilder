@@ -233,7 +233,7 @@ The ship builder's Three.js loader applies `rotateX(-Math.PI/2)`:
 
 No scaling or shift is needed before writing positions to .bin.
 
-**Known issue — 12x6x2 and 16x6x2 (ring-buffer sizes):** vertex positions appear normalized to a ±1 bbox cube rather than grid-unit scale. The current batch converter writes these bins as-is; the ship builder will render them at incorrect scale relative to smaller hull pieces. Root cause and fix are under investigation. 12x6x4 and 16x6x4 may have the same issue.
+**Ring-buffer geom_start misalignment (fixed):** For most ring-buffer files, the `geom_start` value in the HMD trailer is wrong by 16–62 bytes relative to the true start of the vertex buffer. The fix: scan the file for `ic` consecutive uint16 values all < `vc` to locate the true index buffer, then back-compute `vbuf_start = ibuf_found − vc×stride`. Implemented in `_find_ibuf_start()` in `hmd_to_bin.py`, called from `_finish_prod_conversion` for all conversion paths. All 32 ring-buffer bins (12x6x2 A–N, 12x6x4 A–B, 16x6x2 A–N, 16x6x4 A–B) now have correct grid-unit dimensions.
 
 ---
 
@@ -382,10 +382,10 @@ Cannot be sourced from HAR — must come from in-game assets.
 | 8x3x1    | A–N (14) | ✓ DONE (pak_out, except N) | text prefix ~128 B; N has anomalous format (HAR) |
 | 8x3x2    | A–N (14) | ✓ DONE (pak_out)        | text prefix                                   |
 | 8x6x2    | A–N (14) | ✓ DONE (pak_out)        | text prefix ~176 B                            |
-| 12x6x2   | A–N (14) | ✓ DONE (pak_out) ⚠     | ring-buffer variant 1 (A–M) and 3 (N, JSON end); coordinate scale issue TBD |
-| 12x6x4   | A–B (2)  | ✓ DONE (pak_out) ⚠     | ring-buffer variant 1 (A) and 3 (B, JSON end); may share coordinate scale issue |
-| 16x6x2   | A–N (14) | ✓ DONE (pak_out) ⚠     | variants 1, 2 (short trailer / JSON / truncated); coordinate scale issue TBD |
-| 16x6x4   | A–B (2)  | ✓ DONE (pak_out) ⚠     | ring-buffer variant 2 (prefix pattern); may share coordinate scale issue |
+| 12x6x2   | A–N (14) | ✓ DONE (pak_out)        | ring-buffer variant 1 (A–M) and 3 (N, JSON end); geom_start corrected via ibuf scan |
+| 12x6x4   | A–B (2)  | ✓ DONE (pak_out)        | ring-buffer variant 1 (A) and 3 (B, JSON end); same fix applied |
+| 16x6x2   | A–N (14) | ✓ DONE (pak_out)        | variants 1, 2 (prefix/JSON); geom_start corrected via ibuf scan |
+| 16x6x4   | A–B (2)  | ✓ DONE (pak_out)        | ring-buffer variant 2; same fix applied |
 | MK1      | various  | not started             | Rounded_MK1_* connector pieces                |
 | MK2      | various  | not started             | Rounded_MK2_* connector pieces                |
 
