@@ -182,7 +182,7 @@ Each LOD section starts at `geom_start + vp` (vp from that LOD's extra[0..3]).
 1. **Vertex buffer:** `vc × 28 bytes` (vc from `header[15..18]` for LOD0; varies per LOD)
 2. **Index buffer:** uint16 LE, runs to start of next LOD's section (or EOF)
 
-**Index buffer format:** **little-endian uint16** (NOT big-endian like TestPE A-style).
+**Index buffer format:** little-endian uint16 when `vc ≤ 65535`; little-endian **uint32** when `vc > 65535` (e.g. Engine_Explorer_MK2 with vc=67,614). Detection: `idx_size = 4 if vc_lod0 > 65535 else 2`; `ic = ic_bytes // idx_size`. The .bin format and `_manifest.json` must reflect `i32=True` for these files.
 
 **Vertex position layout (stride=28):**
 | Offset | Content         |

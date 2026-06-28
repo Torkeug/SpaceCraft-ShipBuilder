@@ -9,6 +9,7 @@ const canvas = document.getElementById('c');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 2.2;
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0a1420);
@@ -24,9 +25,9 @@ controls.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
 controls.enableDamping = true;
 controls.dampingFactor = 0.08;
 
-scene.add(new THREE.AmbientLight(0x86a0c0, 0.7));
-const sun = new THREE.DirectionalLight(0xffffff, 1.1); sun.position.set(20, 40, 15); scene.add(sun);
-const fill = new THREE.DirectionalLight(0x88bbff, 0.4); fill.position.set(-20, 10, -20); scene.add(fill);
+scene.add(new THREE.AmbientLight(0x86a0c0, 1.3));
+const sun = new THREE.DirectionalLight(0xffffff, 2.0); sun.position.set(20, 40, 15); scene.add(sun);
+const fill = new THREE.DirectionalLight(0x88bbff, 0.8); fill.position.set(-20, 10, -20); scene.add(fill);
 
 const _gridMat = new THREE.ShaderMaterial({
   uniforms: {
@@ -35,8 +36,8 @@ const _gridMat = new THREE.ShaderMaterial({
     uCrossLen:     { value: 0.22 },
     uDiamondSize:  { value: 0.40 },
     uDiamondThick: { value: 0.09 },
-    uMinorAlpha:   { value: 0.30 },
-    uMajorAlpha:   { value: 0.60 },
+    uMinorAlpha:   { value: 0.45 },
+    uMajorAlpha:   { value: 0.80 },
     uFade:         { value: 50.0 },
   },
   vertexShader: `
@@ -91,7 +92,7 @@ const _gridMat = new THREE.ShaderMaterial({
 
       float alpha = max(cross * uMinorAlpha, diamond * uMajorAlpha) * fade;
       if (alpha < 0.001) discard;
-      gl_FragColor = vec4(0.13, 0.22, 0.32, alpha);
+      gl_FragColor = vec4(0.28, 0.48, 0.68, alpha);
     }
   `,
   transparent: true,

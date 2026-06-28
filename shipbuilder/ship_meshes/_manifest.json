@@ -947,8 +947,20 @@
     "t": 16239,
     "v": 20308
   },
+  "Engine_AE_Small_prod": {
+    "g": 6,
+    "i32": false,
+    "t": 16239,
+    "v": 20308
+  },
   "Engine_DA_Small": {
     "g": 6,
+    "i32": false,
+    "t": 15938,
+    "v": 22454
+  },
+  "Engine_DA_Small_prod": {
+    "g": 11,
     "i32": false,
     "t": 15938,
     "v": 22454
@@ -959,17 +971,35 @@
     "t": 14483,
     "v": 21918
   },
+  "Engine_Explorer_MK2_prod": {
+    "g": 11,
+    "i32": true,
+    "t": 62494,
+    "v": 67614
+  },
   "Engine_MK_Big": {
     "g": 6,
     "i32": false,
     "t": 1880,
     "v": 5639
   },
+  "Engine_MK_Big_prod": {
+    "g": 12,
+    "i32": false,
+    "t": 37706,
+    "v": 40125
+  },
   "Engine_TC_Small": {
     "g": 6,
     "i32": false,
     "t": 9882,
     "v": 12835
+  },
+  "Engine_TC_Small_prod": {
+    "g": 11,
+    "i32": false,
+    "t": 25160,
+    "v": 24094
   },
   "FTL_Engine": {
     "g": 6,
@@ -1102,6 +1132,12 @@
     "i32": false,
     "t": 20266,
     "v": 19139
+  },
+  "Motor_Bulky_prod": {
+    "g": 10,
+    "i32": false,
+    "t": 40790,
+    "v": 32945
   },
   "Navigator": {
     "g": 5,

@@ -225,10 +225,10 @@ def _parse_attr_blocks(data):
         # Skip past the known minimum extra (based on gc at extra[4]) to avoid
         # spurious 0x0B bytes inside ic_per_group data (e.g. 2856 = 28 0B 00 00).
         gc_peek = data[attrs_end + 4] if attrs_end + 5 < len(data) else 0
-        min_skip = (38 + gc_peek * 4) if 1 <= gc_peek <= 8 else 1
+        min_skip = (38 + gc_peek * 4) if 1 <= gc_peek <= 16 else 1
         next_ob = data.find(bytes([0x0B]), attrs_end + min_skip)
-        # Sanity: next block should be within 120 bytes (largest observed extra is 62+some)
-        if next_ob < 0 or next_ob - attrs_end > 120:
+        # Sanity: next block should be within 200 bytes (engines have gc=10-12, extra up to ~90 bytes)
+        if next_ob < 0 or next_ob - attrs_end > 200:
             # Last block — extra runs to end of attr section (find sentinel instead)
             sentinel = bytes([0x00, 0x00, 0x00, 0x02, 0x04, 0x05])
             sent_idx = data.find(sentinel, attrs_end)
@@ -291,11 +291,14 @@ def parse_prod_hmd(data):
     for lod in range(min(lod_count, len(blocks))):
         blk = blocks[lod]
         extra_off = blk['extra_off']
-        if extra_off + 53 > len(data):
+        if extra_off + 29 > len(data):
             break
         vp   = _u32(data, extra_off)
-        # bbox at extra[29..52] (6 float32)
-        bbox_off = extra_off + 29
+        # bbox at extra[5 + gc*4 + 4 .. +24] (6 float32); offset 29 only correct for gc=5
+        gc_here = data[extra_off + 4] if extra_off + 4 < len(data) else 5
+        bbox_off = extra_off + 5 + gc_here * 4 + 4
+        if bbox_off + 24 > len(data):
+            bbox_off = extra_off + 29  # fallback
         bbox = list(struct.unpack_from('<6f', data, bbox_off))
         lod_extras.append({'vp': vp, 'bbox': bbox})
 
@@ -309,6 +312,9 @@ def parse_prod_hmd(data):
     total_geom = len(data) - geom_start
     vps_sorted.append(total_geom)
 
+    # Meshes with vc > 65535 cannot use uint16 indices; they use uint32 (4 bytes/index).
+    idx_size = 4 if vc_lod0 > 65535 else 2
+
     lods = []
     for i, ex in enumerate(lod_extras_sorted):
         vp         = ex['vp']
@@ -319,7 +325,7 @@ def parse_prod_hmd(data):
         ic_bytes   = next_start - ibuf_start
         if ic_bytes < 0 or ibuf_start >= len(data):
             continue
-        ic = ic_bytes // 2
+        ic = ic_bytes // idx_size
         lods.append({
             'vbuf_start': vbuf_start,
             'vc':         vc,
@@ -327,6 +333,7 @@ def parse_prod_hmd(data):
             'ibuf_start': ibuf_start,
             'ic':         ic,
             'bbox':       ex['bbox'],
+            'idx_size':   idx_size,
         })
 
     return lods if lods else None
@@ -421,3 +428,8 @@ def read_verts_f16(data, vbuf_start, vc, stride):
 def read_indices_le_u16(data, ibuf_start, ic):
     """Read ic little-endian uint16 triangle indices."""
     return list(struct.unpack_from('<%dH' % ic, data, ibuf_start))
+
+
+def read_indices_le_u32(data, ibuf_start, ic):
+    """Read ic little-endian uint32 triangle indices (for meshes with vc > 65535)."""
+    return list(struct.unpack_from('<%dI' % ic, data, ibuf_start))

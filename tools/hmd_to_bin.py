@@ -84,7 +84,7 @@ def quantize(val, vmin, vmax):
     return max(0, min(65535, int(round((val - vmin) / r * 65535))))
 
 
-def write_bin(out_path, verts, groups, indices):
+def write_bin(out_path, verts, groups, indices, i32=False):
     """
     Write the .bin format:
       uint32 vc, uint32 ic, uint8 gc,
@@ -106,6 +106,8 @@ def write_bin(out_path, verts, groups, indices):
     zs = [v[2] for v in verts]
     bbox = [min(xs), min(ys), min(zs), max(xs), max(ys), max(zs)]
 
+    idx_fmt = f'<{ic}I' if i32 else f'<{ic}H'
+
     with open(out_path, 'wb') as f:
         f.write(struct.pack('<IIB', vc, ic, gc))
         f.write(struct.pack('<6f', *bbox))
@@ -118,8 +120,7 @@ def write_bin(out_path, verts, groups, indices):
         for g in groups:
             r, gg, b = g['rgb']
             f.write(struct.pack('<BBBBII', g['role'], r, gg, b, g['start'], g['count']))
-        for idx in indices:
-            f.write(struct.pack('<H', idx))
+        f.write(struct.pack(idx_fmt, *indices))
 
     print(f"Wrote {vc} verts, {ic} indices, {gc} groups -> {out_path}")
     print(f"  bbox: {[round(v,4) for v in bbox]}")
@@ -294,23 +295,31 @@ def _find_ibuf_start(data, vc, ic):
 
 def _finish_prod_conversion(raw, data, lod0, blocks, geom_start, out_path, label='Production'):
     """Shared final stage: read verts/indices, build groups, write .bin."""
-    from hmd_parse_prod import (read_verts_f16, read_indices_le_u16, parse_material_groups)
+    from hmd_parse_prod import (read_verts_f16, read_indices_le_u16, read_indices_le_u32,
+                                 parse_material_groups)
+
+    idx_size = lod0.get('idx_size', 2)
 
     # For ring-buffer files, geom_start in the HMD header can be wrong by 16–62 bytes.
     # Locate the true index buffer by scanning for ic consecutive uint16s all < vc,
-    # then back-compute the true vbuf_start.
-    ibuf_found = _find_ibuf_start(data, lod0['vc'], lod0['ic'])
-    if ibuf_found is not None:
-        true_vbuf = ibuf_found - lod0['vc'] * lod0['stride']
-        if true_vbuf >= 0 and true_vbuf != lod0['vbuf_start']:
-            print(f"  Correcting vbuf_start {lod0['vbuf_start']} -> {true_vbuf} "
-                  f"(ibuf at {ibuf_found}, delta={true_vbuf - lod0['vbuf_start']})")
-            lod0 = dict(lod0)
-            lod0['vbuf_start'] = true_vbuf
-            lod0['ibuf_start'] = ibuf_found
+    # then back-compute the true vbuf_start.  Skip for uint32 files (all uint16 values
+    # pass the vc check when vc > 65535, causing false positives).
+    if idx_size == 2:
+        ibuf_found = _find_ibuf_start(data, lod0['vc'], lod0['ic'])
+        if ibuf_found is not None:
+            true_vbuf = ibuf_found - lod0['vc'] * lod0['stride']
+            if true_vbuf >= 0 and true_vbuf != lod0['vbuf_start']:
+                print(f"  Correcting vbuf_start {lod0['vbuf_start']} -> {true_vbuf} "
+                      f"(ibuf at {ibuf_found}, delta={true_vbuf - lod0['vbuf_start']})")
+                lod0 = dict(lod0)
+                lod0['vbuf_start'] = true_vbuf
+                lod0['ibuf_start'] = ibuf_found
 
     verts = read_verts_f16(data, lod0['vbuf_start'], lod0['vc'], lod0['stride'])
-    raw_indices = read_indices_le_u16(data, lod0['ibuf_start'], lod0['ic'])
+    if idx_size == 4:
+        raw_indices = read_indices_le_u32(data, lod0['ibuf_start'], lod0['ic'])
+    else:
+        raw_indices = read_indices_le_u16(data, lod0['ibuf_start'], lod0['ic'])
 
     vc = len(verts)
     bad = [i for i, v in enumerate(raw_indices) if v >= vc]
@@ -330,9 +339,10 @@ def _finish_prod_conversion(raw, data, lod0, blocks, geom_start, out_path, label
     else:
         groups = [{'role': 1, 'rgb': (121, 130, 141), 'start': 0, 'count': len(raw_indices)}]
 
+    i32 = (idx_size == 4)
     print(f"  {label} HMD: vc={vc}, ic={len(raw_indices)}, gc={len(groups)}, "
-          f"stride={lod0['stride']}")
-    write_bin(out_path, verts, groups, raw_indices)
+          f"stride={lod0['stride']}, idx_size={idx_size}")
+    write_bin(out_path, verts, groups, raw_indices, i32=i32)
 
 
 def _detect_prefix_ring_buffer(raw):
