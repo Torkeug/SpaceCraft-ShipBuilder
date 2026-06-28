@@ -1167,15 +1167,75 @@ document.querySelectorAll('.orient-btn').forEach(btn => {
   });
 });
 
-// ── Save / Load / Clear ───────────────────────────────────────────────────────
+// ── Modals ───────────────────────────────────────────────────────────────────
 
-document.getElementById('btn-save').addEventListener('click', () => {
-  const data = state.placed.map((e, _, arr) => ({ partId: e.part.id, shapeIdx: e.shapeIdx, rotDeg: e.rotDeg, mx: e.mx, my: e.my, mz: e.mz, rz: e.rz || false, gx: e.gx, gy: e.gy, gz: e.gz, ...(e.slotOwner != null ? { slotOwnerIdx: arr.indexOf(e.slotOwner) } : {}) }));
-  navigator.clipboard.writeText(JSON.stringify(data, null, 2)).then(() => alert('Build copied to clipboard.'));
+const modalOverlay = document.getElementById('modal-overlay');
+
+function openModal(id) {
+  modalOverlay.classList.add('open');
+  document.getElementById(id).classList.add('open');
+}
+
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+  modalOverlay.classList.remove('open');
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && modalOverlay.classList.contains('open')) {
+    modalOverlay.querySelectorAll('.modal.open').forEach(m => m.classList.remove('open'));
+    modalOverlay.classList.remove('open');
+  }
 });
 
+// Clear modal
+document.getElementById('btn-clear').addEventListener('click', () => openModal('modal-clear'));
+document.getElementById('modal-clear-cancel').addEventListener('click', () => closeModal('modal-clear'));
+document.getElementById('modal-clear-ok').addEventListener('click', () => { closeModal('modal-clear'); clearAll(); });
+
+// Save modal
+document.getElementById('btn-save').addEventListener('click', () => {
+  const data = state.placed.map((e, _, arr) => ({ partId: e.part.id, shapeIdx: e.shapeIdx, rotDeg: e.rotDeg, mx: e.mx, my: e.my, mz: e.mz, rz: e.rz || false, gx: e.gx, gy: e.gy, gz: e.gz, ...(e.slotOwner != null ? { slotOwnerIdx: arr.indexOf(e.slotOwner) } : {}) }));
+  const json = JSON.stringify(data, null, 2);
+  const ta = document.getElementById('modal-save-text');
+  const hint = document.getElementById('modal-save-hint');
+  ta.value = json;
+  hint.textContent = '';
+  hint.className = 'modal-hint';
+  openModal('modal-save');
+  navigator.clipboard.writeText(json).then(() => {
+    hint.textContent = 'Copied to clipboard.';
+    hint.className = 'modal-hint ok';
+  }).catch(() => {});
+});
+
+document.getElementById('modal-save-copy').addEventListener('click', () => {
+  const hint = document.getElementById('modal-save-hint');
+  navigator.clipboard.writeText(document.getElementById('modal-save-text').value).then(() => {
+    hint.textContent = 'Copied to clipboard.';
+    hint.className = 'modal-hint ok';
+  }).catch(() => {
+    hint.textContent = 'Copy failed — select all and copy manually.';
+    hint.className = 'modal-hint error';
+  });
+});
+
+document.getElementById('modal-save-close').addEventListener('click', () => closeModal('modal-save'));
+
+// Load modal
 document.getElementById('btn-load').addEventListener('click', () => {
-  const raw = prompt('Paste build JSON:'); if (!raw) return;
+  document.getElementById('modal-load-text').value = '';
+  const err = document.getElementById('modal-load-error');
+  err.style.display = 'none';
+  openModal('modal-load');
+});
+
+document.getElementById('modal-load-cancel').addEventListener('click', () => closeModal('modal-load'));
+
+document.getElementById('modal-load-ok').addEventListener('click', () => {
+  const raw = document.getElementById('modal-load-text').value.trim();
+  const errEl = document.getElementById('modal-load-error');
+  if (!raw) return;
   try {
     const data = JSON.parse(raw); clearAll();
     const savedEntries = [];
@@ -1194,10 +1254,12 @@ document.getElementById('btn-load').addEventListener('click', () => {
     });
     updateShipStats();
     refreshSlotSprites();
-  } catch (err) { alert('Invalid JSON: ' + err.message); }
+    closeModal('modal-load');
+  } catch (err) {
+    errEl.textContent = 'Invalid JSON: ' + err.message;
+    errEl.style.display = 'block';
+  }
 });
-
-document.getElementById('btn-clear').addEventListener('click', () => { if (confirm('Clear all?')) clearAll(); });
 
 // ── Palette ───────────────────────────────────────────────────────────────────
 

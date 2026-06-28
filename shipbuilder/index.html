@@ -82,6 +82,40 @@
     <div id="ship-stats"><div class="ship-empty">Place parts to see stats</div></div>
   </div>
 
+  <!-- ── Modals ── -->
+  <div id="modal-overlay">
+
+    <div class="modal" id="modal-clear">
+      <div class="modal-title">Clear All</div>
+      <div class="modal-body">Remove all placed parts from the grid?</div>
+      <div class="modal-actions">
+        <button class="modal-btn" id="modal-clear-cancel">Cancel</button>
+        <button class="modal-btn danger" id="modal-clear-ok">Clear</button>
+      </div>
+    </div>
+
+    <div class="modal" id="modal-save">
+      <div class="modal-title">Save Build</div>
+      <textarea class="modal-textarea" id="modal-save-text" readonly spellcheck="false"></textarea>
+      <div class="modal-hint" id="modal-save-hint"></div>
+      <div class="modal-actions">
+        <button class="modal-btn" id="modal-save-copy">Copy to clipboard</button>
+        <button class="modal-btn primary" id="modal-save-close">Close</button>
+      </div>
+    </div>
+
+    <div class="modal" id="modal-load">
+      <div class="modal-title">Load Build</div>
+      <textarea class="modal-textarea" id="modal-load-text" placeholder="Paste build JSON here…" spellcheck="false"></textarea>
+      <div class="modal-hint error" id="modal-load-error" style="display:none"></div>
+      <div class="modal-actions">
+        <button class="modal-btn" id="modal-load-cancel">Cancel</button>
+        <button class="modal-btn primary" id="modal-load-ok">Load</button>
+      </div>
+    </div>
+
+  </div>
+
   <script type="module" src="js/main.js"></script>
 </body>
 </html>
