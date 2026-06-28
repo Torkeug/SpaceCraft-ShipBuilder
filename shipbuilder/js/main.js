@@ -1387,7 +1387,8 @@ const STAT_LABELS = {
   SystemSupport: 'Sys. Support', SystemRequirement: 'Sys. Required',
   EngineForce: 'Engine Force', EngineThrust: 'Engine Thrust',
   PowerProduction: 'Power Gen', PowerUsage: 'Power Use',
-  StorageUnits: 'Storage (su)', HeatCapacity: 'Heat Cap.',
+  HeatCapacity: 'Heat Cap.',
+  HeatInterfaceMaterial: 'Heat conductivity',
   SolidStorage: 'Cargo (su)', FluidStorage: 'Fluid Store',
   FTOilStorage: 'FTL Oil', FakeFTLOptimalMaxWeight: 'FTL Cap.',
 };
@@ -1428,6 +1429,7 @@ function updateShipStats() {
   const powUse  = sum('PowerUsage') + sum('EngineConsumption');
   const powStorage = sum('PowerStorage');
   const heat    = sum('HeatCapacity');
+  const heatCond = sum('HeatInterfaceParts');
   const steering = sum('SteeringStrength');
 
   // Fan-data stats (not yet in game data): heat gen, shields, recharge
@@ -1510,7 +1512,8 @@ function updateShipStats() {
   h += `</div>`;
   if (powStorage) h += `<div class="stat-row" style="margin-top:3px"><span class="stat-label">Battery cap.</span><span class="stat-val">${fmt(powStorage)}</span></div>`;
   if (recharge)   h += `<div class="stat-row"><span class="stat-label">Recharge</span><span class="stat-val">${fmt(recharge)}/s</span></div>`;
-  if (heat)       h += `<div class="stat-row"><span class="stat-label">Heat cap.</span><span class="stat-val">${fmt(heat)}</span></div>`;
+  if (heat)      h += `<div class="stat-row"><span class="stat-label">Heat cap.</span><span class="stat-val">${fmt(heat)}</span></div>`;
+  if (heatCond)  h += `<div class="stat-row"><span class="stat-label">Heat conductivity</span><span class="stat-val">${fmt(heatCond)}</span></div>`;
   h += `</div>`;
 
   // ── Module slots ──

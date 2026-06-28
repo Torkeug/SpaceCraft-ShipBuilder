@@ -20,7 +20,9 @@
         "ShipWeight": 20,
         "HeatCapacity": 20,
         "StorageUnits": 20,
-        "ShipDecoSupport": 4
+        "ShipDecoSupport": 4,
+        "HeatInterfaceMaterial": 60,
+        "HeatInterfaceParts": 12
       },
       "cost": "Small Steel Part Casingx2, Support Hardwarex2",
       "grad": {
@@ -127,7 +129,9 @@
         "ShipWeight": 30,
         "HeatCapacity": 30,
         "StorageUnits": 20,
-        "ShipDecoSupport": 6
+        "ShipDecoSupport": 6,
+        "HeatInterfaceMaterial": 60,
+        "HeatInterfaceParts": 18
       },
       "cost": "Small Steel Part Casingx2, Support Hardwarex4",
       "grad": {
@@ -237,7 +241,9 @@
         "ShipWeight": 30,
         "HeatCapacity": 30,
         "StorageUnits": 20,
-        "ShipDecoSupport": 6
+        "ShipDecoSupport": 6,
+        "HeatInterfaceMaterial": 60,
+        "HeatInterfaceParts": 18
       },
       "cost": "Small Steel Part Casingx3, Support Hardwarex3",
       "grad": {
@@ -347,7 +353,9 @@
         "ShipWeight": 45,
         "HeatCapacity": 45,
         "StorageUnits": 20,
-        "ShipDecoSupport": 9
+        "ShipDecoSupport": 9,
+        "HeatInterfaceMaterial": 60,
+        "HeatInterfaceParts": 27
       },
       "cost": "Small Steel Part Casingx3, Support Hardwarex6",
       "grad": {
@@ -457,7 +465,9 @@
         "ShipWeight": 40,
         "HeatCapacity": 40,
         "StorageUnits": 20,
-        "ShipDecoSupport": 8
+        "ShipDecoSupport": 8,
+        "HeatInterfaceMaterial": 60,
+        "HeatInterfaceParts": 24
       },
       "cost": "Small Steel Part Casingx4, Support Hardwarex4",
       "grad": {
@@ -562,7 +572,9 @@
         "ShipWeight": 60,
         "HeatCapacity": 60,
         "StorageUnits": 20,
-        "ShipDecoSupport": 12
+        "ShipDecoSupport": 12,
+        "HeatInterfaceMaterial": 60,
+        "HeatInterfaceParts": 36
       },
       "cost": "Small Steel Part Casingx4, Support Hardwarex8",
       "grad": {
@@ -672,7 +684,9 @@
         "ShipWeight": 16,
         "HeatCapacity": 22,
         "StorageUnits": 20,
-        "ShipDecoSupport": 4
+        "ShipDecoSupport": 4,
+        "HeatInterfaceMaterial": 60,
+        "HeatInterfaceParts": 12
       },
       "cost": "Small Titanium Part Casingx2, Support Hardwarex2",
       "grad": {
@@ -775,7 +789,9 @@
         "ShipWeight": 24,
         "HeatCapacity": 33,
         "StorageUnits": 20,
-        "ShipDecoSupport": 6
+        "ShipDecoSupport": 6,
+        "HeatInterfaceMaterial": 60,
+        "HeatInterfaceParts": 18
       },
       "cost": "Small Titanium Part Casingx2, Support Hardwarex4",
       "grad": {
@@ -881,7 +897,9 @@
         "ShipWeight": 24,
         "HeatCapacity": 33,
         "StorageUnits": 20,
-        "ShipDecoSupport": 6
+        "ShipDecoSupport": 6,
+        "HeatInterfaceMaterial": 60,
+        "HeatInterfaceParts": 18
       },
       "cost": "Small Titanium Part Casingx3, Support Hardwarex3",
       "grad": {
@@ -987,7 +1005,9 @@
         "ShipWeight": 36,
         "HeatCapacity": 49.5,
         "StorageUnits": 20,
-        "ShipDecoSupport": 9
+        "ShipDecoSupport": 9,
+        "HeatInterfaceMaterial": 60,
+        "HeatInterfaceParts": 27
       },
       "cost": "Small Titanium Part Casingx3, Support Hardwarex6",
       "grad": {
@@ -1093,7 +1113,9 @@
         "ShipWeight": 32,
         "HeatCapacity": 44,
         "StorageUnits": 20,
-        "ShipDecoSupport": 8
+        "ShipDecoSupport": 8,
+        "HeatInterfaceMaterial": 60,
+        "HeatInterfaceParts": 24
       },
       "cost": "Small Titanium Part Casingx4, Support Hardwarex4",
       "grad": {
@@ -1194,7 +1216,9 @@
         "ShipWeight": 48,
         "HeatCapacity": 66,
         "StorageUnits": 20,
-        "ShipDecoSupport": 12
+        "ShipDecoSupport": 12,
+        "HeatInterfaceMaterial": 60,
+        "HeatInterfaceParts": 36
       },
       "cost": "Small Titanium Part Casingx4, Support Hardwarex8",
       "grad": {
@@ -1300,7 +1324,9 @@
         "ShipWeight": 64,
         "HeatCapacity": 88,
         "StorageUnits": 50,
-        "ShipDecoSupport": 16
+        "ShipDecoSupport": 16,
+        "HeatInterfaceMaterial": 60,
+        "HeatInterfaceParts": 48
       },
       "cost": "Titanium Part Casingx2, Support Hardwarex8",
       "grad": {
@@ -1406,7 +1432,9 @@
         "ShipWeight": 96,
         "HeatCapacity": 132,
         "StorageUnits": 50,
-        "ShipDecoSupport": 24
+        "ShipDecoSupport": 24,
+        "HeatInterfaceMaterial": 60,
+        "HeatInterfaceParts": 72
       },
       "cost": "Titanium Part Casingx3, Support Hardwarex12",
       "grad": {
@@ -1512,7 +1540,9 @@
         "ShipWeight": 128,
         "HeatCapacity": 176,
         "StorageUnits": 50,
-        "ShipDecoSupport": 32
+        "ShipDecoSupport": 32,
+        "HeatInterfaceMaterial": 60,
+        "HeatInterfaceParts": 96
       },
       "cost": "Titanium Part Casingx4, Support Hardwarex16",
       "grad": {
@@ -1616,7 +1646,9 @@
         "SystemSupport": 60,
         "Hull": 10,
         "ShipWeight": 10,
-        "HeatCapacity": 20
+        "HeatCapacity": 20,
+        "HeatInterfaceMaterial": 36,
+        "HeatInterfaceParts": 7.2
       },
       "cost": "Small Alloy X Part Casingx2, Support Hardwarex2",
       "grad": {
@@ -1725,7 +1757,9 @@
         "SystemSupport": 90,
         "Hull": 15,
         "ShipWeight": 15,
-        "HeatCapacity": 30
+        "HeatCapacity": 30,
+        "HeatInterfaceMaterial": 36,
+        "HeatInterfaceParts": 10.8
       },
       "cost": "Small Alloy X Part Casingx3, Support Hardwarex3",
       "grad": {
@@ -1837,7 +1871,9 @@
         "SystemSupport": 150,
         "Hull": 9,
         "ShipWeight": 15,
-        "HeatCapacity": 30
+        "HeatCapacity": 30,
+        "HeatInterfaceMaterial": 36,
+        "HeatInterfaceParts": 10.8
       },
       "cost": "Small Alloy X Part Casingx2, Support Hardwarex4",
       "grad": {
@@ -1949,7 +1985,9 @@
         "SystemSupport": 120,
         "Hull": 20,
         "ShipWeight": 20,
-        "HeatCapacity": 40
+        "HeatCapacity": 40,
+        "HeatInterfaceMaterial": 36,
+        "HeatInterfaceParts": 14.4
       },
       "cost": "Small Alloy X Part Casingx4, Support Hardwarex4",
       "grad": {
@@ -2056,7 +2094,9 @@
         "SystemSupport": 225,
         "Hull": 13.5,
         "ShipWeight": 22.5,
-        "HeatCapacity": 45
+        "HeatCapacity": 45,
+        "HeatInterfaceMaterial": 36,
+        "HeatInterfaceParts": 16.2
       },
       "cost": "Small Alloy X Part Casingx3, Support Hardwarex6",
       "grad": {
@@ -2168,7 +2208,9 @@
         "SystemSupport": 300,
         "Hull": 18,
         "ShipWeight": 30,
-        "HeatCapacity": 60
+        "HeatCapacity": 60,
+        "HeatInterfaceMaterial": 36,
+        "HeatInterfaceParts": 21.6
       },
       "cost": "Small Alloy X Part Casingx4, Support Hardwarex8",
       "grad": {
@@ -2280,7 +2322,9 @@
         "SystemSupport": 200,
         "Hull": 20,
         "ShipWeight": 40,
-        "HeatCapacity": 80
+        "HeatCapacity": 80,
+        "HeatInterfaceMaterial": 36,
+        "HeatInterfaceParts": 28.8
       },
       "cost": "Alloy X Part Casingx2, Support Hardwarex8",
       "grad": {
@@ -2392,7 +2436,9 @@
         "SystemSupport": 300,
         "Hull": 30,
         "ShipWeight": 60,
-        "HeatCapacity": 120
+        "HeatCapacity": 120,
+        "HeatInterfaceMaterial": 36,
+        "HeatInterfaceParts": 43.2
       },
       "cost": "Alloy X Part Casingx3, Support Hardwarex12",
       "grad": {
@@ -2504,7 +2550,9 @@
         "SystemSupport": 400,
         "Hull": 40,
         "ShipWeight": 80,
-        "HeatCapacity": 160
+        "HeatCapacity": 160,
+        "HeatInterfaceMaterial": 36,
+        "HeatInterfaceParts": 57.6
       },
       "cost": "Alloy X Part Casingx4, Support Hardwarex16",
       "grad": {
@@ -2617,7 +2665,9 @@
         "ShipWeight": 20,
         "HeatCapacity": 30,
         "StorageUnits": 20,
-        "ShipDecoSupport": 4
+        "ShipDecoSupport": 4,
+        "HeatInterfaceMaterial": 60,
+        "HeatInterfaceParts": 12
       },
       "cost": "Small Solid Frame Casingx4",
       "grad": {
@@ -2723,7 +2773,9 @@
         "ShipWeight": 30,
         "HeatCapacity": 45,
         "StorageUnits": 20,
-        "ShipDecoSupport": 6
+        "ShipDecoSupport": 6,
+        "HeatInterfaceMaterial": 60,
+        "HeatInterfaceParts": 18
       },
       "cost": "Small Solid Frame Casingx6",
       "grad": {
@@ -2832,7 +2884,9 @@
         "ShipWeight": 40,
         "HeatCapacity": 60,
         "StorageUnits": 20,
-        "ShipDecoSupport": 8
+        "ShipDecoSupport": 8,
+        "HeatInterfaceMaterial": 60,
+        "HeatInterfaceParts": 24
       },
       "cost": "Small Solid Frame Casingx8",
       "grad": {
@@ -2936,7 +2990,9 @@
         "ShipWeight": 80,
         "HeatCapacity": 120,
         "StorageUnits": 50,
-        "ShipDecoSupport": 16
+        "ShipDecoSupport": 16,
+        "HeatInterfaceMaterial": 60,
+        "HeatInterfaceParts": 48
       },
       "cost": "Solid Frame Casingx4",
       "grad": {
@@ -3045,7 +3101,9 @@
         "ShipWeight": 120,
         "HeatCapacity": 180,
         "StorageUnits": 50,
-        "ShipDecoSupport": 24
+        "ShipDecoSupport": 24,
+        "HeatInterfaceMaterial": 60,
+        "HeatInterfaceParts": 72
       },
       "cost": "Solid Frame Casingx6",
       "grad": {
@@ -3154,7 +3212,9 @@
         "ShipWeight": 160,
         "HeatCapacity": 240,
         "StorageUnits": 50,
-        "ShipDecoSupport": 32
+        "ShipDecoSupport": 32,
+        "HeatInterfaceMaterial": 60,
+        "HeatInterfaceParts": 96
       },
       "cost": "Solid Frame Casingx8",
       "grad": {
@@ -3264,7 +3324,9 @@
         "ShipWeight": 12,
         "HeatCapacity": 15,
         "StorageUnits": 20,
-        "ShipDecoSupport": 6
+        "ShipDecoSupport": 6,
+        "HeatInterfaceMaterial": 120,
+        "HeatInterfaceParts": 36
       },
       "cost": "Small Levinium Part Casingx2, Support Hardwarex4",
       "grad": {
@@ -3374,7 +3436,9 @@
         "ShipWeight": 18,
         "HeatCapacity": 22.5,
         "StorageUnits": 20,
-        "ShipDecoSupport": 9
+        "ShipDecoSupport": 9,
+        "HeatInterfaceMaterial": 120,
+        "HeatInterfaceParts": 54
       },
       "cost": "Small Levinium Part Casingx3, Support Hardwarex6",
       "grad": {
@@ -3484,7 +3548,9 @@
         "ShipWeight": 24,
         "HeatCapacity": 30,
         "StorageUnits": 20,
-        "ShipDecoSupport": 12
+        "ShipDecoSupport": 12,
+        "HeatInterfaceMaterial": 120,
+        "HeatInterfaceParts": 72
       },
       "cost": "Small Levinium Part Casingx4, Support Hardwarex8",
       "grad": {
@@ -3594,7 +3660,9 @@
         "ShipWeight": 20,
         "HeatCapacity": 20,
         "StorageUnits": 20,
-        "ShipDecoSupport": 4
+        "ShipDecoSupport": 4,
+        "HeatInterfaceMaterial": 40,
+        "HeatInterfaceParts": 8
       },
       "cost": "Steel 4x3x1x1, Thermal Sheetx4",
       "grad": {
@@ -3701,7 +3769,9 @@
         "ShipWeight": 30,
         "HeatCapacity": 30,
         "StorageUnits": 20,
-        "ShipDecoSupport": 6
+        "ShipDecoSupport": 6,
+        "HeatInterfaceMaterial": 40,
+        "HeatInterfaceParts": 12
       },
       "cost": "Steel 4x3x2x1, Thermal Sheetx6",
       "grad": {
@@ -3811,7 +3881,9 @@
         "ShipWeight": 30,
         "HeatCapacity": 30,
         "StorageUnits": 20,
-        "ShipDecoSupport": 6
+        "ShipDecoSupport": 6,
+        "HeatInterfaceMaterial": 40,
+        "HeatInterfaceParts": 12
       },
       "cost": "Steel 6x3x1x1, Thermal Sheetx6",
       "grad": {
@@ -3921,7 +3993,9 @@
         "ShipWeight": 45,
         "HeatCapacity": 45,
         "StorageUnits": 20,
-        "ShipDecoSupport": 9
+        "ShipDecoSupport": 9,
+        "HeatInterfaceMaterial": 40,
+        "HeatInterfaceParts": 18
       },
       "cost": "Steel 6x3x2x1, Thermal Sheetx9",
       "grad": {
@@ -4031,7 +4105,9 @@
         "ShipWeight": 40,
         "HeatCapacity": 40,
         "StorageUnits": 20,
-        "ShipDecoSupport": 8
+        "ShipDecoSupport": 8,
+        "HeatInterfaceMaterial": 40,
+        "HeatInterfaceParts": 16
       },
       "cost": "Steel 8x3x1x1, Thermal Sheetx8",
       "grad": {
@@ -4136,7 +4212,9 @@
         "ShipWeight": 60,
         "HeatCapacity": 60,
         "StorageUnits": 20,
-        "ShipDecoSupport": 12
+        "ShipDecoSupport": 12,
+        "HeatInterfaceMaterial": 40,
+        "HeatInterfaceParts": 24
       },
       "cost": "Steel 8x3x2x1, Thermal Sheetx12",
       "grad": {
@@ -4246,7 +4324,9 @@
         "ShipWeight": 16,
         "HeatCapacity": 22,
         "StorageUnits": 20,
-        "ShipDecoSupport": 4
+        "ShipDecoSupport": 4,
+        "HeatInterfaceMaterial": 40,
+        "HeatInterfaceParts": 8
       },
       "cost": "Titanium 4x3x1x1, Thermal Sheetx4",
       "grad": {
@@ -4349,7 +4429,9 @@
         "ShipWeight": 24,
         "HeatCapacity": 33,
         "StorageUnits": 20,
-        "ShipDecoSupport": 6
+        "ShipDecoSupport": 6,
+        "HeatInterfaceMaterial": 40,
+        "HeatInterfaceParts": 12
       },
       "cost": "Titanium 4x3x2x1, Thermal Sheetx6",
       "grad": {
@@ -4455,7 +4537,9 @@
         "ShipWeight": 24,
         "HeatCapacity": 33,
         "StorageUnits": 20,
-        "ShipDecoSupport": 6
+        "ShipDecoSupport": 6,
+        "HeatInterfaceMaterial": 40,
+        "HeatInterfaceParts": 12
       },
       "cost": "Titanium 6x3x1x1, Thermal Sheetx6",
       "grad": {
@@ -4561,7 +4645,9 @@
         "ShipWeight": 36,
         "HeatCapacity": 49.5,
         "StorageUnits": 20,
-        "ShipDecoSupport": 9
+        "ShipDecoSupport": 9,
+        "HeatInterfaceMaterial": 40,
+        "HeatInterfaceParts": 18
       },
       "cost": "Titanium 6x3x2x1, Thermal Sheetx9",
       "grad": {
@@ -4667,7 +4753,9 @@
         "ShipWeight": 32,
         "HeatCapacity": 44,
         "StorageUnits": 20,
-        "ShipDecoSupport": 8
+        "ShipDecoSupport": 8,
+        "HeatInterfaceMaterial": 40,
+        "HeatInterfaceParts": 16
       },
       "cost": "Titanium 8x3x1x1, Thermal Sheetx8",
       "grad": {
@@ -4768,7 +4856,9 @@
         "ShipWeight": 48,
         "HeatCapacity": 66,
         "StorageUnits": 20,
-        "ShipDecoSupport": 12
+        "ShipDecoSupport": 12,
+        "HeatInterfaceMaterial": 40,
+        "HeatInterfaceParts": 24
       },
       "cost": "Titanium 8x3x2x1, Thermal Sheetx12",
       "grad": {
@@ -4874,7 +4964,9 @@
         "ShipWeight": 64,
         "HeatCapacity": 88,
         "StorageUnits": 50,
-        "ShipDecoSupport": 16
+        "ShipDecoSupport": 16,
+        "HeatInterfaceMaterial": 40,
+        "HeatInterfaceParts": 32
       },
       "cost": "Titanium 8x6x2x1, Thermal Sheetx16",
       "grad": {
@@ -4980,7 +5072,9 @@
         "ShipWeight": 96,
         "HeatCapacity": 132,
         "StorageUnits": 50,
-        "ShipDecoSupport": 24
+        "ShipDecoSupport": 24,
+        "HeatInterfaceMaterial": 40,
+        "HeatInterfaceParts": 48
       },
       "cost": "Titanium 12x6x2x1, Thermal Sheetx24",
       "grad": {
@@ -5086,7 +5180,9 @@
         "ShipWeight": 128,
         "HeatCapacity": 176,
         "StorageUnits": 50,
-        "ShipDecoSupport": 32
+        "ShipDecoSupport": 32,
+        "HeatInterfaceMaterial": 40,
+        "HeatInterfaceParts": 64
       },
       "cost": "Titanium 16x6x2x1, Thermal Sheetx32",
       "grad": {
@@ -5193,7 +5289,9 @@
         "ShipWeight": 4,
         "HeatCapacity": 5,
         "StorageUnits": 5,
-        "SteeringStrength": 2
+        "SteeringStrength": 2,
+        "HeatInterfaceMaterial": 60,
+        "HeatInterfaceParts": 3
       },
       "cost": "Small Steel Part Casingx1, Support Hardwarex1",
       "grad": {
@@ -5239,7 +5337,9 @@
         "ShipWeight": 4,
         "HeatCapacity": 5,
         "StorageUnits": 5,
-        "SteeringStrength": 2
+        "SteeringStrength": 2,
+        "HeatInterfaceMaterial": 60,
+        "HeatInterfaceParts": 3
       },
       "cost": "Small Steel Part Casingx1, Support Hardwarex1",
       "grad": {
@@ -5285,7 +5385,9 @@
         "ShipWeight": 4,
         "HeatCapacity": 5,
         "StorageUnits": 5,
-        "SteeringStrength": 2
+        "SteeringStrength": 2,
+        "HeatInterfaceMaterial": 40,
+        "HeatInterfaceParts": 2
       },
       "cost": "\"Catfin\" Spoilerx1, Thermal Sheetx1",
       "grad": {
@@ -5331,7 +5433,9 @@
         "ShipWeight": 4,
         "HeatCapacity": 5,
         "StorageUnits": 5,
-        "SteeringStrength": 2
+        "SteeringStrength": 2,
+        "HeatInterfaceMaterial": 40,
+        "HeatInterfaceParts": 2
       },
       "cost": "\"Nimbus\" Spoilerx1, Thermal Sheetx1",
       "grad": {
@@ -5377,7 +5481,9 @@
         "ShipWeight": 8,
         "HeatCapacity": 10,
         "StorageUnits": 10,
-        "SteeringStrength": 4
+        "SteeringStrength": 4,
+        "HeatInterfaceMaterial": 60,
+        "HeatInterfaceParts": 6
       },
       "cost": "Small Steel Part Casingx1, Support Hardwarex1",
       "grad": {
@@ -5423,7 +5529,9 @@
         "ShipWeight": 8,
         "HeatCapacity": 10,
         "StorageUnits": 5,
-        "SteeringStrength": 4
+        "SteeringStrength": 4,
+        "HeatInterfaceMaterial": 40,
+        "HeatInterfaceParts": 4
       },
       "cost": "\"Warden\" Wingx1, Thermal Sheetx2",
       "grad": {
@@ -5469,7 +5577,9 @@
         "ShipWeight": 51.2,
         "HeatCapacity": 88,
         "StorageUnits": 50,
-        "SteeringStrength": 16
+        "SteeringStrength": 16,
+        "HeatInterfaceMaterial": 60,
+        "HeatInterfaceParts": 48
       },
       "cost": "Titanium Part Casingx2, Support Hardwarex8",
       "grad": {
@@ -5511,7 +5621,9 @@
         "ShipWeight": 51.2,
         "HeatCapacity": 88,
         "StorageUnits": 50,
-        "SteeringStrength": 16
+        "SteeringStrength": 16,
+        "HeatInterfaceMaterial": 40,
+        "HeatInterfaceParts": 32
       },
       "cost": "\"Condor\" Wingx1, Thermal Sheetx16",
       "grad": {
@@ -5550,7 +5662,9 @@
         "SystemSupport": 200,
         "ShipWeight": 40,
         "HeatCapacity": 40,
-        "StorageUnits": 20
+        "StorageUnits": 20,
+        "HeatInterfaceMaterial": 60,
+        "HeatInterfaceParts": 24
       },
       "cost": "Stainless Platex10, Wirex50, Motorx2",
       "grad": {
@@ -5594,7 +5708,9 @@
         "Hull": 50,
         "ShipWeight": 40,
         "HeatCapacity": 40,
-        "StorageUnits": 20
+        "StorageUnits": 20,
+        "HeatInterfaceMaterial": 60,
+        "HeatInterfaceParts": 24
       },
       "cost": "Small Steel Part Casingx3, Support Hardwarex6",
       "grad": {
@@ -5637,7 +5753,9 @@
         "SystemSupport": 200,
         "ShipWeight": 40,
         "HeatCapacity": 40,
-        "StorageUnits": 20
+        "StorageUnits": 20,
+        "HeatInterfaceMaterial": 40,
+        "HeatInterfaceParts": 16
       },
       "cost": "Small Steel Part Casingx3, Support Hardwarex6, Thermal Sheetx20",
       "grad": {
@@ -5681,7 +5799,9 @@
         "ShipWeight": 40,
         "HeatCapacity": 40,
         "StorageUnits": 20,
-        "SolidStorage": 300
+        "SolidStorage": 300,
+        "HeatInterfaceMaterial": 60,
+        "HeatInterfaceParts": 24
       },
       "cost": "Small Steel Part Casingx3, Support Hardwarex6, Metal Sheetx20, Nut and Boltx40",
       "grad": {
@@ -5725,7 +5845,9 @@
         "ShipWeight": 40,
         "HeatCapacity": 40,
         "StorageUnits": 20,
-        "PowerStorage": 1000
+        "PowerStorage": 1000,
+        "HeatInterfaceMaterial": 60,
+        "HeatInterfaceParts": 24
       },
       "cost": "Small Steel Part Casingx3, Support Hardwarex6, Wirex20, Magnetic Coilx8",
       "grad": {
@@ -5767,7 +5889,9 @@
         "Frame": 1280,
         "SystemSupport": 1000,
         "ShipWeight": 298,
-        "HeatCapacity": 352
+        "HeatCapacity": 352,
+        "HeatInterfaceMaterial": 60,
+        "HeatInterfaceParts": 192
       },
       "cost": "Titanium Part Casingx4, Support Hardwarex32",
       "grad": {
@@ -5810,7 +5934,9 @@
         "SystemSupport": 1000,
         "Hull": 150,
         "ShipWeight": 298,
-        "HeatCapacity": 352
+        "HeatCapacity": 352,
+        "HeatInterfaceMaterial": 60,
+        "HeatInterfaceParts": 192
       },
       "cost": "Titanium Part Casingx4, Support Hardwarex32",
       "grad": {
@@ -5853,7 +5979,9 @@
         "SystemSupport": 1000,
         "ShipWeight": 128,
         "HeatCapacity": 176,
-        "StorageUnits": 50
+        "StorageUnits": 50,
+        "HeatInterfaceMaterial": 60,
+        "HeatInterfaceParts": 96
       },
       "cost": "Titanium Part Casingx4, Support Hardwarex32",
       "grad": {
@@ -5893,7 +6021,9 @@
         "Frame": 1280,
         "SystemSupport": 1000,
         "ShipWeight": 298,
-        "HeatCapacity": 352
+        "HeatCapacity": 352,
+        "HeatInterfaceMaterial": 60,
+        "HeatInterfaceParts": 192
       },
       "cost": "Titanium Part Casingx4, Support Hardwarex32",
       "grad": {
@@ -5936,7 +6066,9 @@
         "SystemSupport": 400,
         "ShipWeight": 128,
         "HeatCapacity": 176,
-        "StorageUnits": 50
+        "StorageUnits": 50,
+        "HeatInterfaceMaterial": 60,
+        "HeatInterfaceParts": 96
       },
       "cost": "Titanium Part Casingx4, Support Hardwarex16, Quantum Beaconx1, Elmerium Corex20, Diffraction Gratingx50",
       "grad": {
@@ -5977,7 +6109,9 @@
         "SystemSupport": 400,
         "ShipWeight": 128,
         "HeatCapacity": 176,
-        "StorageUnits": 50
+        "StorageUnits": 50,
+        "HeatInterfaceMaterial": 60,
+        "HeatInterfaceParts": 96
       },
       "cost": "Titanium Part Casingx4, Support Hardwarex16, Concretex80, Structural Beamx50, Stainless Platex50",
       "grad": {
@@ -6020,7 +6154,9 @@
         "EngineForce": 300,
         "EngineConsumption": 35,
         "BoostThrust": 100,
-        "SteeringStrength": 8
+        "SteeringStrength": 8,
+        "HeatInterfaceMaterial": 60,
+        "HeatInterfaceParts": 12
       },
       "cost": "Stainless Platex10, Wirex40, Hall Alternatorx1",
       "grad": {
@@ -6065,7 +6201,9 @@
         "EngineForce": 600,
         "EngineConsumption": 70,
         "BoostThrust": 80,
-        "SteeringStrength": 20
+        "SteeringStrength": 20,
+        "HeatInterfaceMaterial": 40,
+        "HeatInterfaceParts": 12
       },
       "cost": "Small Steel Part Casingx2, Support Hardwarex4, Hall Alternatorx3, Thermal Sheetx6, Hematitex3",
       "grad": {
@@ -6109,7 +6247,9 @@
         "EngineThrust": 60,
         "EngineForce": 700,
         "EngineConsumption": 15,
-        "SteeringStrength": 15
+        "SteeringStrength": 15,
+        "HeatInterfaceMaterial": 60,
+        "HeatInterfaceParts": 18
       },
       "cost": "Small Steel Part Casingx2, Support Hardwarex4, Hall Alternatorx3, Motorx2",
       "grad": {
@@ -6154,7 +6294,9 @@
         "EngineForce": 600,
         "EngineConsumption": 80,
         "BoostThrust": 150,
-        "SteeringStrength": 15
+        "SteeringStrength": 15,
+        "HeatInterfaceMaterial": 120,
+        "HeatInterfaceParts": 36
       },
       "cost": "Small Steel Part Casingx2, Support Hardwarex4, Hall Alternatorx3, Wirex15, Watertight Pipex15",
       "grad": {
@@ -7726,7 +7868,9 @@
       "stats": {
         "StorageUnits": 10,
         "SystemRequirement": 50,
-        "PowerUsage": 35
+        "PowerUsage": 35,
+        "HeatInterfaceMaterial": 60,
+        "HeatInterfaceParts": 96
       },
       "cost": "Small Module Kitx1, Wirex5, Thermal Woolx1",
       "grad": {
