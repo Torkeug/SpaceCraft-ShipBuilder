@@ -96,6 +96,7 @@ const _gridMat = new THREE.ShaderMaterial({
   `,
   transparent: true,
   depthWrite: false,
+  side: THREE.DoubleSide,
 });
 const _gridMesh = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), _gridMat);
 _gridMesh.rotation.x = -Math.PI / 2;
@@ -590,7 +591,8 @@ function updatePointer(e) {
   pointer.y = -((e.clientY - r.top)  / r.height) * 2 + 1;
 }
 
-function snap(v) { return Math.round(v * 2) / 2; }
+function snapH(v) { return Math.round(v * 1.5) / 1.5; } // X/Z: 2/3-unit grid
+function snapV(v) { return Math.round(v * 2)   / 2;   } // Y:   1/2-unit grid
 
 // Invisible axis-aligned box used for raycasting instead of the visual mesh,
 // so face normals are always perfectly axis-aligned regardless of mesh detail.
@@ -608,6 +610,7 @@ function getGridPos(baseDims = null, excludeEntry = null, rotDeg = state.rotDeg)
   const [elx, ely, elz] = effDims(baseDims, rotDeg);
   raycaster.setFromCamera(pointer, camera);
 
+  const go = (excludeEntry && drag.grabOffset) ? drag.grabOffset : { x: elx / 2, y: ely / 2, z: elz / 2 };
   let gx, gy, gz;
   const hitMeshes = state.placed.filter(p => p !== excludeEntry).map(p => p.hitMesh).filter(Boolean);
   if (hitMeshes.length) {
@@ -621,13 +624,13 @@ function getGridPos(baseDims = null, excludeEntry = null, rotDeg = state.rotDeg)
         const p = hit.point;
         const [exl, eyl, ezl] = entry.dims;
         if (n.y < 0) {
-          gx = snap(p.x - elx / 2); gz = snap(p.z - elz / 2); gy = entry.gy - ely;
+          gx = snapH(p.x - go.x); gz = snapH(p.z - go.z); gy = entry.gy - ely;
         } else if (n.y > 0) {
-          gx = snap(p.x - elx / 2); gy = entry.gy + eyl; gz = snap(p.z - elz / 2);
+          gx = snapH(p.x - go.x); gy = entry.gy + eyl; gz = snapH(p.z - go.z);
         } else {
-          gx = n.x !== 0 ? (n.x > 0 ? entry.gx + exl : entry.gx - elx) : snap(p.x - elx / 2);
-          gy = snap(p.y - ely / 2);
-          gz = n.z !== 0 ? (n.z > 0 ? entry.gz + ezl : entry.gz - elz) : snap(p.z - elz / 2);
+          gx = n.x !== 0 ? (n.x > 0 ? entry.gx + exl : entry.gx - elx) : snapH(p.x - go.x);
+          gy = snapV(p.y - go.y);
+          gz = n.z !== 0 ? (n.z > 0 ? entry.gz + ezl : entry.gz - elz) : snapH(p.z - go.z);
         }
       }
     }
@@ -636,12 +639,12 @@ function getGridPos(baseDims = null, excludeEntry = null, rotDeg = state.rotDeg)
   if (gx == null) {
     const camDir = new THREE.Vector3(); camera.getWorldDirection(camDir);
     const hLen = Math.sqrt(camDir.x * camDir.x + camDir.z * camDir.z);
-    if (!excludeEntry && hLen < 0.5) {
+    if (!excludeEntry && (hLen < 0.5 || state.placed.length === 0)) {
       // New placement, top-down or bottom-up: cast against the ground plane.
       const planeHits = raycaster.intersectObject(buildPlane);
       if (!planeHits.length) return null;
       const p = planeHits[0].point;
-      gx = snap(p.x - elx / 2); gz = snap(p.z - elz / 2);
+      gx = snapH(p.x - go.x); gz = snapH(p.z - go.z);
       gy = camDir.y < 0
         ? stackHeight(gx, gz, [elx, ely, elz], excludeEntry)
         : stackDepth(gx, gz, [elx, ely, elz], excludeEntry);
@@ -661,9 +664,9 @@ function getGridPos(baseDims = null, excludeEntry = null, rotDeg = state.rotDeg)
       }
       const t = new THREE.Vector3();
       if (!raycaster.ray.intersectPlane(snapPlane, t)) return null;
-      const raw_gx = snap(t.x - elx / 2), raw_gz = snap(t.z - elz / 2);
+      const raw_gx = snapH(t.x - go.x), raw_gz = snapH(t.z - go.z);
       gx = raw_gx; gz = raw_gz;
-      gy = (excludeEntry && hLen < 0.5) ? excludeEntry.gy : snap(t.y - ely / 2);
+      gy = (excludeEntry && hLen < 0.5) ? excludeEntry.gy : snapV(t.y - go.y);
       // Snap X or Z to the nearest overlapping piece edge.
       let best = null, bestMin = Infinity;
       for (const entry of state.placed) {
@@ -692,7 +695,7 @@ function getGridPos(baseDims = null, excludeEntry = null, rotDeg = state.rotDeg)
 
 // ── Pointer events ────────────────────────────────────────────────────────────
 
-const drag = { pending: null, active: false, entry: null, gx: null, gy: null, gz: null };
+const drag = { pending: null, active: false, entry: null, gx: null, gy: null, gz: null, grabOffset: null };
 let _pDown = null;
 
 renderer.domElement.addEventListener('pointerdown', e => {
@@ -703,13 +706,16 @@ renderer.domElement.addEventListener('pointerdown', e => {
   const hits = raycaster.intersectObjects(state.placed.map(p => p.mesh));
   if (!hits.length) return;
   const entry = hits[0].object._entry ?? state.placed.find(p => p.mesh === hits[0].object);
-  if (entry && !entry.slotOwner) drag.pending = { entry, x: e.clientX, y: e.clientY };
+  if (entry && !entry.slotOwner) drag.pending = { entry, x: e.clientX, y: e.clientY, hitPoint: hits[0].point.clone() };
 });
 
 renderer.domElement.addEventListener('pointermove', e => {
   if (drag.pending) {
     if (Math.hypot(e.clientX - drag.pending.x, e.clientY - drag.pending.y) > 5) {
-      drag.active = true; drag.entry = drag.pending.entry; drag.pending = null; _pDown = null;
+      const pending = drag.pending;
+      drag.active = true; drag.entry = pending.entry; drag.pending = null; _pDown = null;
+      const de = drag.entry;
+      drag.grabOffset = { x: pending.hitPoint.x - de.gx, y: pending.hitPoint.y - de.gy, z: pending.hitPoint.z - de.gz };
       state.inspected = drag.entry; updateInspector();
       occupyCells(drag.entry, false);
       drag.entry.mesh.visible = false;
