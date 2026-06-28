@@ -797,13 +797,14 @@ renderer.domElement.addEventListener('pointermove', e => {
     _midPan.lastX = e.clientX; _midPan.lastY = e.clientY;
     if (dx || dy) {
       const dist = camera.position.distanceTo(controls.target);
-      const scale = (2 * dist * Math.tan(camera.fov * Math.PI / 360)) / renderer.domElement.clientHeight;
+      const scale = 2 * (2 * dist * Math.tan(camera.fov * Math.PI / 360)) / renderer.domElement.clientHeight;
       const right = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0); right.y = 0; right.normalize();
       const fwd   = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 2).negate(); fwd.y = 0; fwd.normalize();
+      const fwdSign = camera.position.y < controls.target.y ? -1 : 1;
       camera.position.addScaledVector(right, -dx * scale);
-      camera.position.addScaledVector(fwd,   dy * scale);
+      camera.position.addScaledVector(fwd,   dy * scale * fwdSign);
       controls.target.addScaledVector(right, -dx * scale);
-      controls.target.addScaledVector(fwd,   dy * scale);
+      controls.target.addScaledVector(fwd,   dy * scale * fwdSign);
     }
     return;
   }
