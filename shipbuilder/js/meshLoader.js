@@ -96,6 +96,7 @@ export function fitGeom(base, dims, rotDeg, part, flip, rz) {
   // Cockpits are already Y-up in source but face +X; rotate 90° Y to face -Z (forward).
   if (part && part._cockpit) g.rotateY(Math.PI / 2);
   else g.rotateX(-Math.PI / 2);
+  if (part && part._meshRot) g.rotateY(part._meshRot * Math.PI / 180);
   const [fx, fy, fz] = flip || [false, false, false];
   if (fx || fy || fz) {
     g.scale(fx ? -1 : 1, fy ? -1 : 1, fz ? -1 : 1);

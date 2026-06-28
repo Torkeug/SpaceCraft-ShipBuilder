@@ -5184,6 +5184,7 @@
         4,
         1
       ],
+      "_meshRot": -90,
       "price": 202,
       "stats": {
         "Frame": 8,
@@ -5229,6 +5230,7 @@
         3,
         1
       ],
+      "_meshRot": -90,
       "price": 202,
       "stats": {
         "Frame": 8,
@@ -5267,13 +5269,14 @@
       "name": "Thermal \"Catfin\" Spoiler",
       "type": "ShipWing",
       "kind": "build",
-      "group": "Wings & spoilers",
+      "group": "Wings & spoilers — Thermal plating",
       "color": "#4a7fb5",
       "dims": [
         3,
-        1,
-        2
+        4,
+        1
       ],
+      "_meshRot": -90,
       "price": 225,
       "stats": {
         "Frame": 8,
@@ -5312,13 +5315,14 @@
       "name": "Thermal \"Nimbus\" Spoiler",
       "type": "ShipWing",
       "kind": "build",
-      "group": "Wings & spoilers",
+      "group": "Wings & spoilers — Thermal plating",
       "color": "#4a7fb5",
       "dims": [
+        2,
         3,
-        1,
-        2
+        1
       ],
+      "_meshRot": -90,
       "price": 225,
       "stats": {
         "Frame": 8,
@@ -5364,6 +5368,7 @@
         3,
         4
       ],
+      "_meshRot": -90,
       "price": 404,
       "stats": {
         "Frame": 16,
@@ -5402,13 +5407,14 @@
       "name": "Thermal \"Warden\" Spoiler",
       "type": "ShipWing",
       "kind": "build",
-      "group": "Wings & spoilers",
+      "group": "Wings & spoilers — Thermal plating",
       "color": "#4a7fb5",
       "dims": [
+        6,
         3,
-        1,
-        2
+        4
       ],
+      "_meshRot": -90,
       "price": 450,
       "stats": {
         "Frame": 16,
@@ -5454,6 +5460,7 @@
         7,
         1
       ],
+      "_meshRot": 90,
       "price": 9200,
       "stats": {
         "Frame": 204.8,
@@ -5488,13 +5495,14 @@
       "name": "Thermal \"Condor\" Wing",
       "type": "ShipWing",
       "kind": "build",
-      "group": "Wings & spoilers",
+      "group": "Wings & spoilers — Thermal plating",
       "color": "#4a7fb5",
       "dims": [
-        3,
-        1,
-        2
+        9,
+        7,
+        1
       ],
+      "_meshRot": 90,
       "price": 10000,
       "stats": {
         "Frame": 204.8,
@@ -8535,6 +8543,7 @@
     "Levinium frames",
     "Thermal plating",
     "Wings & spoilers",
+    "Wings & spoilers — Thermal plating",
     "Cockpits",
     "Engines & thrusters",
     "Boosters",
