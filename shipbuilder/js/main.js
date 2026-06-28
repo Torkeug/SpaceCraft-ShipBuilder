@@ -19,7 +19,7 @@ camera.position.set(20, 16, 20);
 camera.lookAt(0, 0, 0);
 
 const controls = new OrbitControls(camera, renderer.domElement);
-controls.mouseButtons = { LEFT: null, MIDDLE: THREE.MOUSE.PAN, RIGHT: THREE.MOUSE.ROTATE };
+controls.mouseButtons = { LEFT: null, MIDDLE: null, RIGHT: THREE.MOUSE.ROTATE };
 controls.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
 controls.enableDamping = true;
 controls.dampingFactor = 0.08;
@@ -577,6 +577,7 @@ function placeInSlot(part, hullEntry) {
 
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
+const _midPan = { active: false, lastX: 0, lastY: 0 };
 
 function updatePointer(e) {
   const r = renderer.domElement.getBoundingClientRect();
@@ -763,6 +764,11 @@ function clearGroupSel() {
 }
 
 renderer.domElement.addEventListener('pointerdown', e => {
+  if (e.button === 1) {
+    e.preventDefault();
+    _midPan.active = true; _midPan.lastX = e.clientX; _midPan.lastY = e.clientY;
+    return;
+  }
   _pDown = { x: e.clientX, y: e.clientY, btn: e.button };
   if (e.button !== 0 || state.eraseMode || state.selected) return;
   updatePointer(e);
@@ -786,6 +792,21 @@ renderer.domElement.addEventListener('pointerdown', e => {
 });
 
 renderer.domElement.addEventListener('pointermove', e => {
+  if (_midPan.active) {
+    const dx = e.clientX - _midPan.lastX, dy = e.clientY - _midPan.lastY;
+    _midPan.lastX = e.clientX; _midPan.lastY = e.clientY;
+    if (dx || dy) {
+      const dist = camera.position.distanceTo(controls.target);
+      const scale = (2 * dist * Math.tan(camera.fov * Math.PI / 360)) / renderer.domElement.clientHeight;
+      const right = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0); right.y = 0; right.normalize();
+      const fwd   = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 2).negate(); fwd.y = 0; fwd.normalize();
+      camera.position.addScaledVector(right, -dx * scale);
+      camera.position.addScaledVector(fwd,   dy * scale);
+      controls.target.addScaledVector(right, -dx * scale);
+      controls.target.addScaledVector(fwd,   dy * scale);
+    }
+    return;
+  }
   if (marquee.active) {
     showMarquee(marquee.x0, marquee.y0, e.clientX, e.clientY);
     return;
@@ -877,6 +898,7 @@ renderer.domElement.addEventListener('pointermove', e => {
 });
 
 renderer.domElement.addEventListener('pointerup', e => {
+  if (e.button === 1) { _midPan.active = false; return; }
   if (marquee.active) {
     marquee.active = false;
     marqueeEl.style.display = 'none';
@@ -1030,6 +1052,7 @@ window.addEventListener('pointermove', e => {
 });
 
 window.addEventListener('pointerup', () => {
+  _midPan.active = false;
   // Fallback: clean up any stuck drag/marquee (e.g. released outside browser window).
   if (marquee.active) { marquee.active = false; marqueeEl.style.display = 'none'; }
   if (groupDrag.active) {
