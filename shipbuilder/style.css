@@ -125,6 +125,17 @@ body {
 }
 .mount-badge.inside  { color: #4fd084; border: 1px solid rgba(79,208,132,.5); }
 .mount-badge.surface { color: #e8a71d; border: 1px solid rgba(232,167,29,.5); }
+.wip-badge {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  padding: 1px 4px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  color: #ff6b6b;
+  border: 1px solid rgba(255,107,107,.5);
+}
 
 /* ── Viewport (center) ── */
 #viewport { flex: 1; position: relative; overflow: hidden; }

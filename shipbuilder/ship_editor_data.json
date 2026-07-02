@@ -1634,6 +1634,7 @@
       "type": "ShipHull_AlloyX",
       "kind": "build",
       "group": "Alloy-X frames",
+      "wip": true,
       "color": "#9aa8b4",
       "dims": [
         4,
@@ -1745,6 +1746,7 @@
       "type": "ShipHull_AlloyX",
       "kind": "build",
       "group": "Alloy-X frames",
+      "wip": true,
       "color": "#9aa8b4",
       "dims": [
         6,
@@ -1859,6 +1861,7 @@
       "type": "ShipHull_AlloyX",
       "kind": "build",
       "group": "Alloy-X frames",
+      "wip": true,
       "color": "#9aa8b4",
       "dims": [
         4,
@@ -1973,6 +1976,7 @@
       "type": "ShipHull_AlloyX",
       "kind": "build",
       "group": "Alloy-X frames",
+      "wip": true,
       "color": "#9aa8b4",
       "dims": [
         8,
@@ -2082,6 +2086,7 @@
       "type": "ShipHull_AlloyX",
       "kind": "build",
       "group": "Alloy-X frames",
+      "wip": true,
       "color": "#9aa8b4",
       "dims": [
         6,
@@ -2196,6 +2201,7 @@
       "type": "ShipHull_AlloyX",
       "kind": "build",
       "group": "Alloy-X frames",
+      "wip": true,
       "color": "#9aa8b4",
       "dims": [
         8,
@@ -2310,6 +2316,7 @@
       "type": "ShipHull_AlloyX",
       "kind": "build",
       "group": "Alloy-X frames",
+      "wip": true,
       "color": "#9aa8b4",
       "dims": [
         8,
@@ -2424,6 +2431,7 @@
       "type": "ShipHull_AlloyX",
       "kind": "build",
       "group": "Alloy-X frames",
+      "wip": true,
       "color": "#9aa8b4",
       "dims": [
         12,
@@ -2538,6 +2546,7 @@
       "type": "ShipHull_AlloyX",
       "kind": "build",
       "group": "Alloy-X frames",
+      "wip": true,
       "color": "#9aa8b4",
       "dims": [
         16,
@@ -5650,6 +5659,7 @@
       "type": "ShipCockpit",
       "kind": "build",
       "group": "Cockpits",
+      "wip": true,
       "color": "#2bb0c0",
       "dims": [
         3,
@@ -5695,6 +5705,7 @@
       "type": "ShipCockpit",
       "kind": "build",
       "group": "Cockpits",
+      "wip": true,
       "color": "#2bb0c0",
       "dims": [
         3,
@@ -5741,6 +5752,7 @@
       "type": "ShipCockpit",
       "kind": "build",
       "group": "Cockpits",
+      "wip": true,
       "color": "#2bb0c0",
       "dims": [
         4,
@@ -5786,6 +5798,7 @@
       "type": "ShipCockpit",
       "kind": "build",
       "group": "Cockpits",
+      "wip": true,
       "color": "#2bb0c0",
       "dims": [
         3,
@@ -5832,6 +5845,7 @@
       "type": "ShipCockpit",
       "kind": "build",
       "group": "Cockpits",
+      "wip": true,
       "color": "#2bb0c0",
       "dims": [
         3,
@@ -5878,6 +5892,7 @@
       "type": "ShipCockpit",
       "kind": "build",
       "group": "Cockpits",
+      "wip": true,
       "color": "#2bb0c0",
       "dims": [
         11,
@@ -5922,6 +5937,7 @@
       "type": "ShipCockpit",
       "kind": "build",
       "group": "Cockpits",
+      "wip": true,
       "color": "#2bb0c0",
       "dims": [
         11,
@@ -5967,6 +5983,7 @@
       "type": "ShipCockpit",
       "kind": "build",
       "group": "Cockpits",
+      "wip": true,
       "color": "#2bb0c0",
       "dims": [
         6,
@@ -6010,6 +6027,7 @@
       "type": "ShipCockpit",
       "kind": "build",
       "group": "Cockpits",
+      "wip": true,
       "color": "#2bb0c0",
       "dims": [
         11,
@@ -6054,6 +6072,7 @@
       "type": "ShipCockpit",
       "kind": "build",
       "group": "Cockpits",
+      "wip": true,
       "color": "#2bb0c0",
       "dims": [
         6,
@@ -6097,6 +6116,7 @@
       "type": "ShipCockpit",
       "kind": "build",
       "group": "Cockpits",
+      "wip": true,
       "color": "#2bb0c0",
       "dims": [
         6,
@@ -6140,6 +6160,7 @@
       "type": "ShipBooster",
       "kind": "build",
       "group": "Boosters",
+      "wip": true,
       "color": "#e0843a",
       "dims": [
         2,
@@ -6181,6 +6202,7 @@
       "type": "ShipDecorative",
       "kind": "build",
       "group": "Decorative",
+      "wip": true,
       "color": "#9b8b6a",
       "dims": [
         6,
@@ -6221,6 +6243,7 @@
       "type": "ShipDecorative",
       "kind": "build",
       "group": "Decorative",
+      "wip": true,
       "color": "#9b8b6a",
       "dims": [
         5,
@@ -6261,6 +6284,7 @@
       "type": "ShipDecorative",
       "kind": "build",
       "group": "Decorative",
+      "wip": true,
       "color": "#9b8b6a",
       "dims": [
         4,
@@ -7755,6 +7779,7 @@
       "type": "ShipLight",
       "kind": "module",
       "group": "Lights",
+      "wip": true,
       "color": "#e6dd5a",
       "dims": [
         2,
@@ -7790,6 +7815,7 @@
       "type": "ShipLight",
       "kind": "module",
       "group": "Lights",
+      "wip": true,
       "color": "#e6dd5a",
       "dims": [
         1,
@@ -7825,6 +7851,7 @@
       "type": "ShipLight",
       "kind": "module",
       "group": "Lights",
+      "wip": true,
       "color": "#e6dd5a",
       "dims": [
         3,
@@ -7860,6 +7887,7 @@
       "type": "MiningTool",
       "kind": "module",
       "group": "Gathering",
+      "wip": true,
       "color": "#5ec0a0",
       "dims": [
         2,
@@ -7897,6 +7925,7 @@
       "type": "MiningTool",
       "kind": "module",
       "group": "Gathering",
+      "wip": true,
       "color": "#5ec0a0",
       "dims": [
         3,
@@ -7934,6 +7963,7 @@
       "type": "MiningTool",
       "kind": "module",
       "group": "Gathering",
+      "wip": true,
       "color": "#5ec0a0",
       "dims": [
         2,
@@ -7971,6 +8001,7 @@
       "type": "MiningTool",
       "kind": "module",
       "group": "Gathering",
+      "wip": true,
       "color": "#5ec0a0",
       "dims": [
         3,
@@ -8008,6 +8039,7 @@
       "type": "MiningTool",
       "kind": "module",
       "group": "Gathering",
+      "wip": true,
       "color": "#5ec0a0",
       "dims": [
         4,
@@ -8041,6 +8073,7 @@
       "type": "MiningTool",
       "kind": "module",
       "group": "Gathering",
+      "wip": true,
       "color": "#5ec0a0",
       "dims": [
         4,
@@ -8074,6 +8107,7 @@
       "type": "ShipRadars",
       "kind": "module",
       "group": "Radar",
+      "wip": true,
       "color": "#6aa0d8",
       "dims": [
         1,
@@ -8111,6 +8145,7 @@
       "type": "ShipRadars",
       "kind": "module",
       "group": "Radar",
+      "wip": true,
       "color": "#6aa0d8",
       "dims": [
         1,
@@ -8148,6 +8183,7 @@
       "type": "ShipRadars",
       "kind": "module",
       "group": "Radar",
+      "wip": true,
       "color": "#6aa0d8",
       "dims": [
         1,
@@ -8185,6 +8221,7 @@
       "type": "ShipRadars",
       "kind": "module",
       "group": "Radar",
+      "wip": true,
       "color": "#6aa0d8",
       "dims": [
         3,
@@ -8221,6 +8258,7 @@
       "type": "ShipPowerTools",
       "kind": "module",
       "group": "Solar & power",
+      "wip": true,
       "color": "#d8c040",
       "dims": [
         2,
@@ -8259,6 +8297,7 @@
       "type": "ShipPowerTools",
       "kind": "module",
       "group": "Solar & power",
+      "wip": true,
       "color": "#d8c040",
       "dims": [
         2,
@@ -8297,6 +8336,7 @@
       "type": "ShipPowerTools",
       "kind": "module",
       "group": "Solar & power",
+      "wip": true,
       "color": "#d8c040",
       "dims": [
         5,
@@ -8335,6 +8375,7 @@
       "type": "ShipToolSpecial",
       "kind": "module",
       "group": "Specialized tools",
+      "wip": true,
       "color": "#a0c060",
       "dims": [
         1,
@@ -8372,6 +8413,7 @@
       "type": "ShipToolSpecial",
       "kind": "module",
       "group": "Specialized tools",
+      "wip": true,
       "color": "#a0c060",
       "dims": [
         1,
@@ -8606,6 +8648,7 @@
       "type": "ShipEngine",
       "kind": "build",
       "group": "Engines & thrusters",
+      "wip": true,
       "color": "#d8632e",
       "dims": [
         9,
@@ -8650,6 +8693,7 @@
       "type": "ShipEngine",
       "kind": "build",
       "group": "Engines & thrusters",
+      "wip": true,
       "color": "#d8632e",
       "dims": [
         13,

@@ -1442,6 +1442,9 @@ function buildPalette(filter = '') {
       if (p.kind === 'module') {
         el.innerHTML += `<span class="mount-badge ${p.mount === 'inside' ? 'inside' : 'surface'}">${p.mount === 'inside' ? 'in' : 'out'}</span>`;
       }
+      if (p.wip) {
+        el.innerHTML += `<span class="wip-badge" title="Work in progress — stats/mesh may be incomplete">WIP</span>`;
+      }
       el.addEventListener('pointerdown', () => selectPart(state.selected?.id === p.id ? null : p));
       group.appendChild(el);
     });
