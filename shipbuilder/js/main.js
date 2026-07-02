@@ -481,6 +481,7 @@ function removeEntry(entry) {
   if (state.inspected === entry) { state.inspected = null; updateInspector(); }
   const idx = state.placed.indexOf(entry);
   if (idx >= 0) state.placed.splice(idx, 1);
+  if (state.groupSel.delete(entry)) updateGroupOutlines();
   updateShipStats();
 }
 
