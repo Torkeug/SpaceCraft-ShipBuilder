@@ -389,6 +389,138 @@ Cannot be sourced from HAR — must come from in-game assets.
 | MK1      | various  | not started             | Rounded_MK1_* connector pieces                |
 | MK2      | various  | not started             | Rounded_MK2_* connector pieces                |
 
+### Outside-mount modules (Tools/, Decoratives_Parts/) — 14 of 18 DONE (2026-07-02)
+
+The 18 `mount: 'outside'` module parts (lights, mining lasers, radars, solar panels,
+scanners) previously used mesh data that did not match a proper pak_out extraction
+(likely HAR/website-sourced, per the same caveat as hull pieces). Re-extracted and
+converted from `assets/Vehicules/Buildings_Parts/{Tools,Decoratives_Parts}/`.
+
+Conversion tool: `tools/batch_convert_modules.py` (source path table + manifest update,
+same pattern as `batch_convert_hulls.py`).
+
+**Format differences found in this asset category vs. hull pieces:**
+
+1. **Wider material group counts.** Hull pieces only ever use gc=5 or 6, so the
+   ring-buffer parser (`parse_ring_buffer_hmd` in `hmd_parse_prod.py`) only tried
+   those two values when backtracking from a found LOD1+ block to LOD0's extra
+   section. Prop/tool assets use anywhere from 2 to 12 material groups. Fixed by
+   widening the backtrack search to `range(1, 17)`, with a stricter validator
+   (`_valid_extra`): vp must be 0, vbuf_size must divide evenly by stride, and the
+   implied index buffer must fit within the file — this prevents false-positive gc
+   matches now that the search range is much wider.
+
+2. **geom_start misalignment can be large and odd-byte-aligned.** The existing
+   `_find_ibuf_start` correction (scan for `ic` consecutive uint16s all < vc) was
+   hardcoded to even byte offsets only (hull files never needed odd alignment).
+   Some module files have a true vertex/index buffer start at an ODD byte offset
+   (confirmed on `Spot_Light_Barrel.fbx`: true vbuf_start=951, one byte off from
+   even). Also, the misalignment magnitude is not always small (16–62 bytes as
+   documented for hulls) — one file needed a correction of ~2KB. Fixed by
+   rewriting `_find_ibuf_start` (in `hmd_to_bin.py`) with a numpy-based scan that
+   checks both parities and is fast enough to search the whole file.
+
+3. **A pure index-match isn't a reliable-enough signal on its own.** With large
+   vertex counts (10k–19k), a run of indices that are merely "all < vc" can match
+   by coincidence at a position that is NOT the true buffer (confirmed: an
+   incorrect match 2.26MB away from the true position on `ColdLaser.fbx`, with
+   0 bad indices). Fixed with two additional safeguards:
+   - Only search for a corrected offset if the *original* geom_start-implied
+     position is actually broken (`_count_bad_indices` checked first) — most
+     module files' original geom_start was already correct, and blindly
+     re-searching could override a correct position with a coincidental one.
+   - When multiple candidate offsets tie on index-match quality, break ties using
+     `_vertex_sanity_score`: compare the sampled vertex bounding box against the
+     file's own stored bbox (from the LOD0 extra section) rather than a generic
+     "small numbers" heuristic — reading the wrong attribute column (normal/
+     tangent/uv are also small bounded floats) can otherwise look just as
+     plausible as real position data.
+
+4. **Compound multi-object files — the big one.** Tools/Decoratives_Parts `.fbx`
+   files can pack *multiple independent sub-objects* into what the file header
+   calls "lod_count" slots — NOT one object's decreasing-detail LODs. First
+   confirmed on `ColdLaser.fbx`: header declares 12 "LODs" across (as it turns
+   out) 4 real sub-objects named `Base`(2 LODs), `Rotary`(3), `Mining_Arm`(3),
+   `Reciever`(4) — naively taking `lods[0]` (as the converter always did before
+   this fix) gets only the small flat base plate, which is why converted "tool"
+   meshes looked like flat rectangular slabs instead of assembled devices.
+   - **The vc-derivation bug this exposed:** LOD1+'s vertex count is NOT reliable
+     from the field at the expected "vbuf_size" position in its own extra section
+     (that only holds a valid value for true LOD0/vp=0; for later entries it's
+     stale/unrelated data that doesn't divide evenly by stride). The correct vc
+     comes from the **gap to the next LOD's vp**: `vc[i] = (vp[i+1] - vp[i] -
+     ic[i]*idx_size) / stride`. Verified exact on every boundary except the very
+     last LOD of the file (trailing embedded material-name bytes throw off the
+     final total_geom-based boundary — harmless, that LOD isn't needed).
+   - **Sub-object boundary detection — use the embedded names, not a vc heuristic.**
+     The LOD descriptor section (right after the `00 00 00 02 04 05` sentinel)
+     embeds each LOD's own name, e.g. `BaseLOD0`, `RotaryLOD0`, `Mining_ArmLOD0` —
+     ground truth for sub-object identity. An earlier version of this fix inferred
+     boundaries from "vc increases relative to the previous entry", which is
+     WRONG whenever a new sub-object's LOD0 has *fewer* vertices than the
+     previous object's LOD0 — confirmed this silently swallowed a whole
+     `Mining_Arm` sub-object into the previous `Rotary` object's LOD chain on
+     `MiningTool1_OC.fbx`, and (initially unnoticed, since the merged result
+     still looked "mostly right") merged `Rotary`+`Mining_Arm` together on
+     `ColdLaser.fbx` too. Names are extracted via regex (`[A-Za-z_][A-Za-z0-9_]*
+     LOD[0-9]+`) from the descriptor section rather than a fixed-stride walk —
+     the per-entry record has a variable-length prefix that isn't fully decoded,
+     but the name+trailing LOD number is always contiguous printable ASCII+digits
+     regardless. Stripping the trailing `LOD\d+` and comparing against the
+     previous sorted LOD's name gives `is_object_start`; falls back to the old
+     vc-heuristic only if any LOD in the file is missing a parseable name.
+   - **Fix:** `_finish_prod_conversion_merged` in `hmd_to_bin.py` reads every
+     `is_object_start` entry's own geometry+groups (via the shared
+     `_read_object_geometry` helper) and concatenates them into one combined
+     mesh (vertex/index offsets adjusted, groups' `start` offset by cumulative
+     index count) — this is the actual assembled visual. `convert_prod_style`
+     picks the merged path automatically whenever more than one object-start is
+     detected. Applies to the standard (non-ring-buffer) path only so far; the
+     ring-buffer path (`parse_ring_buffer_hmd`) still only returns a single LOD0
+     and hasn't been checked for the same issue (light/decorative parts looked
+     fine on inspection, but haven't been stress-tested for compound files).
+   - **`parse_material_groups`** gained an `extra_off` parameter so groups/colors
+     can be read for a *specific* sub-object's LOD0 rather than always
+     `blocks[0]`; the embedded material-name text section is still scanned
+     file-wide (shared across sub-objects), so color/role assignment across
+     merged parts is a best-effort, not fully independent per sub-object.
+
+5. **Prefab `@model` references can be misleading red herrings, and prefab files
+   can bundle multiple unrelated sibling item records.** Several prefabs (e.g.
+   `Spot_Light_01.prefab`, `ColdLaser.prefab`) embed an `@model`/`@box` reference
+   to a *completely unrelated* mesh (a cockpit, a cargo crate used as a collision
+   proxy) — these are shared template/collision data, not the part's actual
+   visual. Worse: confirmed byte-for-byte that `Batterie.prefab`'s entire content
+   is embedded inside `ColdLaser.prefab` at a fixed offset (other unrelated tool
+   records — `BESS_Battery`, `BigReactiveShield` — also appear as trailing bytes).
+   The pak's per-file size for these small tool prefabs does not correspond to a
+   clean, independent logical record. The `.prefab` binary format itself was
+   partially reverse-engineered (tag bytes matching Heaps' `hxbit` Dynamic-value
+   convention: 0=null,1=false,2=true,3=int,4=float,5=object,6=string,7=array,
+   8=bytes — see `tools/prefab_parse.py`), but does not reliably yield a mesh
+   reference for every item — for at least 3 items (see below) the reachable
+   prefab data is exclusively weapon/FX/collider boilerplate.
+
+6. **Three part ids have no file matching their prefab name, and no resolvable
+   reference in their prefab data** (`Simple_Mining_Laser`, `RadarMK1`, `Scanner`).
+   Currently mapped to a same-family fallback file as an unconfirmed guess:
+   `Simple_Mining_Laser` → `Tools/MiningTool.fbx`, `RadarMK1` → `Tools/Radar.fbx`,
+   `Scanner` → `Tools/ScanningTool.fbx`. Flagged as wrong by visual inspection —
+   left as-is pending better information (no reliable way found yet to resolve
+   these from pak data alone).
+
+**Still unconverted (3 of 18):** `Water_Collector` (Simple Hose Pump),
+`CrudeSolarPanel_Flat` (Small Solar Panel), `SmallSolarPanel_Flat` (Medium Solar
+Panel). These fail even the standard (non-ring-buffer) parse path: `_parse_attr_blocks`
+finds an unusually large number (16+) of small, legitimately-structured attribute
+blocks at regular ~79-byte intervals, and the LOD-count sentinel search resolves to
+0. Given finding 4 above, these are likely compound multi-object files too, but with
+some additional wrinkle (possibly >16 sub-objects, or a broken/differently-shaped
+sentinel) that the current multi-object fix doesn't yet handle. Worth revisiting with
+the same "derive vc from vp gaps, detect vc-increase boundaries" technique applied
+more robustly (currently `parse_prod_hmd` still requires the lod_count sentinel to
+resolve before attempting any of this).
+
 ---
 
 ## TestPE Format (legacy reference)

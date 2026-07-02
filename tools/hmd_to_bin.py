@@ -266,16 +266,133 @@ def _find_hmd_data(data):
     return None
 
 
-def _find_ibuf_start(data, vc, ic):
+def _count_bad_indices(data, ibuf_start, ic, vc):
+    """Count how many of the ic uint16 LE indices at ibuf_start are >= vc.
+    Returns None if the buffer doesn't fit in data at all."""
+    if ibuf_start < 0 or ibuf_start + ic * 2 > len(data):
+        return None
+    vals = struct.unpack_from(f'<{ic}H', data, ibuf_start)
+    return sum(1 for v in vals if v >= vc)
+
+
+def _vertex_sanity_score(data, vbuf_start, vc, stride, target_bbox=None, sample=200):
+    """
+    Sample up to `sample` evenly-spaced vertices starting at vbuf_start and score
+    how plausible they look as real mesh-position data.
+
+    When `target_bbox` (the file's own stored [minX,minY,minZ,maxX,maxY,maxZ], read
+    directly from the LOD0 extra section) is given, the score is how closely the
+    sampled min/max per axis matches it — this is far more discriminating than a
+    generic "small numbers" heuristic, because misreading the wrong attribute
+    column (normal/tangent/uv are all small floats too) can otherwise look just as
+    plausible as the real position data.
+
+    Returns (nan_fraction, badness) — lower is better on both.
+    """
+    if vbuf_start < 0 or vbuf_start + vc * stride > len(data):
+        return (1.0, float('inf'))
+    step = max(1, vc // sample)
+    nan_count = checked = 0
+    mins = [float('inf')] * 3
+    maxs = [float('-inf')] * 3
+    for i in range(0, vc, step):
+        off = vbuf_start + i * stride
+        if off + 6 > len(data):
+            break
+        pt = struct.unpack_from('<3e', data, off)
+        checked += 1
+        bad = False
+        for v in pt:
+            if v != v or v in (float('inf'), float('-inf')):  # NaN/Inf check
+                bad = True
+        if bad:
+            nan_count += 1
+            continue
+        for axis, v in enumerate(pt):
+            mins[axis] = min(mins[axis], v)
+            maxs[axis] = max(maxs[axis], v)
+    if checked == 0:
+        return (1.0, float('inf'))
+    nan_frac = nan_count / checked
+    if target_bbox is None:
+        max_abs = max((abs(v) for v in mins + maxs if v not in (float('inf'), float('-inf'))), default=float('inf'))
+        return (nan_frac, max_abs)
+    badness = 0.0
+    for axis in range(3):
+        if mins[axis] == float('inf'):
+            return (nan_frac, float('inf'))
+        badness += abs(mins[axis] - target_bbox[axis]) + abs(maxs[axis] - target_bbox[axis + 3])
+    return (nan_frac, badness)
+
+
+def _find_ibuf_start(data, vc, ic, stride=None, bbox=None):
     """
     Scan data for the LOD0 index buffer: ic consecutive uint16 LE values all < vc.
     Returns the absolute byte offset of the index buffer within data, or None.
 
     Used to correct ring-buffer files where geom_start in the HMD trailer is wrong
-    (off by 16–62 bytes), causing vbuf_start / ibuf_start to be misaligned.
+    (observed misalignments range from a few bytes up to ~2KB depending on asset
+    category), causing vbuf_start / ibuf_start to be misaligned. Checks both byte
+    parities — some module/prop assets have been observed with an odd-byte-aligned
+    vertex/index buffer start, unlike hull pieces which are always even-aligned.
+
+    When `stride` is given, candidates are additionally ranked by vertex-sanity
+    (real mesh positions are small and finite) because a purely index-based match
+    can hit a coincidental run of small values that doesn't correspond to the real
+    buffer (observed on some Tools/-category files with large vertex counts).
     """
+    try:
+        import numpy as np
+    except ImportError:
+        return _find_ibuf_start_slow(data, vc, ic)
+
+    if len(data) < ic * 2:
+        return None
+
+    # Gather the lowest-bad-count candidates from both byte parities.
+    candidates = []  # (bad_count, byte_offset)
+    for parity in (0, 1):
+        sub = data[parity:]
+        n = len(sub) // 2
+        if n < ic:
+            continue
+        arr = np.frombuffer(sub[:n * 2], dtype='<u2')
+        valid = (arr < vc).astype(np.int64)
+        csum = np.concatenate(([0], np.cumsum(valid)))
+        window_sum = csum[ic:] - csum[:-ic]
+        bad_arr = ic - window_sum
+        k = min(25, len(bad_arr))
+        top_idx = np.argpartition(bad_arr, k - 1)[:k]
+        for idx in top_idx:
+            candidates.append((int(bad_arr[idx]), int(idx) * 2 + parity))
+
+    if not candidates:
+        return None
+    candidates.sort(key=lambda c: c[0])
+    min_bad = candidates[0][0]
+    if min_bad / ic >= 0.05:
+        return None
+
+    if stride is None:
+        return candidates[0][1]
+
+    # Among candidates within a small margin of the best index-match, prefer the
+    # one whose implied vertex buffer looks like real geometry.
+    margin = max(min_bad, 1) * 3
+    close = [c for c in candidates if c[0] - min_bad <= margin]
+    scored = []
+    for bad, byte_off in close:
+        vbuf_start = byte_off - vc * stride
+        nan_frac, badness = _vertex_sanity_score(data, vbuf_start, vc, stride, target_bbox=bbox)
+        scored.append((nan_frac, badness, bad, byte_off))
+    scored.sort(key=lambda s: (s[0], s[1]))
+    return scored[0][3]
+
+
+def _find_ibuf_start_slow(data, vc, ic):
+    """Pure-Python fallback for _find_ibuf_start when numpy is unavailable."""
     results = []
-    for start in range(0, len(data) - ic * 2 + 1, 2):
+    for start in range(0, len(data) - ic * 2 + 1, 1):
         ok = True
         for check in range(min(ic, 8)):
             if struct.unpack_from('<H', data, start + check * 2)[0] >= vc:
@@ -293,8 +410,9 @@ def _find_ibuf_start(data, vc, ic):
     return results[0] if len(results) == 1 else None
 
 
-def _finish_prod_conversion(raw, data, lod0, blocks, geom_start, out_path, label='Production'):
-    """Shared final stage: read verts/indices, build groups, write .bin."""
+def _read_object_geometry(raw, data, lod0, blocks, geom_start, mat_skip=0):
+    """Read one object's verts/indices/groups from a single LOD0-style entry.
+    Returns (verts, groups, raw_indices, idx_size)."""
     from hmd_parse_prod import (read_verts_f16, read_indices_le_u16, read_indices_le_u32,
                                  parse_material_groups)
 
@@ -305,15 +423,21 @@ def _finish_prod_conversion(raw, data, lod0, blocks, geom_start, out_path, label
     # then back-compute the true vbuf_start.  Skip for uint32 files (all uint16 values
     # pass the vc check when vc > 65535, causing false positives).
     if idx_size == 2:
-        ibuf_found = _find_ibuf_start(data, lod0['vc'], lod0['ic'])
-        if ibuf_found is not None:
-            true_vbuf = ibuf_found - lod0['vc'] * lod0['stride']
-            if true_vbuf >= 0 and true_vbuf != lod0['vbuf_start']:
-                print(f"  Correcting vbuf_start {lod0['vbuf_start']} -> {true_vbuf} "
-                      f"(ibuf at {ibuf_found}, delta={true_vbuf - lod0['vbuf_start']})")
-                lod0 = dict(lod0)
-                lod0['vbuf_start'] = true_vbuf
-                lod0['ibuf_start'] = ibuf_found
+        # Only search for a corrected offset if the position implied by geom_start
+        # is actually broken. Checking this first avoids the search's occasional
+        # false-positive matches (a coincidental low-bad-count run elsewhere in the
+        # file) overriding an already-correct position.
+        orig_bad = _count_bad_indices(data, lod0['ibuf_start'], lod0['ic'], lod0['vc'])
+        if orig_bad is None or orig_bad / lod0['ic'] > 0.01:
+            ibuf_found = _find_ibuf_start(data, lod0['vc'], lod0['ic'], lod0['stride'], lod0['bbox'])
+            if ibuf_found is not None:
+                true_vbuf = ibuf_found - lod0['vc'] * lod0['stride']
+                if true_vbuf >= 0 and true_vbuf != lod0['vbuf_start']:
+                    print(f"  Correcting vbuf_start {lod0['vbuf_start']} -> {true_vbuf} "
+                          f"(ibuf at {ibuf_found}, delta={true_vbuf - lod0['vbuf_start']})")
+                    lod0 = dict(lod0)
+                    lod0['vbuf_start'] = true_vbuf
+                    lod0['ibuf_start'] = ibuf_found
 
     verts = read_verts_f16(data, lod0['vbuf_start'], lod0['vc'], lod0['stride'])
     if idx_size == 4:
@@ -327,7 +451,7 @@ def _finish_prod_conversion(raw, data, lod0, blocks, geom_start, out_path, label
         print(f"  Warning: {len(bad)} out-of-range indices clamped to 0")
         raw_indices = [v if v < vc else 0 for v in raw_indices]
 
-    gc, ic_per_group, mat_roles = parse_material_groups(data, blocks, geom_start)
+    gc, ic_per_group, mat_roles = parse_material_groups(data, blocks, geom_start, lod0.get('extra_off'), mat_skip)
 
     if sum(ic_per_group) == len(raw_indices) and gc > 0:
         groups = []
@@ -339,10 +463,55 @@ def _finish_prod_conversion(raw, data, lod0, blocks, geom_start, out_path, label
     else:
         groups = [{'role': 1, 'rgb': (121, 130, 141), 'start': 0, 'count': len(raw_indices)}]
 
+    return verts, groups, raw_indices, idx_size, gc
+
+
+def _finish_prod_conversion(raw, data, lod0, blocks, geom_start, out_path, label='Production'):
+    """Read one object's geometry and write it directly to .bin."""
+    verts, groups, raw_indices, idx_size, _gc = _read_object_geometry(raw, data, lod0, blocks, geom_start)
     i32 = (idx_size == 4)
-    print(f"  {label} HMD: vc={vc}, ic={len(raw_indices)}, gc={len(groups)}, "
+    print(f"  {label} HMD: vc={len(verts)}, ic={len(raw_indices)}, gc={len(groups)}, "
           f"stride={lod0['stride']}, idx_size={idx_size}")
     write_bin(out_path, verts, groups, raw_indices, i32=i32)
+
+
+def _finish_prod_conversion_merged(raw, data, object_lods, blocks, geom_start, out_path, label='Production'):
+    """Read multiple sub-objects (each a LOD0-style entry) and merge them into one .bin.
+
+    Used for compound multi-object files (see parse_prod_hmd) where the real visual
+    is an assembly of several parts, not just the first declared "LOD0"."""
+    all_verts = []
+    all_groups = []
+    all_indices = []
+    idx_size = 2
+    vertex_offset = 0
+    index_offset = 0
+    # NOTE: passing an accumulating mat_skip here (so each sub-object claims the next
+    # slice of the shared keyword-match list instead of always starting at 0) was tried
+    # and made things worse (emissive jumped from 10% to 48% of the mesh) — the shared
+    # material section has only as many *unique* keyword hits as distinct materials
+    # (18 on MiningTool1_OC), reused across far more group slots (30), so a flat
+    # sequential-slice model runs out of real matches partway through and starts
+    # assigning tail-of-list (often emissive/signage) keywords to unrelated later
+    # sub-objects. The true group-to-material mapping needs an actual index/reference
+    # array we haven't located yet — see hmd_format_notes.md "material attribution"
+    # notes. Left at 0 (each sub-object restarts from the first keyword) as the
+    # least-bad default until that's found.
+    for lod0 in object_lods:
+        verts, groups, raw_indices, this_idx_size, gc = _read_object_geometry(
+            raw, data, lod0, blocks, geom_start, 0)
+        idx_size = max(idx_size, this_idx_size)
+        all_verts.extend(verts)
+        all_indices.extend(v + vertex_offset for v in raw_indices)
+        for g in groups:
+            all_groups.append({**g, 'start': g['start'] + index_offset})
+        vertex_offset += len(verts)
+        index_offset += len(raw_indices)
+
+    i32 = (idx_size == 4) or vertex_offset > 65535
+    print(f"  {label} HMD (merged {len(object_lods)} sub-objects): "
+          f"vc={vertex_offset}, ic={len(all_indices)}, gc={len(all_groups)}")
+    write_bin(out_path, all_verts, all_groups, all_indices, i32=i32)
 
 
 def _detect_prefix_ring_buffer(raw):
@@ -450,7 +619,16 @@ def convert_prod_style(hmd_path, out_path):
         return False
 
     blocks = _parse_attr_blocks(data)
-    _finish_prod_conversion(raw, data, lod0, blocks, None, out_path)
+
+    # Compound/prop assets can pack multiple independent sub-objects into the LOD
+    # slots (see parse_prod_hmd docstring) — each marked is_object_start. If there's
+    # more than one, the real visual is their assembly, not just the first one.
+    object_starts = [l for l in lods if l.get('is_object_start') and
+                      l['ibuf_start'] + l['ic'] * (l.get('idx_size', 2)) <= len(data)]
+    if len(object_starts) > 1:
+        _finish_prod_conversion_merged(raw, data, object_starts, blocks, None, out_path)
+    else:
+        _finish_prod_conversion(raw, data, lod0, blocks, None, out_path)
     return True
 
 

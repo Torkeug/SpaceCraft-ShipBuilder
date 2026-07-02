@@ -11,6 +11,7 @@ Usage:
     #            'ibuf_start': int, 'ic': int, 'bbox': [6 floats]}
 """
 
+import re
 import struct
 
 
@@ -102,17 +103,33 @@ def parse_ring_buffer_hmd(raw, hmd_off, geom_start_override=None):
     if first_block_off is not None:
         stride = found_stride
         first_ring_pos = first_block_off + trailer_len
+        def _valid_extra(es, gc_candidate):
+            """Validate a candidate LOD0 extra section: vp=0, vbuf_size divides evenly
+            by stride, and the resulting index buffer fits within the file."""
+            if body[es + 4] != gc_candidate:
+                return False
+            if struct.unpack_from('<I', body, es)[0] != 0:
+                return False
+            vbuf_size_val = struct.unpack_from('<I', body, es + 5 + gc_candidate * 4)[0]
+            if vbuf_size_val == 0 or vbuf_size_val % stride != 0:
+                return False
+            ic_candidate = sum(struct.unpack_from(f'<{gc_candidate}I', body, es + 5))
+            vc_candidate = vbuf_size_val // stride
+            ibuf_end = geom_start + vc_candidate * stride + ic_candidate * 2
+            return 0 < ibuf_end <= len(raw)
+
         if first_ring_pos >= 30:
             # Large trailer: first block is LOD1. Backtrack to find LOD0 extra.
-            for gc_candidate in (5, 6):
+            # gc (material group count) varies widely across asset categories — hull
+            # pieces use 5-6, but small props/tools can use anywhere from 1 to ~32
+            # (confirmed: a "Receiver" sub-object with gc=17 was silently dropped
+            # before this range was widened — see compound multi-object notes below).
+            for gc_candidate in range(1, 33):
                 extra_len = 38 + gc_candidate * 4
                 es = first_block_off - extra_len
                 if es < 0:
                     continue
-                if body[es + 4] != gc_candidate:
-                    continue
-                # LOD0 always has vp=0 (starts at beginning of the geometry section)
-                if struct.unpack_from('<I', body, es)[0] == 0:
+                if _valid_extra(es, gc_candidate):
                     lod0_extra_start = es
                     lod0_gc = gc_candidate
                     break
@@ -130,8 +147,8 @@ def parse_ring_buffer_hmd(raw, hmd_off, geom_start_override=None):
                 pos += 1  # type byte
             if ok:
                 attrs_end = pos
-                for gc_candidate in (5, 6):
-                    if attrs_end + 4 < len(body) and body[attrs_end + 4] == gc_candidate:
+                for gc_candidate in range(1, 33):
+                    if attrs_end + 4 < len(body) and _valid_extra(attrs_end, gc_candidate):
                         lod0_extra_start = attrs_end
                         lod0_gc = gc_candidate
                         break
@@ -197,6 +214,41 @@ def parse_ring_buffer_hmd(raw, hmd_off, geom_start_override=None):
     return [lod], all_blocks, geom_start
 
 
+def _valid_attr_block(data, off):
+    """
+    Check whether `off` looks like a genuine attr block (0x0B marker + count +
+    N×(name_len + name + type)) as opposed to an incidental 0x0B byte inside
+    embedded material name/path strings (common in files with many texture
+    references, where a stray 0x0B can otherwise be mistaken for a new block).
+
+    Returns (attrs_end, stride) or (None, 0).
+    """
+    if off >= len(data) or data[off] != 0x0B:
+        return None, 0
+    if off + 1 >= len(data):
+        return None, 0
+    attr_count = data[off + 1]
+    if not (1 <= attr_count <= 6):
+        return None, 0
+    pos = off + 2
+    stride = 0
+    for _ in range(attr_count):
+        if pos >= len(data):
+            return None, 0
+        name_len = data[pos]; pos += 1
+        if not (1 <= name_len <= 20) or pos + name_len >= len(data):
+            return None, 0
+        name = data[pos:pos + name_len]
+        if not all(0x20 <= b < 0x7F for b in name):
+            return None, 0
+        pos += name_len
+        atype = data[pos]; pos += 1
+        if atype not in _ATTR_SIZE:
+            return None, 0
+        stride += _ATTR_SIZE[atype]
+    return pos, stride
+
+
 def _parse_attr_blocks(data):
     """
     Parse all LOD attribute blocks starting at byte 19.
@@ -226,7 +278,15 @@ def _parse_attr_blocks(data):
         # spurious 0x0B bytes inside ic_per_group data (e.g. 2856 = 28 0B 00 00).
         gc_peek = data[attrs_end + 4] if attrs_end + 5 < len(data) else 0
         min_skip = (38 + gc_peek * 4) if 1 <= gc_peek <= 16 else 1
-        next_ob = data.find(bytes([0x0B]), attrs_end + min_skip)
+        next_ob = attrs_end + min_skip - 1
+        while True:
+            next_ob = data.find(bytes([0x0B]), next_ob + 1)
+            if next_ob < 0:
+                break
+            # Reject incidental 0x0B hits inside material name/path strings (common
+            # in files with many texture references) that don't parse as a real block.
+            if _valid_attr_block(data, next_ob)[0] is not None:
+                break
         # Sanity: next block should be within 200 bytes (engines have gc=10-12, extra up to ~90 bytes)
         if next_ob < 0 or next_ob - attrs_end > 200:
             # Last block — extra runs to end of attr section (find sentinel instead)
@@ -286,7 +346,38 @@ def parse_prod_hmd(data):
         return None
     lod_count = data[idx - 1]
 
-    # Collect vp and bbox for each LOD from parsed block extras
+    # The LOD descriptor section (right after the sentinel) embeds each LOD's own
+    # name, e.g. "BaseLOD0", "RotaryLOD0" — these are ground truth for sub-object
+    # identity in compound multi-object files, far more reliable than inferring
+    # object boundaries from vertex-count patterns (confirmed exact match, in file
+    # order, against all declared LODs on MiningTool1_OC.fbx: Base/Rotary/
+    # Mining_Arm/Receiver/Plane). The per-entry record layout has a variable-length
+    # prefix we haven't fully cracked, so this uses a regex scan rather than a
+    # fixed-stride walk — good enough since names+trailing LOD number are always
+    # printable ASCII immediately followed by digits.
+    lod_names = [m.decode() for m in
+                 re.findall(rb'[A-Za-z_][A-Za-z0-9_]*LOD[0-9]+', data[idx + 6:idx + 6 + 4000])]
+    lod_base_names = [re.sub(r'LOD\d+$', '', n) for n in lod_names]
+
+    # Collect vp, ic (from ic_per_group — reliable), and bbox for each LOD.
+    # IMPORTANT: vc is NOT stored directly for LOD1+ in a form we can trust. A field
+    # at the expected "vbuf_size" position exists but only holds a valid value for
+    # true LOD0 (vp=0); for later entries it's some other/stale value that doesn't
+    # divide evenly by stride. The reliable way to get vc for LOD i is to derive it
+    # from the gap to the NEXT LOD's vp: vc[i] = (vp[i+1] - vp[i] - ic[i]*idx_size) / stride
+    # (confirmed exact on every LOD boundary in ColdLaser.fbx except the very last,
+    # which has trailing material-name bytes after its index buffer).
+    #
+    # This also reveals that compound/prop assets (Tools/, Decoratives_Parts/) can
+    # pack *multiple independent sub-objects* into what the header calls "lod_count"
+    # slots, each with its own decreasing-detail LOD chain — not one object's LODs.
+    # Confirmed on ColdLaser.fbx: 12 declared "LODs" are actually 3 sub-objects (5+3+4
+    # LODs), identifiable because vc jumps back UP at each new sub-object's LOD0
+    # after decreasing within the previous one. The first sub-object is a small flat
+    # base plate; by far the largest (most detailed) sub-object is a later one — i.e.
+    # naively taking `lods[0]` gets an auxiliary part, not the main visual.
+    idx_size = 4 if vc_lod0 > 65535 else 2
+
     lod_extras = []
     for lod in range(min(lod_count, len(blocks))):
         blk = blocks[lod]
@@ -294,13 +385,17 @@ def parse_prod_hmd(data):
         if extra_off + 29 > len(data):
             break
         vp   = _u32(data, extra_off)
-        # bbox at extra[5 + gc*4 + 4 .. +24] (6 float32); offset 29 only correct for gc=5
         gc_here = data[extra_off + 4] if extra_off + 4 < len(data) else 5
+        if not (1 <= gc_here <= 32) or extra_off + 5 + gc_here * 4 + 4 > len(data):
+            continue
+        ic_per_group = struct.unpack_from(f'<{gc_here}I', data, extra_off + 5)
+        ic_here = sum(ic_per_group)
         bbox_off = extra_off + 5 + gc_here * 4 + 4
         if bbox_off + 24 > len(data):
             bbox_off = extra_off + 29  # fallback
         bbox = list(struct.unpack_from('<6f', data, bbox_off))
-        lod_extras.append({'vp': vp, 'bbox': bbox})
+        name = lod_base_names[lod] if lod < len(lod_base_names) else None
+        lod_extras.append({'vp': vp, 'bbox': bbox, 'ic': ic_here, 'extra_off': extra_off, 'name': name})
 
     if not lod_extras:
         return None
@@ -312,20 +407,33 @@ def parse_prod_hmd(data):
     total_geom = len(data) - geom_start
     vps_sorted.append(total_geom)
 
-    # Meshes with vc > 65535 cannot use uint16 indices; they use uint32 (4 bytes/index).
-    idx_size = 4 if vc_lod0 > 65535 else 2
+    # Prefer name-based object grouping (ground truth) over the vc-increase heuristic
+    # when every sorted LOD has a name — a name change from the previous entry marks
+    # a new sub-object, regardless of whether its LOD0 vc happens to be smaller than
+    # the previous object's (the case the vc-heuristic gets wrong, e.g. "Mining_Arm"
+    # having fewer vertices than "Rotary" before it).
+    names_sorted = [e.get('name') for e in lod_extras_sorted]
+    use_names = all(n is not None for n in names_sorted)
 
+    prev_vc = None
+    prev_name = None
     lods = []
     for i, ex in enumerate(lod_extras_sorted):
-        vp         = ex['vp']
-        vc         = vc_lod0
+        vp = ex['vp']
+        ic = ex['ic']
+        gap = vps_sorted[i + 1] - vp - ic * idx_size
+        if gap <= 0 or gap % stride != 0:
+            continue
+        vc = gap // stride
         vbuf_start = geom_start + vp
         ibuf_start = vbuf_start + vc * stride
-        next_start = geom_start + vps_sorted[i + 1]
-        ic_bytes   = next_start - ibuf_start
-        if ic_bytes < 0 or ibuf_start >= len(data):
-            continue
-        ic = ic_bytes // idx_size
+        name = ex.get('name')
+        if use_names:
+            is_object_start = prev_name is None or name != prev_name
+        else:
+            is_object_start = prev_vc is None or vc > prev_vc
+        prev_vc = vc
+        prev_name = name
         lods.append({
             'vbuf_start': vbuf_start,
             'vc':         vc,
@@ -334,6 +442,8 @@ def parse_prod_hmd(data):
             'ic':         ic,
             'bbox':       ex['bbox'],
             'idx_size':   idx_size,
+            'is_object_start': is_object_start,
+            'extra_off':  ex['extra_off'],
         })
 
     return lods if lods else None
@@ -348,10 +458,10 @@ _MAT_KEYWORDS = [
     (b'Metal_Standard_Zinc',   1),    # metal variant
     (b'Metal_Standard',        1),    # metal
     (b'Metal_RedPaint',        0),    # painted panel
-    (b'Metal_Painted_Yellow',  4),    # yellow accent -> closest bucket (emissive-yellow default)
+    (b'Metal_Painted_Yellow',  1),    # yellow-painted metal (caution marking) -> metal/gray, not glowing
     (b'MetallicPaint_Color2',  0),    # painted panel variant
     (b'Irridescent_Metal',     1),    # metal
-    (b'Yellow_Plastic',        4),    # yellow accent -> closest bucket (emissive-yellow default)
+    (b'Yellow_Plastic',        1),    # yellow accent panel -> metal/gray, not glowing
     (b'White_Basic_Color1',    3),    # light/white
     (b'Black_Basic',           2),    # dark
     (b'Grid_Hex',              2),    # dark grille/vent pattern
@@ -371,25 +481,54 @@ _MAT_KEYWORDS = [
     (b'Signaletic_01',         4),    # emissive (alt spelling)
     (b'Emissiv_Generic_01',    4),    # emissive
     (b'Marques_colored',       0),    # painted logo/decal
+
+    # Tools/props category materials (discovered on MiningTool1_OC.fbx — these were
+    # all absent from the original hull-piece-derived list above, causing most
+    # groups on compound tool meshes to fall back to the "dark" default and look
+    # like missing/invisible geometry against the dark viewport background).
+    (b'Metal_Standard_Copper', 1),    # metal
+    (b'Metal_Standard_Zinc2',  1),    # metal variant
+    (b'Metal_Coil',            1),    # metal
+    (b'Metal_Redpaint',        0),    # painted panel (alt case of Metal_RedPaint)
+    (b'Gray_Plastic_Color1',   2),    # dark/neutral plastic housing
+    (b'Plastic_Shiny_LightOrange', 4), # orange accent -> emissive bucket
+    (b'Plastic_Shiny_Red',     4),    # red accent -> emissive bucket
+    (b'Plastic_Cable_Red',     2),    # cable/wiring -> dark bucket
+    (b'Yellow_Basic',          1),    # yellow accent panel -> metal/gray, not glowing
+    (b'Orange_Basic',          4),    # orange accent -> emissive bucket
+    (b'Emissiv_LampOrange',    4),    # emissive lamp (explicit "Emissiv" name — genuinely a lit lamp)
 ]
 
 
-def parse_material_groups(data, blocks, geom_start=None):
-    """Parse material groups from LOD0 extra and the embedded material section.
+def parse_material_groups(data, blocks, geom_start=None, extra_off=None, mat_skip=0):
+    """Parse material groups from a LOD's extra section and the embedded material section.
 
     Returns (gc, ic_per_group, mat_roles) where:
       gc           = number of material groups
-      ic_per_group = list of index counts per group (for LOD0)
+      ic_per_group = list of index counts per group (for the target LOD)
       mat_roles    = list of role ints in group order (paint=0, metal=1, dark=2, emissive=4)
 
     geom_start: absolute byte offset of geometry section. When None, read from
                 data[4:8] (correct for standard HMD where header is at byte 0).
                 Pass explicitly for ring-buffer files where data=raw.
+    extra_off:  byte offset of the target LOD's own extra section (its gc/ic_per_group).
+                Defaults to blocks[0] (the file's first LOD) for backward compatibility;
+                pass explicitly for a specific sub-object's LOD0 in a compound/multi-object
+                file (see "compound multi-object files" note in parse_prod_hmd).
+    mat_skip:   number of leading keyword matches to skip before assigning roles to this
+                object's groups. Compound multi-object files embed ONE shared material
+                name section covering ALL sub-objects' groups in sequence (materials are
+                reused across sub-objects, so there are fewer unique names than total
+                groups) — each sub-object's groups claim the next slice of that shared,
+                file-wide ordered list, not always the first `gc` entries. Callers merging
+                multiple sub-objects must pass the cumulative gc of objects already
+                processed so each one claims the correct slice.
     """
-    blk0 = blocks[0]
-    gc = data[blk0['extra_off'] + 4]
+    if extra_off is None:
+        extra_off = blocks[0]['extra_off']
+    gc = data[extra_off + 4]
     std_extra_len = 38 + gc * 4        # 58 for gc=5, 62 for gc=6
-    ic_per_group = list(struct.unpack_from('<%dI' % gc, data, blk0['extra_off'] + 5))
+    ic_per_group = list(struct.unpack_from('<%dI' % gc, data, extra_off + 5))
     if geom_start is None:
         geom_start = _u32(data, 4)
 
@@ -425,12 +564,11 @@ def parse_material_groups(data, blocks, geom_start=None):
             found.append((idx, role))
     found.sort()
 
-    # Take first gc entries in byte-position order (position of each name's length-prefix
-    # byte matches the group's order of appearance in the file).
-    mat_roles = []
-    for idx, role in found:
-        if len(mat_roles) < gc:
-            mat_roles.append(role)
+    # Take the next gc entries starting after mat_skip (see mat_skip docstring above) —
+    # in byte-position order (position of each name's length-prefix byte matches the
+    # group's order of appearance in the file).
+    window = found[mat_skip:mat_skip + gc]
+    mat_roles = [role for _, role in window]
 
     # Pad with dark (2) if we couldn't identify all groups.
     while len(mat_roles) < gc:
