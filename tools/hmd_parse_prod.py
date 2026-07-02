@@ -345,6 +345,16 @@ def parse_prod_hmd(data):
     if idx < 1:
         return None
     lod_count = data[idx - 1]
+    if lod_count == 0:
+        # Some compound files (e.g. Water_Collector.fbx) have a separate LOD
+        # descriptor sentinel PER sub-object (each with its own small local name
+        # list) rather than one shared section for the whole file — data.find()
+        # only locates the first one, and the byte before it doesn't hold a valid
+        # global count. Fall back to trusting however many real attribute blocks
+        # were actually found (confirmed exact on Water_Collector.fbx: 16 blocks
+        # found == 16 LOD names across its 4 named sub-objects: base/Pannel_L/
+        # Pannel_R/Piston, each with 4 LODs).
+        lod_count = len(blocks)
 
     # The LOD descriptor section (right after the sentinel) embeds each LOD's own
     # name, e.g. "BaseLOD0", "RotaryLOD0" — these are ground truth for sub-object

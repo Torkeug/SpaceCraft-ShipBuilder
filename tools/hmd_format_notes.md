@@ -509,17 +509,34 @@ same pattern as `batch_convert_hulls.py`).
    left as-is pending better information (no reliable way found yet to resolve
    these from pak data alone).
 
-**Still unconverted (3 of 18):** `Water_Collector` (Simple Hose Pump),
-`CrudeSolarPanel_Flat` (Small Solar Panel), `SmallSolarPanel_Flat` (Medium Solar
-Panel). These fail even the standard (non-ring-buffer) parse path: `_parse_attr_blocks`
-finds an unusually large number (16+) of small, legitimately-structured attribute
-blocks at regular ~79-byte intervals, and the LOD-count sentinel search resolves to
-0. Given finding 4 above, these are likely compound multi-object files too, but with
-some additional wrinkle (possibly >16 sub-objects, or a broken/differently-shaped
-sentinel) that the current multi-object fix doesn't yet handle. Worth revisiting with
-the same "derive vc from vp gaps, detect vc-increase boundaries" technique applied
-more robustly (currently `parse_prod_hmd` still requires the lod_count sentinel to
-resolve before attempting any of this).
+7. **`lod_count` byte can read as 0 even when the file is fine — fixed.**
+   `Water_Collector.fbx`, `CrudeSolarPanel_Flat.fbx`, and `SmallSolarPanel_Flat.fbx`
+   all failed at the standard (non-ring-buffer) parse path with zero LODs found.
+   Root cause: these files have a *separate* LOD descriptor sentinel per sub-object
+   (each with its own small local name list — e.g. `Water_Collector_LOD0`,
+   `Water_Collector_Pannel_L_LOD0`, `Water_Collector_Pannel_R_LOD0`,
+   `Water_Collector_Piston_LOD0`, 4 LODs each = 16 total) rather than one shared
+   descriptor section for the whole file. `data.find(sentinel)` only locates the
+   *first* one, and the byte immediately before it doesn't hold a valid global
+   count (reads 0) — even though the LOD name data right after it is well-formed.
+   Confirmed the real count by both counting actual attribute blocks found (16)
+   and by regex-scanning all LOD names in the file (16, ignoring end-of-file
+   name-scan overrun duplicates) — they agree. Fix: if the sentinel-derived
+   `lod_count` is 0, fall back to `len(blocks)` (the number of attribute blocks
+   `_parse_attr_blocks` actually found). All 3 files now convert correctly; the
+   parsed `Water_Collector` base object's bbox (~13.8 units on its long axis)
+   closely matches this item's authoritative in-game dims `[3, 14, 4]` from
+   `ship_editor_data.json`, a good independent sanity check that the fix is
+   correct and not just "no longer crashing."
+
+**All 18 of 18 outside modules now convert successfully.** 3 part ids
+(`Simple_Mining_Laser`, `RadarMK1`, `Scanner`) still use unconfirmed fallback
+source files per finding 6 above — visually flagged as likely wrong, but no
+better candidate found in the pak. `MiningTool.fbx` (Simple Mining Laser's
+fallback) in particular shows a crowded/disconnected-looking sub-object
+arrangement with no evidence of a parser bug (no vbuf corrections triggered,
+each sub-object's own geometry reads as internally consistent) — most likely
+further evidence it's simply the wrong source file, not a parsing issue.
 
 ---
 
