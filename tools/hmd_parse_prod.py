@@ -342,13 +342,35 @@ def parse_prod_hmd(data):
 _SENTINEL = bytes([0x00, 0x00, 0x00, 0x02, 0x04, 0x05])
 
 _MAT_KEYWORDS = [
-    (b'Panel_Principal', 0),    # paint
-    (b'Metal_Brushed',   1),    # metal
-    (b'POM_Decals_01',   2),    # dark
-    (b'POM_Decals_02',   2),    # dark
-    (b'POM_Decals_03',   2),    # dark
-    (b'Signaletique_01', 4),    # emissive
-    (b'Signaletic_01',   4),    # emissive (alt)
+    (b'Panel_Principal',       0),    # paint
+    (b'Metal_Brushed_Dark',    2),    # dark metal variant -> dark bucket
+    (b'Metal_Brushed',         1),    # metal
+    (b'Metal_Standard_Zinc',   1),    # metal variant
+    (b'Metal_Standard',        1),    # metal
+    (b'Metal_RedPaint',        0),    # painted panel
+    (b'Metal_Painted_Yellow',  4),    # yellow accent -> closest bucket (emissive-yellow default)
+    (b'MetallicPaint_Color2',  0),    # painted panel variant
+    (b'Irridescent_Metal',     1),    # metal
+    (b'Yellow_Plastic',        4),    # yellow accent -> closest bucket (emissive-yellow default)
+    (b'White_Basic_Color1',    3),    # light/white
+    (b'Black_Basic',           2),    # dark
+    (b'Grid_Hex',              2),    # dark grille/vent pattern
+    (b'Grille_Square',         2),    # dark grille/vent pattern
+    (b'POM_Decals_02_Zinc',    2),    # dark decal variant
+    (b'POM_Decals_01',         2),    # dark
+    (b'POM_Decals_02',         2),    # dark
+    (b'POM_Decals_03',         2),    # dark
+    (b'POM2',                  2),    # dark decal
+    (b'Signaletique_01_Black', 2),    # dark signage backing
+    (b'Signaletique_01_Yellow', 4),   # emissive signage stripe
+    (b'Signaletique_02_White', 3),    # light/white signage
+    (b'Signaletique_02_Black', 2),    # dark signage backing
+    (b'Signaletique_01',       4),    # emissive
+    (b'Signaletique_02',       4),    # emissive
+    (b'Signaletic_02',         4),    # emissive (alt spelling)
+    (b'Signaletic_01',         4),    # emissive (alt spelling)
+    (b'Emissiv_Generic_01',    4),    # emissive
+    (b'Marques_colored',       0),    # painted logo/decal
 ]
 
 
@@ -371,36 +393,42 @@ def parse_material_groups(data, blocks, geom_start=None):
     if geom_start is None:
         geom_start = _u32(data, 4)
 
-    # The material section is embedded at the end of the last attr block's extra.
-    # Find the last attr block whose extra_off is before geom_start (skips fake blocks
-    # that can arise when a 0x0B byte appears in bbox data and fools the parser).
+    # The material section is embedded in the last attr block's extra, normally starting
+    # 5 bytes before the end of the standard-length extra. Find the last attr block whose
+    # extra_off is before geom_start (skips fake blocks that can arise when a 0x0B byte
+    # appears in bbox data and fools the parser).
     valid_blocks = [b for b in blocks if b['extra_off'] < geom_start]
     if not valid_blocks:
         return gc, ic_per_group, []
     last_valid = valid_blocks[-1]
 
-    # Material section starts 5 bytes before the end of the standard-length extra.
-    mat_off = last_valid['extra_off'] + std_extra_len - 5
+    # Scan from the start of the last block's extra section rather than the fixed
+    # std_extra_len offset: some files (e.g. those with per-LOD embedded texture paths)
+    # have a larger-than-standard extra section, which throws off the fixed offset and
+    # starts the scan mid-string. Scanning the whole extra region is safe because matches
+    # below require an exact length-prefix byte, so stray bytes can't produce a false hit.
+    mat_off = last_valid['extra_off']
 
     # It ends at the LOD descriptor sentinel.
     sent_idx = data.find(_SENTINEL, mat_off)
     mat_end = sent_idx if sent_idx > mat_off else geom_start
     mat_bytes = data[mat_off:mat_end]
 
-    # Scan for known material names; first occurrence = position of that group's name.
+    # Scan for known material names. Require the byte immediately before the name to
+    # equal len(name) — this is the format's length-prefix byte — so that a short name
+    # (e.g. "Signaletique_01") cannot spuriously match inside a longer one that shares
+    # it as a prefix (e.g. "Signaletique_01_Black").
     found = []
     for kw, role in _MAT_KEYWORDS:
-        idx = mat_bytes.find(kw)
+        idx = mat_bytes.find(bytes([len(kw)]) + kw)
         if idx >= 0:
             found.append((idx, role))
     found.sort()
 
-    # Deduplicate and take first gc entries in byte-position order.
-    seen_roles_at = {}
+    # Take first gc entries in byte-position order (position of each name's length-prefix
+    # byte matches the group's order of appearance in the file).
     mat_roles = []
     for idx, role in found:
-        # Use (idx // 30) as a rough "slot" to avoid matching the same keyword twice
-        # from a short name then a long path (they're far apart in practice).
         if len(mat_roles) < gc:
             mat_roles.append(role)
 

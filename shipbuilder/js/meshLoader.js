@@ -115,7 +115,9 @@ export function fitGeom(base, dims, rotDeg, part, flip, rz) {
   } else {
     const s = Math.min(w / (sp.x || 1), h / (sp.y || 1), d / (sp.z || 1));
     g.scale(s, s, s);
-    g.translate((w - sp.x * s) / 2, 0, (d - sp.z * s) / 2);
+    const [mx, my, mz] = (part && part._meshScale) || [1, 1, 1];
+    if (mx !== 1 || my !== 1 || mz !== 1) g.scale(mx, my, mz);
+    g.translate((w - sp.x * s * mx) / 2, 0, (d - sp.z * s * mz) / 2);
   }
   return g;
 }

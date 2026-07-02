@@ -1480,6 +1480,8 @@ function selectPart(part) {
 }
 
 function isThruster(part) { return !!(part && part.group === 'Engines & thrusters'); }
+function isWing(part) { return !!(part && part.type === 'ShipWing'); }
+function supportsOrient(part) { return isThruster(part) || isWing(part); }
 
 function updateInspector() {
   updateSelOutline();
@@ -1493,7 +1495,7 @@ function updateInspector() {
   const showRot = !!entry;
   document.getElementById('rot-left') .style.display = showRot ? '' : 'none';
   document.getElementById('rot-right').style.display = showRot ? '' : 'none';
-  const showOrient = isThruster(part);
+  const showOrient = supportsOrient(part);
   document.getElementById('orient-section').style.display = showOrient ? '' : 'none';
   if (showOrient) {
     document.getElementById('orient-h').classList.toggle('active', !rz);

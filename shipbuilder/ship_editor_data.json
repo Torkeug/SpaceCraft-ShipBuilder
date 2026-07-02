@@ -5369,7 +5369,7 @@
       "name": "Thermal \"Catfin\" Spoiler",
       "type": "ShipWing",
       "kind": "build",
-      "group": "Wings & spoilers \u00e2\u20ac\u201d Thermal plating",
+      "group": "Wings & spoilers â€” Thermal plating",
       "color": "#4a7fb5",
       "dims": [
         3,
@@ -5417,7 +5417,7 @@
       "name": "Thermal \"Nimbus\" Spoiler",
       "type": "ShipWing",
       "kind": "build",
-      "group": "Wings & spoilers \u00e2\u20ac\u201d Thermal plating",
+      "group": "Wings & spoilers â€” Thermal plating",
       "color": "#4a7fb5",
       "dims": [
         2,
@@ -5513,7 +5513,7 @@
       "name": "Thermal \"Warden\" Spoiler",
       "type": "ShipWing",
       "kind": "build",
-      "group": "Wings & spoilers \u00e2\u20ac\u201d Thermal plating",
+      "group": "Wings & spoilers â€” Thermal plating",
       "color": "#4a7fb5",
       "dims": [
         6,
@@ -5605,7 +5605,7 @@
       "name": "Thermal \"Condor\" Wing",
       "type": "ShipWing",
       "kind": "build",
-      "group": "Wings & spoilers \u00e2\u20ac\u201d Thermal plating",
+      "group": "Wings & spoilers â€” Thermal plating",
       "color": "#4a7fb5",
       "dims": [
         9,
@@ -6131,281 +6131,6 @@
           "s": "",
           "p": "prefabs/ships/parts/cockpit/Cockpit_MK2.prefab",
           "m": "Cockpit_MK2"
-        }
-      ]
-    },
-    {
-      "id": "Thruster0",
-      "name": "\"Cart Pusher\" Thruster",
-      "type": "ShipEngine",
-      "kind": "build",
-      "group": "Engines & thrusters",
-      "color": "#d8632e",
-      "dims": [
-        4,
-        3,
-        1
-      ],
-      "price": 315,
-      "stats": {
-        "StorageUnits": 20,
-        "SystemRequirement": 300,
-        "EngineThrust": 50,
-        "EngineForce": 300,
-        "EngineConsumption": 35,
-        "BoostThrust": 100,
-        "SteeringStrength": 8,
-        "HeatInterfaceMaterial": 60,
-        "HeatInterfaceParts": 12
-      },
-      "cost": "Stainless Platex10, Wirex40, Hall Alternatorx1",
-      "grad": {
-        "c": [
-          "#2F323B",
-          "#665C5C",
-          "#E9D6D6",
-          "#9A9A9A"
-        ],
-        "p": [
-          0,
-          0.423828125,
-          0.70703125,
-          1
-        ]
-      },
-      "shapes": [
-        {
-          "s": "",
-          "p": "prefabs/ships/parts/engine/Engine_TC_Small.prefab",
-          "m": "Engine_TC_Small"
-        }
-      ]
-    },
-    {
-      "id": "ThrusterDA1",
-      "name": "\"Voidseeker\" Thruster",
-      "type": "ShipEngine",
-      "kind": "build",
-      "group": "Engines & thrusters",
-      "color": "#d8632e",
-      "dims": [
-        6,
-        3,
-        2
-      ],
-      "price": 1230,
-      "stats": {
-        "StorageUnits": 20,
-        "SystemRequirement": 450,
-        "EngineThrust": 50,
-        "EngineForce": 600,
-        "EngineConsumption": 70,
-        "BoostThrust": 80,
-        "SteeringStrength": 20,
-        "HeatInterfaceMaterial": 40,
-        "HeatInterfaceParts": 12
-      },
-      "cost": "Small Steel Part Casingx2, Support Hardwarex4, Hall Alternatorx3, Thermal Sheetx6, Hematitex3",
-      "grad": {
-        "c": [
-          "#2F323B",
-          "#665C5C",
-          "#E9D6D6",
-          "#9A9A9A"
-        ],
-        "p": [
-          0,
-          0.423828125,
-          0.70703125,
-          1
-        ]
-      },
-      "shapes": [
-        {
-          "s": "",
-          "p": "prefabs/ships/parts/engine/Engine_DA_Small.prefab",
-          "m": "Engine_DA_Small"
-        }
-      ]
-    },
-    {
-      "id": "ThrusterAE1",
-      "name": "\"Quiet Breeze\" Thruster",
-      "type": "ShipEngine",
-      "kind": "build",
-      "group": "Engines & thrusters",
-      "color": "#d8632e",
-      "dims": [
-        7,
-        3,
-        4
-      ],
-      "price": 1250,
-      "stats": {
-        "StorageUnits": 20,
-        "SystemRequirement": 1000,
-        "EngineThrust": 60,
-        "EngineForce": 700,
-        "EngineConsumption": 15,
-        "SteeringStrength": 15,
-        "HeatInterfaceMaterial": 60,
-        "HeatInterfaceParts": 18
-      },
-      "cost": "Small Steel Part Casingx2, Support Hardwarex4, Hall Alternatorx3, Motorx2",
-      "grad": {
-        "c": [
-          "#2F323B",
-          "#665C5C",
-          "#E9D6D6",
-          "#9A9A9A"
-        ],
-        "p": [
-          0,
-          0.423828125,
-          0.70703125,
-          1
-        ]
-      },
-      "shapes": [
-        {
-          "s": "",
-          "p": "prefabs/ships/parts/engine/Engine_AE_Small.prefab",
-          "m": "Engine_AE_Small"
-        }
-      ]
-    },
-    {
-      "id": "ThrusterMK1",
-      "name": "\"Grasshopper\" Thruster",
-      "type": "ShipEngine",
-      "kind": "build",
-      "group": "Engines & thrusters",
-      "color": "#d8632e",
-      "dims": [
-        5,
-        3,
-        3
-      ],
-      "price": 1270,
-      "stats": {
-        "StorageUnits": 20,
-        "SystemRequirement": 600,
-        "EngineThrust": 100,
-        "EngineForce": 600,
-        "EngineConsumption": 80,
-        "BoostThrust": 150,
-        "SteeringStrength": 15,
-        "HeatInterfaceMaterial": 120,
-        "HeatInterfaceParts": 36
-      },
-      "cost": "Small Steel Part Casingx2, Support Hardwarex4, Hall Alternatorx3, Wirex15, Watertight Pipex15",
-      "grad": {
-        "c": [
-          "#2F323B",
-          "#665C5C",
-          "#E9D6D6",
-          "#9A9A9A"
-        ],
-        "p": [
-          0,
-          0.423828125,
-          0.70703125,
-          1
-        ]
-      },
-      "shapes": [
-        {
-          "s": "",
-          "p": "prefabs/ships/parts/engine/Motor_Bulky.prefab",
-          "m": "Motor_Bulky"
-        }
-      ]
-    },
-    {
-      "id": "Thruster2",
-      "name": "\"Silent Thruster\"",
-      "type": "ShipEngine",
-      "kind": "build",
-      "group": "Engines & thrusters",
-      "color": "#d8632e",
-      "dims": [
-        9,
-        6,
-        2
-      ],
-      "price": 9600,
-      "stats": {
-        "SystemRequirement": 1100,
-        "EngineThrust": 150,
-        "EngineForce": 1250,
-        "EngineConsumption": 50,
-        "BoostThrust": 200,
-        "SteeringStrength": 30
-      },
-      "cost": "Titanium Part Casingx2, Support Hardwarex8, Copper Ingotx3",
-      "grad": {
-        "c": [
-          "#2F323B",
-          "#665C5C",
-          "#E9D6D6",
-          "#9A9A9A"
-        ],
-        "p": [
-          0,
-          0.423828125,
-          0.70703125,
-          1
-        ]
-      },
-      "shapes": [
-        {
-          "s": "",
-          "p": "prefabs/ships/parts/engine/Engine_Explorer_MK2.prefab",
-          "m": "Engine_Explorer_MK2"
-        }
-      ]
-    },
-    {
-      "id": "Thruster1",
-      "name": "\"Long Haul Booster\"",
-      "type": "ShipEngine",
-      "kind": "build",
-      "group": "Engines & thrusters",
-      "color": "#d8632e",
-      "dims": [
-        13,
-        6,
-        2
-      ],
-      "price": 14400,
-      "stats": {
-        "SystemRequirement": 1200,
-        "EngineThrust": 150,
-        "EngineForce": 1400,
-        "EngineConsumption": 60,
-        "BoostThrust": 600,
-        "SteeringStrength": 30
-      },
-      "cost": "Titanium Part Casingx3, Support Hardwarex12, Copper Ingotx5",
-      "grad": {
-        "c": [
-          "#2F323B",
-          "#665C5C",
-          "#E9D6D6",
-          "#9A9A9A"
-        ],
-        "p": [
-          0,
-          0.423828125,
-          0.70703125,
-          1
-        ]
-      },
-      "shapes": [
-        {
-          "s": "",
-          "p": "prefabs/ships/parts/engine/Engine_MK_Big.prefab",
-          "m": "Engine_MK_Big"
         }
       ]
     },
@@ -8679,8 +8404,8 @@
       "m": "Scanner"
     },
     {
-      "id": "Thruster0_prod",
-      "name": "\"Cart Pusher\" Thruster [PROD]",
+      "id": "Thruster0",
+      "name": "\"Cart Pusher\" Thruster",
       "type": "ShipEngine",
       "kind": "build",
       "group": "Engines & thrusters",
@@ -8726,8 +8451,8 @@
       ]
     },
     {
-      "id": "ThrusterDA1_prod",
-      "name": "\"Voidseeker\" Thruster [PROD]",
+      "id": "ThrusterDA1",
+      "name": "\"Voidseeker\" Thruster",
       "type": "ShipEngine",
       "kind": "build",
       "group": "Engines & thrusters",
@@ -8764,6 +8489,11 @@
           1
         ]
       },
+      "_meshScale": [
+        0.68,
+        0.68,
+        0.68
+      ],
       "shapes": [
         {
           "s": "",
@@ -8773,8 +8503,8 @@
       ]
     },
     {
-      "id": "ThrusterAE1_prod",
-      "name": "\"Quiet Breeze\" Thruster [PROD]",
+      "id": "ThrusterAE1",
+      "name": "\"Quiet Breeze\" Thruster",
       "type": "ShipEngine",
       "kind": "build",
       "group": "Engines & thrusters",
@@ -8819,8 +8549,8 @@
       ]
     },
     {
-      "id": "ThrusterMK1_prod",
-      "name": "\"Grasshopper\" Thruster [PROD]",
+      "id": "ThrusterMK1",
+      "name": "\"Grasshopper\" Thruster",
       "type": "ShipEngine",
       "kind": "build",
       "group": "Engines & thrusters",
@@ -8857,6 +8587,11 @@
           1
         ]
       },
+      "_meshScale": [
+        0.97,
+        0.87,
+        0.97
+      ],
       "shapes": [
         {
           "s": "",
@@ -8866,8 +8601,8 @@
       ]
     },
     {
-      "id": "Thruster2_prod",
-      "name": "\"Silent Thruster\" [PROD]",
+      "id": "Thruster2",
+      "name": "\"Silent Thruster\"",
       "type": "ShipEngine",
       "kind": "build",
       "group": "Engines & thrusters",
@@ -8910,8 +8645,8 @@
       ]
     },
     {
-      "id": "Thruster1_prod",
-      "name": "\"Long Haul Booster\" [PROD]",
+      "id": "Thruster1",
+      "name": "\"Long Haul Booster\"",
       "type": "ShipEngine",
       "kind": "build",
       "group": "Engines & thrusters",
@@ -8962,7 +8697,7 @@
     "Levinium frames",
     "Thermal plating",
     "Wings & spoilers",
-    "Wings & spoilers \u00e2\u20ac\u201d Thermal plating",
+    "Wings & spoilers â€” Thermal plating",
     "Cockpits",
     "Engines & thrusters",
     "Boosters",
