@@ -259,6 +259,13 @@ function partDims(part) {
     const [l, h, w] = part.dims;
     return [w, h, l];   // fitGeom applies 90°Y, which swaps X↔Z extents
   }
+  if (part.kind === 'module' && part.mount === 'outside') {
+    // Outside-mount module dims were authored directly as [X, Y, Z] (matching the
+    // literal "WxHxD" shown in the inspector), unlike hull frames below — applying
+    // the hull LxWxH swap here silently reinterpreted e.g. Large Solar Panel's
+    // [5,1,4] as a tall 5x4x1 box instead of the intended flat 5x1x4 one.
+    return part.dims;
+  }
   const [l, w, h] = part.dims;
   return [l, h, w];     // game LxWxH → Three.js X,Y,Z
 }
