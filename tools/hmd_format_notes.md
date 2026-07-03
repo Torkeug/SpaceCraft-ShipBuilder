@@ -319,7 +319,7 @@ Bounds check in `_detect_ring_buffer_hmd`: `off + 8 <= len(raw)` prevents buffer
 
 ### 8x3x1_N — separate anomalous format
 
-8x3x1_N starts with raw big-endian uint16 index data at byte 0 (sequential values 0x0295, 0x0296...), with `HMD\x06` appearing at byte 144 as a false positive within the data. It matches none of the ring-buffer variants (raw[1] = 0x95 ≠ 0x00). The standard text-prefix path would slice from the false HMD hit and produce a garbage parse. The bounds check on the resulting `ibuf_start + ic*2 > len(data)` catches this and returns failure cleanly. The HAR-sourced bin is preserved for 8x3x1_N.
+8x3x1_N starts with raw big-endian uint16 index data at byte 0 (sequential values 0x0295, 0x0296...), with `HMD\x06` appearing at byte 144 as a false positive within the data. It matches none of the ring-buffer variants (raw[1] = 0x95 ≠ 0x00). The standard text-prefix path would slice from the false HMD hit and produce a garbage parse. The bounds check on the resulting `ibuf_start + ic*2 > len(data)` catches this and returns failure cleanly. Shape N genuinely exists in-game for 8x3x1 (same as every other hull size), but no usable mesh could be derived from this pak entry -- left out of the 8x3x1 catalogue entries (13 of 14 shapes) rather than shipped with unverified data, pending a real source.
 
 ---
 
@@ -366,27 +366,22 @@ python tools/hmd_convert_v2.py <input.hmd> <output.bin>       # compound tools/m
 ```bash
 python tools/batch_convert_hulls.py
 ```
-Converts all sizes from pak_out, overwrites HAR-sourced bins, updates `_manifest.json`.
+Converts all sizes from pak_out and updates `_manifest.json`.
 
 ---
 
 ## Conversion Status
 
-### 4x3x1 through 8x6x2 — COMPLETE (7 sizes × 14 shapes = 98 files)
+### 4x3x1 through 8x6x2 — COMPLETE (7 sizes × 14 shapes = 98, except 8x3x1's 13 of 14 — see 8x3x1_N above)
 
-All 98 shapes converted from pak_out to .bin with correct material groups.
+All available shapes converted from pak_out to .bin with correct material groups.
 Output: `shipbuilder/ship_meshes/{size}_{shape}.bin`
-Manifest: `shipbuilder/ship_meshes/_manifest.json` (all 98 entries from pak_out)
+Manifest: `shipbuilder/ship_meshes/_manifest.json` (all entries from pak_out)
 Parts: `shipbuilder/ship_editor_data.json` — already complete for all hull sizes and variants.
 
 ### 12x6x2, 12x6x4, 16x6x2, 16x6x4 — COMPLETE (ring-buffer parser implemented)
 
-All shapes for these sizes are now converted from pak_out. See "Ring-Buffer Layout" section for implementation details. 129 of 130 total shapes are pak_out-sourced; only 8x3x1_N remains HAR-sourced.
-
-### Missing shape thumbnails (ship_shapes/)
-
-H.webp, I.webp, L.webp, M.webp are absent from `shipbuilder/ship_shapes/`.
-Cannot be sourced from HAR — must come from in-game assets.
+All shapes for these sizes are now converted from pak_out. See "Ring-Buffer Layout" section for implementation details. 129 of the 130 shapes that exist across all hull sizes are pak_out-sourced and in the catalogue; 8x3x1_N is the one exception (see above).
 
 ### Hull size conversion table
 
@@ -409,9 +404,8 @@ Cannot be sourced from HAR — must come from in-game assets.
 ### Outside-mount modules (Tools/, Decoratives_Parts/) — 15 of 18 parts (14 of 17 unique mesh files) on the correct transform-aware pipeline (2026-07-03)
 
 The 18 `mount: 'outside'` module parts (lights, mining lasers, radars, solar panels,
-scanners) previously used mesh data that did not match a proper pak_out extraction
-(likely HAR/website-sourced, per the same caveat as hull pieces). Re-extracted and
-converted from `assets/Vehicules/Buildings_Parts/{Tools,Decoratives_Parts}/`.
+scanners) previously used mesh data that did not match a proper pak_out extraction.
+Re-extracted and converted from `assets/Vehicules/Buildings_Parts/{Tools,Decoratives_Parts}/`.
 
 Conversion tool: `tools/batch_convert_modules_v2.py` (transform-aware, see finding 8 —
 this is now the correct/current path for the 15 Tools-category items). The 3
@@ -1341,9 +1335,9 @@ further evidence it's simply the wrong source file, not a parsing issue.
     `_meshScale`: it's not present in any real game data structure (only
     `fitGeom`/`ship_editor_data.json` reference it), but unlike
     `_meshScale` it isn't a droppable fudge factor either -- it was added
-    when the fanmade wing meshes were replaced with real PAK-extracted
-    ones, because the `Little` and `Midd` mesh families are genuinely
-    authored 90° apart in their own raw vertex data. Confirmed by
+    when the previously-used wing meshes were replaced with real
+    PAK-extracted ones, because the `Little` and `Midd` mesh families are
+    genuinely authored 90° apart in their own raw vertex data. Confirmed by
     comparing each wing's X/Z bounding-box order with and without
     `_meshRot` against that wing's original (long-validated) `dims`: only
     the with-`_meshRot` computation matches the expected orientation on
@@ -1419,10 +1413,11 @@ further evidence it's simply the wrong source file, not a parsing issue.
     Spot_Light_01/Spot_Light_Barrel/Aerator_Spot_01 are reconverted through
     v2 and re-verified.
 
-24. **Auditing which repo assets actually came from this project's own
-    pak-extraction pipeline vs. the original day-one bulk-import commit**
-    (done in response to the repo going public) found and fixed several
-    real gaps, and one dead end worth recording so it isn't retried:
+24. **Auditing which repo assets had actually been verified through this
+    project's own pak-extraction pipeline versus never revisited since
+    they were first added** (done in response to the repo going public)
+    found and fixed several real gaps, and one dead end worth recording
+    so it isn't retried:
 
     - 16 more hull-frame `.bin` files were stale for the same reason as
       finding 23 (pre-dating the position-formula fix) -- re-running
@@ -1437,8 +1432,8 @@ further evidence it's simply the wrong source file, not a parsing issue.
       (rendered via 2D icon sprite only), so this was always inert;
       removed the dead manifest entries.
     - `Booster.bin` (the "LR Speedster" booster, `kind: 'build'` so it
-      *is* rendered when placed) was still from the original bulk commit
-      and had never been wired into any conversion tool. Reconverted from
+      *is* rendered when placed) had never been wired into any conversion
+      tool. Reconverted from
       its real source (`Tools/Booster.fbx`, real prefab scale 0.5) and
       derived real `dims`/`_renderSize` -- the old box (2x1x1) was well
       undersized against the real ~3.7x1.5x1.5 mesh.

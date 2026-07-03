@@ -1,6 +1,6 @@
 """
 batch_convert_hulls.py — Convert all extracted Main_Structures HMD files to .bin.
-Overwrites any existing .bin files (including HAR-sourced ones).
+Overwrites any existing .bin files.
 Updates shipbuilder/ship_meshes/_manifest.json with converted file stats.
 
 Usage:
