@@ -5803,7 +5803,8 @@
         4.0371,
         2.0459,
         2.5586
-      ]
+      ],
+      "unreleased": true
     },
     {
       "id": "Cockpit_DA1",
@@ -6008,7 +6009,8 @@
         12.4414,
         4.7397,
         11.2422
-      ]
+      ],
+      "unreleased": true
     },
     {
       "id": "Cockpit_LR3",
@@ -6059,7 +6061,8 @@
         11.0938,
         5.2207,
         11.2031
-      ]
+      ],
+      "unreleased": true
     },
     {
       "id": "Cockpit_LR2",
@@ -6108,7 +6111,8 @@
         6.6213,
         2.5505,
         5.9828
-      ]
+      ],
+      "unreleased": true
     },
     {
       "id": "Cockpit_MK3",
@@ -6158,7 +6162,8 @@
         11.5859,
         5.5195,
         10.8164
-      ]
+      ],
+      "unreleased": true
     },
     {
       "id": "Cockpit_AE2",
@@ -6298,7 +6303,8 @@
           "p": "prefabs/ships/parts/tool/Booster.prefab",
           "m": "Booster"
         }
-      ]
+      ],
+      "unreleased": true
     },
     {
       "id": "Deco_05",
