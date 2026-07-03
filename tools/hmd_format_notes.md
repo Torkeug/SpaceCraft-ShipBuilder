@@ -197,7 +197,13 @@ Each LOD section starts at `geom_start + vp` (vp from that LOD's extra[0..3]).
 - Files A, B, C, F, M, N: Z ∈ [~0, ~1] (piece is along one face)
 - Files D, E, G, H, I, J, K, L: Z ∈ [~−0.5, ~0.5] (piece is centered on Z)
 
-No coordinate scaling or shift is required — positions are already in grid units.
+No coordinate scaling or shift is required for these hull-frame vertex buffers —
+positions are already in grid units. **This does NOT generalize to compound
+tool/module meshes** — see finding 8 below: those files carry a *separate*
+per-part scale/rotation/translation in the HMD `models[]` node hierarchy (not
+present/needed for simple single-object hull frames), which must be read and
+applied on top of the raw vertex data, or the result is wrong by whatever
+factor that part's model node specifies (confirmed 3x+ wrong on Water_Collector).
 
 ---
 
@@ -231,7 +237,9 @@ The ship builder's Three.js loader applies `rotateX(-Math.PI/2)`:
 - new_Y = old_Z (HMD depth/Z → Three.js height)
 - new_Z = −old_Y (HMD height/Y → Three.js depth, negated)
 
-No scaling or shift is needed before writing positions to .bin.
+No scaling or shift is needed before writing positions to .bin **for simple
+single-object hull-frame/engine files**. Compound tool/module meshes need their
+per-part model-node transform applied first — see finding 8 below.
 
 **Ring-buffer geom_start misalignment (fixed):** For most ring-buffer files, the `geom_start` value in the HMD trailer is wrong by 16–62 bytes relative to the true start of the vertex buffer. The fix: scan the file for `ic` consecutive uint16 values all < `vc` to locate the true index buffer, then back-compute `vbuf_start = ibuf_found − vc×stride`. Implemented in `_find_ibuf_start()` in `hmd_to_bin.py`, called from `_finish_prod_conversion` for all conversion paths. All 32 ring-buffer bins (12x6x2 A–N, 12x6x4 A–B, 16x6x2 A–N, 16x6x4 A–B) now have correct grid-unit dimensions.
 
@@ -331,19 +339,37 @@ Bounds check in `_detect_ring_buffer_hmd`: `off + 8 <= len(raw)` prevents buffer
 
 | Tool                        | Purpose                                                             |
 |-----------------------------|---------------------------------------------------------------------|
-| `tools/hmd_parse_prod.py`   | Parser for production HMD (v0x06): `parse_prod_hmd()`, `parse_material_groups()`, `_parse_attr_blocks()`, `read_verts_f16()`, `read_indices_le_u16()` |
-| `tools/hmd_to_bin.py`       | Converter: `convert_prod_style()` calls hmd_parse_prod and writes .bin; `convert_g_style_auto()` handles TestPE G-style; `write_bin()` writes the .bin format |
+| `tools/hmd_parse_prod.py`   | Legacy heuristic parser for production HMD (v0x06), used for hull frames/engines: `parse_prod_hmd()`, `parse_material_groups()`, `_parse_attr_blocks()`, `read_verts_f16()`, `read_indices_le_u16()`. Does NOT read the real model-node transform hierarchy — see finding 8. |
+| `tools/hmd_parse_heaps.py`  | **Authoritative** HMD reader — faithful port of Heaps' own `hxd/fmt/hmd/Reader.hx`. Reads the real `models[]` scene-node hierarchy (position/quaternion rotation/scale per named part, separate from raw geometry) and `stride_bytes()` (the real per-vertex byte stride — the raw file `stride` byte is a component count, not bytes). Use this for any new format investigation. |
+| `tools/hmd_to_bin.py`       | Converter: `convert_prod_style()` calls hmd_parse_prod and writes .bin; `convert_g_style_auto()` handles TestPE G-style; `write_bin()` writes the .bin format. Used for hull frames/engines. |
+| `tools/hmd_convert_v2.py`   | Transform-aware converter for compound multi-part meshes (tools/modules): selects each `*LOD0` model, applies its real scale→rotate→translate, merges using the file's own material index per group. Use this for any Tools-category asset. |
 | `tools/hmd_parse.py`        | Legacy parser for TestPE G-style (disc=0x00) files                  |
-| `tools/pak_extract.py`      | Extracts both disc=0x00 and disc=0x02 files from res.pak using cumulative offset calculation |
+| `tools/pak_extract.py`      | Extracts both disc=0x00 and disc=0x02 files from res.pak using cumulative offset calculation. `--all` extracts every file in the pak (used to build a full local mirror for format reverse-engineering, output to `pak_out_full/`, gitignored). |
 | `tools/batch_convert_hulls.py` | Batch converter for all Main_Structures hull sizes; updates `_manifest.json` |
+| `tools/batch_convert_modules.py` | Batch converter for outside-mount modules using the old heuristic path; kept for its `MODULE_SOURCES` mapping table |
+| `tools/batch_convert_modules_v2.py` | Batch converter for outside-mount modules using `hmd_convert_v2.py`; falls back to `hmd_to_bin.py` for the 3 Decoratives_Parts files whose animation/skin section isn't ported yet |
+| `tools/prefab_parse.py`     | Exploratory `.prefab` binary tokenizer — debugging aid only, not a finished/trustworthy parser (see finding 5) |
 
 **All tools must be saved to `tools/` immediately after writing, even if incomplete.**
 
+**Reference source (not committed, gitignored):** `hmd_parse_heaps.py` was written
+by cloning `HeapsIO/heaps` (and, for other format work, `HeapsIO/hxbit`,
+`HeapsIO/hide`, `HaxeFoundation/hashlink`, `Gui-Yom/hlbc`) into `tools/heaps_ref/`
+and reading the actual engine source rather than guessing. That folder isn't
+kept in the repo (large external clones) — recreate it if further format
+investigation is needed:
+```bash
+git clone --depth 1 https://github.com/HeapsIO/heaps.git tools/heaps_ref/heaps
+```
+The authoritative HMD reader lives at `hxd/fmt/hmd/Reader.hx` and `Data.hx`
+inside that clone; the buffer stride/format logic is in `hxd/BufferFormat.hx`.
+
 **Running the converter:**
 ```bash
-python tools/hmd_to_bin.py <input.hmd> <output.bin>
+python tools/hmd_to_bin.py <input.hmd> <output.bin>          # hull frames / engines
+python tools/hmd_convert_v2.py <input.hmd> <output.bin>       # compound tools/modules
 ```
-Auto-detects format: tries production (v0x06) first, then G-style, then KNOWN_FILES fallback.
+`hmd_to_bin.py` auto-detects format: tries production (v0x06) first, then G-style, then KNOWN_FILES fallback.
 
 **Running the batch converter (after fixing prefix/inverted support):**
 ```bash
@@ -389,15 +415,19 @@ Cannot be sourced from HAR — must come from in-game assets.
 | MK1      | various  | not started             | Rounded_MK1_* connector pieces                |
 | MK2      | various  | not started             | Rounded_MK2_* connector pieces                |
 
-### Outside-mount modules (Tools/, Decoratives_Parts/) — 14 of 18 DONE (2026-07-02)
+### Outside-mount modules (Tools/, Decoratives_Parts/) — 15 of 18 parts (14 of 17 unique mesh files) on the correct transform-aware pipeline (2026-07-03)
 
 The 18 `mount: 'outside'` module parts (lights, mining lasers, radars, solar panels,
 scanners) previously used mesh data that did not match a proper pak_out extraction
 (likely HAR/website-sourced, per the same caveat as hull pieces). Re-extracted and
 converted from `assets/Vehicules/Buildings_Parts/{Tools,Decoratives_Parts}/`.
 
-Conversion tool: `tools/batch_convert_modules.py` (source path table + manifest update,
-same pattern as `batch_convert_hulls.py`).
+Conversion tool: `tools/batch_convert_modules_v2.py` (transform-aware, see finding 8 —
+this is now the correct/current path for the 15 Tools-category items). The 3
+Decoratives_Parts items still go through the older `tools/batch_convert_modules.py` /
+`hmd_to_bin.py` path (source table + manifest update, same pattern as
+`batch_convert_hulls.py`) because the new reader doesn't yet handle their
+animation/skin section.
 
 **Format differences found in this asset category vs. hull pieces:**
 
