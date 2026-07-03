@@ -30,7 +30,7 @@ python tools/pak_extract.py --extract "Main_Structures/4x3x2" --out pak_out
 
 Output path matches PAK directory structure under `pak_out/`.
 
-> **Do not use .har files as reference — use only the in-game extracted files from pak_out.**
+> **Use only the in-game extracted files from `pak_out` as reference.**
 
 ---
 
