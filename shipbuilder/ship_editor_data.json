@@ -7045,7 +7045,8 @@
           0.9765625
         ]
       },
-      "mount": "inside"
+      "mount": "inside",
+      "unreleased": true
     },
     {
       "id": "StealthModule_Personnal",
@@ -7076,7 +7077,8 @@
           0.9765625
         ]
       },
-      "mount": "inside"
+      "mount": "inside",
+      "unreleased": true
     },
     {
       "id": "KineticShield1",
@@ -7150,7 +7152,8 @@
       "model": "prefabs/ships/parts/tool/Kinetic_Shield.prefab",
       "mount": "inside",
       "su": 10,
-      "m": "Kinetic_Shield"
+      "m": "Kinetic_Shield",
+      "unreleased": true
     },
     {
       "id": "KineticShield_Group",
@@ -7181,7 +7184,8 @@
           0.9765625
         ]
       },
-      "mount": "inside"
+      "mount": "inside",
+      "unreleased": true
     },
     {
       "id": "HeatShield",
@@ -7212,7 +7216,8 @@
           0.9765625
         ]
       },
-      "mount": "inside"
+      "mount": "inside",
+      "unreleased": true
     },
     {
       "id": "KineticShield2",
@@ -7286,7 +7291,8 @@
       "model": "prefabs/ships/parts/tool/Kinetic_Shield.prefab",
       "mount": "inside",
       "su": 25,
-      "m": "Kinetic_Shield"
+      "m": "Kinetic_Shield",
+      "unreleased": true
     },
     {
       "id": "HeavyShield2",
@@ -7323,7 +7329,8 @@
       "model": "prefabs/ships/parts/tool/Kinetic_Shield.prefab",
       "mount": "inside",
       "su": 25,
-      "m": "Kinetic_Shield"
+      "m": "Kinetic_Shield",
+      "unreleased": true
     },
     {
       "id": "KineticShield3",
@@ -7360,7 +7367,8 @@
       "model": "prefabs/ships/parts/tool/BigReactive_Shield.prefab",
       "mount": "inside",
       "su": 50,
-      "m": "BigReactive_Shield"
+      "m": "BigReactive_Shield",
+      "unreleased": true
     },
     {
       "id": "BarrierShield3",
@@ -7397,7 +7405,8 @@
       "model": "prefabs/ships/parts/tool/Kinetic_Shield.prefab",
       "mount": "inside",
       "su": 50,
-      "m": "Kinetic_Shield"
+      "m": "Kinetic_Shield",
+      "unreleased": true
     },
     {
       "id": "HeavyShield3",
@@ -7434,7 +7443,8 @@
       "model": "prefabs/ships/parts/tool/Kinetic_Shield.prefab",
       "mount": "inside",
       "su": 50,
-      "m": "Kinetic_Shield"
+      "m": "Kinetic_Shield",
+      "unreleased": true
     },
     {
       "id": "FusionGenerator",
@@ -7827,7 +7837,8 @@
       "model": "prefabs/ships/parts/tool/Batterie.prefab",
       "mount": "inside",
       "su": 10,
-      "m": "Batterie"
+      "m": "Batterie",
+      "unreleased": true
     },
     {
       "id": "AutoMineModule",
