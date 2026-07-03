@@ -124,7 +124,12 @@ export function fitGeom(base, dims, rotDeg, part, flip, rz) {
     // in the real game, not a real footprint -- see hmd_format_notes.md
     // finding 21). The mesh renders at its true size and sits centered in
     // its (possibly differently-sized) grid cell.
-    const [rw, rh, rd] = part._renderSize;
+    let [rw, rh, rd] = part._renderSize;
+    // The `rz` orientation toggle rotates the mesh 90° around X *before* the
+    // bbox above is measured, swapping what sp.y/sp.z mean -- swap the
+    // matching target components too, or per-axis scaling maps the wrong
+    // target onto the wrong (now-swapped) axis and distorts the mesh.
+    if (rz) { const t = rh; rh = rd; rd = t; }
     g.scale(rw / (sp.x || 1), rh / (sp.y || 1), rd / (sp.z || 1));
     g.translate((w - rw) / 2, 0, (d - rd) / 2);
   } else {
