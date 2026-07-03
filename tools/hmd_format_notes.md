@@ -36,27 +36,15 @@ Output path matches PAK directory structure under `pak_out/`.
 
 ## PAK disc=0x02 Extraction
 
-disc=0x02 directory entries do NOT store a pos field. Instead, files are stored sequentially in directory-traversal order starting at a fixed absolute offset in the PAK file:
+**Corrected by finding 17 -- see below.** disc=0x02 directory entries store their OWN absolute position directly, as a little-endian double, in the first 8 bytes of the 16-byte payload (`stored_pos(double, 8) + size(int32, 4) + hash(int32, 4)`). The real absolute byte offset is:
 
-```
-D02_BASE       = 2_156_306_928   # where disc=0x02 block starts in res.pak
-D02_DRIFT      = 8_464           # gap from D02_BASE to first actual file byte
-D02_DATA_START = D02_BASE + D02_DRIFT = 2_156_315_392
-```
-
-Each disc=0x02 file's absolute byte offset:
 ```python
-cumulative = 0
-for path, size in d02_files_in_directory_order:
-    abs_pos = D02_DATA_START + cumulative
-    cumulative += (size + 15) & ~15   # 16-byte alignment
+abs_pos = int(stored_pos) + dir_size   # dir_size = the pak header's own headerSize field
 ```
 
-The directory entry for disc=0x02 is 16 bytes: `bsphere_x(4) + bsphere_r(4) + size(4) + hash(4)`. The `pos` field used by disc=0x00 files is absent; position is derived from cumulative ordering.
+`dir_size` is the same field already read at pak header byte 4-7 (`PakReader.dir_size` / `self.dir_size`) -- no extra empirically-fitted constant needed.
 
-**How D02_DRIFT was determined:** confirmed by finding HMD magic (`48 4D 44 06`) at `D02_DATA_START + cumulative_off` for Blasting_Missile.fbx and all 14 Main_Structures/4x3x1 files. The files are uncompressed despite the "compressed" name sometimes used for disc=0x02.
-
-pak_extract.py implements this automatically. Both disc types are extracted the same way: just pass a pattern to `--extract`.
+pak_extract.py implements this automatically. Both disc types are extracted the same way: just pass a pattern to `--extract`. `tools/pak_verify_positions.py` confirms 0 failures across every `.fbx`/`.prefab`/`ui/icons/*.png` entry in the pak (3,030 validatable entries checked).
 
 ---
 
@@ -1047,6 +1035,92 @@ further evidence it's simply the wrong source file, not a parsing issue.
     may still need attention if it turns out to look wrong in practice, but
     fixing it would require either finding some other ground-truth source or
     accepting a heuristic guess -- not done here.
+
+17. **The disc=0x02 "cumulative sum from a fitted base constant" position
+    formula (D02_BASE/D02_DRIFT, documented above under "PAK disc=0x02
+    Extraction" in earlier revisions of this file) was never correct -- it
+    was an approximation that happened to track the truth closely for files
+    stored in the same order as the directory tree, and diverged badly
+    (anywhere from tens of bytes to tens of thousands of bytes, non-
+    monotonically) wherever real on-disk storage order differed from
+    directory-traversal order. This was discovered while investigating why
+    `ui/icons/sprite_sheet_icon_64.png` (needed to extract real icons for the
+    5 items added to the catalogue this session) could not be decoded as any
+    known image format at its cumulative-sum-computed position.
+
+    A from-scratch self-correcting scanner (scratchpad-only, not promoted to
+    `tools/` since it's now superseded) tried to patch this by searching
+    forward for the next magic-byte occurrence whenever validation failed at
+    the computed position, carrying the correction forward as the new
+    cumulative base. That produced 215 "corrections", but the very first one
+    (index 0, an 8.2MB file) was a false positive -- `HMD` occurred at byte
+    8,203,328 as a coincidental substring in unrelated binary payload, not a
+    real header -- and because corrections were carried forward, that one
+    false positive silently corrupted every position computed after it,
+    including entries later proven fine at their pure cumulative-formula
+    position (e.g. `Gravitron.fbx`, `ui/icons/sector.png`).
+
+    Rerunning validation without cascading corrections (always computing the
+    pure formula position fresh per entry, `tools/pak_verify_positions.py`)
+    showed the truth was more specific: `Buildings/SpaceStation/*` and
+    `prefabs/*` entries had *genuine* non-trivial drift (confirmed via
+    `HBSON`/`HMD` magic search near, but not at, the computed position), while
+    `Main_Structures` hull frames had only a tiny, perfectly constant offset
+    per size class (exactly -32 bytes for 12x6x2/12x6x4, exactly -16 bytes for
+    16x6x2/16x6x4) and `Vehicules/Buildings_Parts/Tools/*` (everything this
+    session's mesh conversion pipeline actually depends on) validated with
+    zero error. None of this fit a single clean model -- which was the signal
+    to stop guessing at byte layouts entirely.
+
+    **Root cause, found via the compiled game itself** (per the user's
+    explicit suggestion to use the game engine as ground truth, exactly as
+    was done earlier for the HMD/HBSON formats): the patched `hlbc` HashLink
+    decompiler (see finding 8 setup) was pointed at the real
+    `hxd.fmt.pak.Reader.readFile` function in `hlboot.dat`
+    (`hlbc hlboot.dat -c "decomp <findex>"`, findex found via `sfn`/grep over
+    a dumped function list). The decompiled pseudocode revealed that
+    non-directory pak entries read a conditional field (double vs int32
+    depending on a flags bit) followed by `dataPosition`, `dataSize`,
+    `checksum` -- i.e. **the real, authoritative position is a value stored
+    directly in the directory entry, not something to be derived from
+    cumulative file ordering at all.** The disc=0x02 payload previously
+    labeled `bsphere_x(float,4) + bsphere_r(float,4) + size(4) + hash(4)` is
+    actually `stored_pos(double, 8 bytes) + size(4) + hash(4)` -- same total
+    byte count (16), different interpretation of the first 8 bytes.
+
+    Empirically confirmed exact (zero byte error) by reading that double for
+    three independent, already-verified anchors and comparing against their
+    known-correct real position:
+
+    | File | stored double | + dir_size (346,608) | known-correct real position |
+    |---|---|---|---|
+    | `Tools/Gravitron.fbx` | 14,392,831,360.0 | 14,393,177,968 | 14,393,177,968 (exact) |
+    | `Main_Structures/12x6x2/12x6x2_A.fbx` | 14,218,445,968.0 | 14,218,792,576 | 14,218,792,576 (exact) |
+    | `Main_Structures/16x6x2/16x6x2_A.fbx` | 14,220,999,920.0 | 14,221,346,528 | 14,221,346,528 (exact) |
+
+    (`dir_size` is the same `headerSize` field the pak's own header already
+    stores at byte 4-7 -- no separate empirically-fitted constant needed.)
+
+    Applying `abs_pos = int(stored_pos) + dir_size` universally and
+    re-running `tools/pak_verify_positions.py` across the whole pak: **0
+    failures out of 3,030 validatable entries** (`.fbx` via `HMD` magic,
+    `.prefab` via `HBSON` magic, `ui/icons/*.png` via the standard PNG magic
+    `89 50 4E 47 0D 0A 1A 0A`) -- including every previously-broken
+    `Buildings/SpaceStation` and `prefabs/` entry, and the very file this
+    investigation started over. `ui/icons/sprite_sheet_icon_64.png` decodes
+    at its corrected position as a genuine, valid 1280x640 RGBA **standard
+    PNG** -- there is no custom BC1/BC3 format involved for this file at all;
+    the entire earlier "which compressed texture format is this" investigation
+    was chasing a symptom of the position bug, not a real format mystery.
+    (Material-library `*_basecolor.png` textures are still genuinely BC1/BC3
+    compressed -- that finding, documented separately, is unaffected.)
+
+    `tools/pak_extract.py` has been updated to use this formula directly (the
+    old `D02_BASE`/`D02_DRIFT`/cumulative-sum code path and constants have
+    been removed entirely, not kept as a fallback) -- do not reintroduce
+    cumulative-sum position math for disc=0x02 entries. `tools/
+    pak_read_stored_position.py` and `tools/pak_verify_positions.py` are kept
+    as the derivation proof and the regression guard, respectively.
 
 ---
 
