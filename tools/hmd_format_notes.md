@@ -1419,6 +1419,56 @@ further evidence it's simply the wrong source file, not a parsing issue.
     Spot_Light_01/Spot_Light_Barrel/Aerator_Spot_01 are reconverted through
     v2 and re-verified.
 
+24. **Auditing which repo assets actually came from this project's own
+    pak-extraction pipeline vs. the original day-one bulk-import commit**
+    (done in response to the repo going public) found and fixed several
+    real gaps, and one dead end worth recording so it isn't retried:
+
+    - 16 more hull-frame `.bin` files were stale for the same reason as
+      finding 23 (pre-dating the position-formula fix) -- re-running
+      `batch_convert_hulls.py` against the freshly-refreshed `pak_out`
+      fixed them; vertex/index/group counts were unchanged, confirming a
+      positional correction, not a structural break.
+    - 28 mesh keys used only by `mount: 'inside'` modules (batteries, FTL
+      engines/tanks, cargo/liquid storage, some shields) turned out to have
+      **no `.bin` file ever committed at all** -- just stale manifest
+      entries pointing at nothing. Confirmed via `buildPartMesh` or
+      `isInsideMod`: inside-mount modules never load their mesh at all
+      (rendered via 2D icon sprite only), so this was always inert;
+      removed the dead manifest entries.
+    - `Booster.bin` (the "LR Speedster" booster, `kind: 'build'` so it
+      *is* rendered when placed) was still from the original bulk commit
+      and had never been wired into any conversion tool. Reconverted from
+      its real source (`Tools/Booster.fbx`, real prefab scale 0.5) and
+      derived real `dims`/`_renderSize` -- the old box (2x1x1) was well
+      undersized against the real ~3.7x1.5x1.5 mesh.
+    - All 142 catalogue icons were regenerated via `extract_item_icons.py`
+      in one pass (every catalogue id matches a `data.cdb` item id
+      directly). 132 of 142 actually changed content, confirming they
+      weren't real extracted icons before.
+    - **Dead end, don't retry:** for the 14 hull shape-picker thumbnails
+      (`ship_shapes/A.webp`..`N.webp`), rendering fresh thumbnails
+      ourselves from the real (now-verified) mesh geometry was tried and
+      rejected -- not reliable, since matching the real in-game icon's
+      exact framing/style from raw geometry alone is guesswork. **The
+      correct fix was finding the real in-game icons instead.** They're
+      not in the `item` sheet (which only has per-item icons) but in a
+      separate, dedicated **`icon` sheet** (`data.cdb['sheets'][0]`,
+      name `"icon"`) -- each `PieceShapeA`..`N` id there has its own exact
+      `{file: "ui/icons/BlocksShapesIcons.png", size: 32, x, y}` entry.
+      `ui/icons/BlocksShapesIcons.png` itself is a real sprite sheet
+      extracted from `res.pak` (previously only known to us via a hand-
+      traced approximation from a reference screenshot, `ship_shapes/
+      icons screenshot.png` -- removed, along with the equally-unused
+      `rotation.png`, neither ever referenced by any code). All 14 real
+      crops matched the existing hand-traced shape *assignment/order*
+      almost exactly, just with hand-drawing imprecision -- confirms the
+      original author correctly identified the game's real shape-picker
+      order by eye, they just didn't have pixel-accurate source crops.
+      When a `data.cdb` id doesn't resolve in the sheet you expect, check
+      for a same-named id in a different, more specific sheet before
+      assuming a decompilation-only path is necessary.
+
 ---
 
 ## TestPE Format (legacy reference)
