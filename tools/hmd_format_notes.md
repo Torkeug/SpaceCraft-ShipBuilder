@@ -672,6 +672,66 @@ further evidence it's simply the wrong source file, not a parsing issue.
      confirmed correct (their filenames exactly match the prefab name in
      `visual.model`).
 
+10. **Material colors were pure invented placeholders (per-role flat RGB),
+    never verified against anything real -- the actual texture format has
+    now been reverse-engineered from scratch (no reference implementation
+    existed for this one, unlike the HMD reader) and real colors are wired
+    in.** The `_MAT_KEYWORDS` -> `_DEFAULT_ROLES` system only ever assigned
+    one of 6 fixed placeholder colors (paint/metal/dark/light/emissive/glass)
+    by keyword-matching a material's *name* -- it never had any connection to
+    what that material actually looks like.
+
+    The game's `*_basecolor.png` files (referenced from
+    `Tools/materials.props` and the shared `Materials_Library/*` prefabs) are
+    NOT real PNGs despite the extension -- confirmed via `hxd/res/Image.hx`
+    (Heaps' own format-signature checks for PNG/JPG/GIF/DDS all fail to
+    match). Reverse-engineered by algebraic file-size matching plus visual
+    verification: **BC1/DXT1 compressed, square power-of-two resolution,
+    full mipmap chain, 128-byte header** (confirmed exact: mip-chain byte
+    total + 128 equals the real file size for every plain material checked).
+    Alpha/decal materials use **BC3/DXT5** (148-byte header) instead, and 2
+    files (`Signaletique_01`/`02`) are **uncompressed RGBA, single level, no
+    mips** (also 128-byte header). Verified by decoding real images: 
+    `Metal_Brushed` produces a recognizable brushed-steel-with-scratches
+    texture; `Yellow_Plastic` a plausible flat mustard-yellow. BC3 decoding
+    has a remaining bug (the block/plane layout isn't quite standard
+    interleaved BC3 -- decoded output shows the right spatial pattern, e.g.
+    `Grid_Hex`'s hexagon grid is clearly visible, but with color-channel
+    noise on top) -- low priority since it only affects a handful of
+    decal/glass materials, and per-block color averaging still gives a
+    roughly plausible mean even with the noise.
+
+    `tools/extract_material_colors.py`: driven by the actual material names
+    read from each Tools mesh's own `materials[]` list (not a blind crawl of
+    the texture library), searches the whole pak for an exact
+    `<name>_basecolor*.png`, with two fallbacks: case-insensitive match (the
+    game's own data has inconsistent casing for the same material, e.g.
+    `Metal_RedPaint` vs `Metal_Redpaint` across different files), then
+    progressively stripping trailing `_word` segments to find the base
+    texture behind a tint/paint variant (`Metal_Standard_Copper` has no
+    texture of its own -- it's `Metal_Standard` tinted elsewhere). Covers 35
+    of 55 real material names used across the Tools category; the rest
+    (`PufferCloth`, `Logo_Aegir`, `Water_Bubble`, decal-atlas names like
+    `POM_Decals_01/02/03`, etc.) have no matching texture anywhere in the pak
+    -- either genuinely unique specialty textures not found via this search,
+    or (for the decal names) shared trim-sheet atlas materials accessed via
+    per-decal UV offsets rather than individual files, which this
+    average-color approach can't represent anyway. Those fall back to the
+    old placeholder role color, same as before.
+
+    `hmd_convert_v2.py`'s `match_material_color()` looks up the real name in
+    `tools/material_colors.json` first, falling back to the role default
+    only when no real color was extracted. The `role` assignment (still
+    keyword-based) is kept as-is because it also drives PBR shading params
+    (metalness/roughness) and special emissive/glass rendering in
+    `meshLoader.js` -- only the flat display color changed, not the shading
+    model. **Note:** real colors can render more saturated under the ship
+    builder's PBR lighting/environment reflections than their raw flat value
+    suggests (confirmed on `Blue_Basic`, (97,108,114) — fairly muted in
+    isolation) -- this is expected PBR behavior, not a decoding error, but
+    means the overall look shifted in ways that need visual sign-off rather
+    than being assumed correct just because the source data is real now.
+
 ---
 
 ## TestPE Format (legacy reference)

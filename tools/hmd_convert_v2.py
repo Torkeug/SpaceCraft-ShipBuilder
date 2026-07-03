@@ -17,6 +17,7 @@ Usage:
     python tools/hmd_convert_v2.py <input.fbx> <output.bin>
 """
 
+import json
 import os
 import sys
 import math
@@ -26,6 +27,13 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from hmd_parse_heaps import parse, stride_bytes
 from hmd_parse_prod import read_verts_f16, read_indices_le_u16, read_indices_le_u32, _MAT_KEYWORDS
 from hmd_to_bin import write_bin, _DEFAULT_ROLES
+
+_COLORS_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'material_colors.json')
+try:
+    with open(_COLORS_PATH, encoding='utf-8') as _f:
+        _REAL_COLORS = json.load(_f)
+except FileNotFoundError:
+    _REAL_COLORS = {}
 
 
 def quat_rotate(qx, qy, qz, v):
@@ -86,6 +94,15 @@ def match_material_role(name):
     return 2  # dark, matching the old fallback default
 
 
+def match_material_color(name, role):
+    """Real average color extracted from the material's own basecolor texture
+    (tools/extract_material_colors.py), falling back to the old invented
+    per-role placeholder when no real texture was found for this name."""
+    if name and name in _REAL_COLORS:
+        return tuple(_REAL_COLORS[name])
+    return _DEFAULT_ROLES[role][1] if role < len(_DEFAULT_ROLES) else (128, 128, 128)
+
+
 def convert(hmd_path, out_path, verbose=True):
     raw = open(hmd_path, 'rb').read()
     off = raw.find(b'HMD\x06')
@@ -127,7 +144,7 @@ def convert(hmd_path, out_path, verbose=True):
             mat_name = (d['materials'][mat_idx]['name']
                         if mat_idx is not None and 0 <= mat_idx < len(d['materials']) else None)
             role = match_material_role(mat_name)
-            rgb = _DEFAULT_ROLES[role][1] if role < len(_DEFAULT_ROLES) else (128, 128, 128)
+            rgb = match_material_color(mat_name, role)
             all_groups.append({'role': role, 'rgb': rgb, 'start': group_start, 'count': count})
             group_start += count
 
