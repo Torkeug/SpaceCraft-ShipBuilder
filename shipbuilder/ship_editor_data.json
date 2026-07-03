@@ -549,6 +549,11 @@
           "s": "M",
           "p": "prefabs/ships/parts/hull/8x3x1/8x3x1_M.prefab",
           "m": "8x3x1_M"
+        },
+        {
+          "s": "N",
+          "p": "prefabs/ships/parts/hull/8x3x1/8x3x1_N.prefab",
+          "m": "8x3x1_N"
         }
       ]
     },
@@ -1193,6 +1198,11 @@
           "s": "M",
           "p": "prefabs/ships/parts/hull/8x3x1/8x3x1_M.prefab",
           "m": "8x3x1_M"
+        },
+        {
+          "s": "N",
+          "p": "prefabs/ships/parts/hull/8x3x1/8x3x1_N.prefab",
+          "m": "8x3x1_N"
         }
       ]
     },
@@ -2080,6 +2090,11 @@
           "s": "M",
           "p": "prefabs/ships/parts/hull/8x3x1/8x3x1_M.prefab",
           "m": "8x3x1_M"
+        },
+        {
+          "s": "N",
+          "p": "prefabs/ships/parts/hull/8x3x1/8x3x1_N.prefab",
+          "m": "8x3x1_N"
         }
       ],
       "unreleased": true
@@ -2986,6 +3001,11 @@
           "s": "M",
           "p": "prefabs/ships/parts/hull/8x3x1/8x3x1_M.prefab",
           "m": "8x3x1_M"
+        },
+        {
+          "s": "N",
+          "p": "prefabs/ships/parts/hull/8x3x1/8x3x1_N.prefab",
+          "m": "8x3x1_N"
         }
       ]
     },
@@ -4207,6 +4227,11 @@
           "s": "M",
           "p": "prefabs/ships/parts/hull/8x3x1/8x3x1_M.prefab",
           "m": "8x3x1_M"
+        },
+        {
+          "s": "N",
+          "p": "prefabs/ships/parts/hull/8x3x1/8x3x1_N.prefab",
+          "m": "8x3x1_N"
         }
       ]
     },
@@ -4851,6 +4876,11 @@
           "s": "M",
           "p": "prefabs/ships/parts/hull/8x3x1/8x3x1_M.prefab",
           "m": "8x3x1_M"
+        },
+        {
+          "s": "N",
+          "p": "prefabs/ships/parts/hull/8x3x1/8x3x1_N.prefab",
+          "m": "8x3x1_N"
         }
       ]
     },

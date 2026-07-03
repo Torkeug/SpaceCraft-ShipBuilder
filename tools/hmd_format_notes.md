@@ -317,9 +317,9 @@ Both files are then correctly handled by `_detect_prefix_ring_buffer` (prefix by
 
 Bounds check in `_detect_ring_buffer_hmd`: `off + 8 <= len(raw)` prevents buffer overflow when reading geom_start from near-EOF hits.
 
-### 8x3x1_N — separate anomalous format
+### 8x3x1_N — resolved (was a stale pak_out copy, not a real anomalous format)
 
-8x3x1_N starts with raw big-endian uint16 index data at byte 0 (sequential values 0x0295, 0x0296...), with `HMD\x06` appearing at byte 144 as a false positive within the data. It matches none of the ring-buffer variants (raw[1] = 0x95 ≠ 0x00). The standard text-prefix path would slice from the false HMD hit and produce a garbage parse. The bounds check on the resulting `ibuf_start + ic*2 > len(data)` catches this and returns failure cleanly. Shape N genuinely exists in-game for 8x3x1 (same as every other hull size), but no usable mesh could be derived from this pak entry -- left out of the 8x3x1 catalogue entries (13 of 14 shapes) rather than shipped with unverified data, pending a real source.
+For a long time this pak entry appeared to start with raw big-endian uint16 index data at byte 0 (sequential values 0x0295, 0x0296...), with `HMD\x06` appearing at byte 144 as a false positive within the data -- matching none of the ring-buffer variants (raw[1] = 0x95 ≠ 0x00), so no usable mesh could be derived from it. This turned out to be the exact same root cause as findings 17/23/24: a stale `pak_out` copy predating the disc=0x02 position-formula fix, not a real alternate format. After the full `pak_extract.py --all` re-extraction, `8x3x1_N.fbx` starts with a clean `HMD\x06` header at byte 0 like every other hull shape, converts through the normal `hmd_to_bin.py` production-HMD path with no special-casing, and produces a correctly-proportioned ~9x3x1 mesh. All 130 of 130 hull shapes are now real. Lesson: don't trust an "anomalous format" diagnosis made before the pak position bug was found and fixed -- re-extract and re-check first.
 
 ---
 
@@ -372,7 +372,7 @@ Converts all sizes from pak_out and updates `_manifest.json`.
 
 ## Conversion Status
 
-### 4x3x1 through 8x6x2 — COMPLETE (7 sizes × 14 shapes = 98, except 8x3x1's 13 of 14 — see 8x3x1_N above)
+### 4x3x1 through 8x6x2 — COMPLETE (7 sizes × 14 shapes = 98)
 
 All available shapes converted from pak_out to .bin with correct material groups.
 Output: `shipbuilder/ship_meshes/{size}_{shape}.bin`
@@ -381,7 +381,7 @@ Parts: `shipbuilder/ship_editor_data.json` — already complete for all hull siz
 
 ### 12x6x2, 12x6x4, 16x6x2, 16x6x4 — COMPLETE (ring-buffer parser implemented)
 
-All shapes for these sizes are now converted from pak_out. See "Ring-Buffer Layout" section for implementation details. 129 of the 130 shapes that exist across all hull sizes are pak_out-sourced and in the catalogue; 8x3x1_N is the one exception (see above).
+All shapes for these sizes are now converted from pak_out. See "Ring-Buffer Layout" section for implementation details. All 130 shapes that exist across all hull sizes are pak_out-sourced and in the catalogue (see 8x3x1_N above for the last one to be resolved).
 
 ### Hull size conversion table
 
@@ -391,7 +391,7 @@ All shapes for these sizes are now converted from pak_out. See "Ring-Buffer Layo
 | 4x3x2    | A–N (14) | ✓ DONE (pak_out)        | text prefix ~16–32 B                          |
 | 6x3x1    | A–N (14) | ✓ DONE (pak_out)        | text prefix ~48–80 B                          |
 | 6x3x2    | A–N (14) | ✓ DONE (pak_out)        | text prefix                                   |
-| 8x3x1    | A–N (14) | ✓ DONE (pak_out, except N) | text prefix ~128 B; N has anomalous format (HAR) |
+| 8x3x1    | A–N (14) | ✓ DONE (pak_out)        | text prefix ~128 B                            |
 | 8x3x2    | A–N (14) | ✓ DONE (pak_out)        | text prefix                                   |
 | 8x6x2    | A–N (14) | ✓ DONE (pak_out)        | text prefix ~176 B                            |
 | 12x6x2   | A–N (14) | ✓ DONE (pak_out)        | ring-buffer variant 1 (A–M) and 3 (N, JSON end); geom_start corrected via ibuf scan |
@@ -1463,6 +1463,30 @@ further evidence it's simply the wrong source file, not a parsing issue.
       When a `data.cdb` id doesn't resolve in the sheet you expect, check
       for a same-named id in a different, more specific sheet before
       assuming a decompilation-only path is necessary.
+
+25. **8x3x1_N's "anomalous format" was never real -- it was the same stale
+    `pak_out` bug as findings 17/23/24, just diagnosed before that bug was
+    known.** The original diagnosis (raw big-endian uint16 index data at
+    byte 0, `HMD\x06` only appearing at byte 144 as a false positive within
+    the data) was accurate *for that specific extracted copy* -- but the
+    copy itself was stale, predating the disc=0x02 position-formula fix.
+    After the pak-wide `pak_extract.py --all` re-extraction (already done
+    for finding 24's audit, but not yet re-checked against this specific
+    file), `8x3x1_N.fbx` starts with a clean `HMD\x06` header at byte 0,
+    identical in shape to every other hull shape file, and converts through
+    the completely standard `tools/hmd_to_bin.py` production-HMD path with
+    zero special-casing -- no ring-buffer variant, no anomaly handling,
+    nothing. Produces a correctly-proportioned ~9x3x1 mesh (bbox
+    `[-4.50,-1.50,-0.01, 4.50,1.50,1.00]`). Re-ran `batch_convert_hulls.py`
+    to regenerate it through the normal pipeline and added the shape back
+    to all 6 material variants of the 8x3x1 catalogue entry (13 → 14
+    shapes each) that had deliberately excluded it. Confirmed visually
+    correct via the shape picker. **All 130 of 130 hull shapes are now
+    real, pak-verified, and in the catalogue -- zero remaining exceptions.**
+    General lesson: any "anomalous format" or "can't be parsed" diagnosis
+    made before finding 17 (the disc=0x02 position-formula fix) should be
+    treated as unconfirmed and re-checked against a fresh extraction before
+    being treated as a real, permanent format limitation.
 
 ---
 
