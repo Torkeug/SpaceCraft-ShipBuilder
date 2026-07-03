@@ -37,10 +37,15 @@ import hmd_to_bin
 # ported); keep converting them with the old heuristic converter for now.
 FALLBACK_TO_V1 = {'Spot_Light_01', 'Spot_Light_Barrel', 'Aerator_Spot_01'}
 
-# Legacy TestPE format (disc=0x00), not production HMD -- needs hmd_to_bin's
-# G-style converter, not hmd_parse_heaps/hmd_convert_v2 which only understand
-# the production models[] hierarchy.
-FALLBACK_TO_V1.add('PathwayPuncher')
+# PathwayPuncher used to be here too under a "legacy TestPE format" theory --
+# that was wrong. It's a genuine production HMD\x06 file; it was just
+# mis-extracted from the pak with a 13-byte offset error (pak_extract.py's
+# disc=0x00 pos landed 13 bytes past the real "HMD" magic for this one entry;
+# root cause not yet audited pak-wide -- re-extracted by hand once). Converts
+# cleanly through the normal v2 path now. See finding 15 in
+# hmd_format_notes.md. Also, read_verts_f16 (hmd_parse_prod.py) assumes
+# float16 vertex positions, which is wrong for this file's actual float32
+# position field -- hmd_convert_v2.read_verts_generic fixes that generically.
 
 
 def read_bin_stats(path):

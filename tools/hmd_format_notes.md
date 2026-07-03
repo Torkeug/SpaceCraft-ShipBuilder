@@ -801,6 +801,205 @@ further evidence it's simply the wrong source file, not a parsing issue.
     like most other entries -- a reasoned name-based match, visually
     confirmed correct by the user afterward alongside Radar0.
 
+13. **(Superseded by finding 14 -- do not trust this entry's conclusion.)**
+    An earlier pass concluded `PathwayPuncher` was very likely NOT
+    `Pathway_Puncher.fbx`, based on the rendered mesh looking like a jagged
+    faceted shard rather than the in-game ring/portal device, plus the
+    file's only embedded object name being the generic-sounding
+    `Cube_001_slice_004`. Finding 14 disproves this via ground-truth prefab
+    content: the mesh assignment is correct. The rendering bug is real and
+    still unresolved, but it's a parser/geometry bug in our TestPE reader,
+    not a wrong-asset problem. A real, confirmed parser bug was found along
+    the way and is still valid: `compute_lod_offsets`'s vertex-to-index-buffer
+    offset formula (`vbuf_start + vc*stride - 3` for non-last LODs) can land
+    on a byte-misaligned position that still keeps every index in-range
+    (passing the old bad-index check) while reading scrambled connectivity.
+    `hmd_parse.py`'s `refine_ibuf_start()` (local-coherence scoring across a
+    search window) fixes this class of bug and is wired into
+    `hmd_to_bin.py`'s `convert_g_style_auto`; worth checking on any other
+    TestPE file that looks broken.
+
+14. **Cracked the real `.prefab`/HBSON binary format from the actual Heaps
+    engine source (`hxd/fmt/hbson/Reader.hx` and `Writer.hx`, fetched from
+    github.com/HeapsIO/heaps via `gh api`), the same way finding 8 cracked
+    HMD from `hxd/fmt/hmd/Reader.hx`.** This directly disproves finding 13's
+    "wrong asset" conclusion for `PathwayPuncher` and confirms our
+    prefab-parsing tools were simply too naive to trust, not that the
+    underlying pak data was random research-junk cross-references.
+
+    - **Real format** (see `tools/hbson_parse.py`, a faithful port): magic
+      `"HBSON"` + 1 pad byte (6-byte header), then one recursively-encoded
+      value. Tag byte meanings: `0`=int 0, `1`=int (next byte), `2`=int (next
+      i32), `3`=float (next f64), `4`/`5`=bool true/false, `6`=null,
+      `7`=empty object, `8`/`9`=object (byte/i32 field count) with
+      `(readString(), read())` pairs, `10`=string, `11`=empty array,
+      `12`/`13`=array (byte/i32 element count). All ints/floats are
+      **little-endian** (Haxe `Input.bigEndian` defaults false). Strings use
+      a per-file backreference table: a leading i32 with bit `0x40000000` set
+      means "fresh short (<=16 char) ASCII string, length in low 30 bits,
+      pushed to the table"; bit `0x80000000` set means "fresh long/non-ASCII
+      string, not added to the table"; neither bit set means "plain index
+      into the table". Critically: **a real `.prefab` file's byte 0 must
+      literally be `'H'`** -- this is the exact check the game's own loader
+      (`hrt/prefab/Resource.hx`'s `loadData()`) uses to decide BSON vs. JSON.
+    - **This exposed a real, confirmed bug in `tools/pak_extract.py`:** every
+      `.prefab` file we'd extracted under `prefabs/` (disc=0x02) failed this
+      "starts with `H`" sanity check -- e.g. our extracted
+      `ColdLaser.prefab` starts mid-object and its declared byte range
+      actually spans four *other*, unrelated, but individually-valid HBSON
+      records (`CargoCrate_Mid`, `Batterie`, `BESS_Battery`,
+      `BigReactiveShield`). This is a genuine cumulative-offset drift bug
+      specific to (at least) the `prefabs/` subtree of the disc=0x02 stream,
+      not the "prefab content is legitimately corrupted/unparseable" theory
+      assumed since finding 5. (A tempting-but-wrong lead along the way:
+      `data.cdb` also doesn't start with printable JSON at its computed
+      disc=0x02 offset -- but that's a false alarm, since `data.cdb` is
+      *itself* HBSON-serialized, per the same `Resource.hx` loader, so
+      binary-looking leading bytes there are expected, not evidence of
+      drift. Don't reuse that check as a validity signal.)
+    - **Root cause bypassed, not fixed:** rather than debug the cumulative
+      disc=0x02 math across ~8,000 entries, the real `Pathway_Puncher.prefab`
+      record was located directly with a drift-independent signature search
+      of the raw 16GB pak: since `"Pathway_Puncher"` is short ASCII (15
+      chars), the writer format tells us exactly what precedes it as a
+      string literal -- 4 bytes `struct.pack('<I', 15 | 0x40000000)`
+      immediately followed by the literal bytes. Exactly one hit in the
+      whole pak. Walking forward from the nearest preceding real `HBSON`
+      marker (~6.1 KB before our -- wrong -- computed position for this
+      entry) gave the complete, self-consistent, genuine record:
+      ```
+      @type prefab @children [...] @object @name @Barrel
+      @constraint @BarrelConstraint @target TurretWeapon.Rotary.Receiver
+      @WeaponDef @reference @Impact assets/fx/Ship/Weapons/MissileExplosion.fx
+      @Eject assets/fx/Ship/Weapons/LaserMissile_Muzzle.fx
+      @Projectile assets/fx/Ship/Weapons/Laser/LaserMissile.fx
+      @PreviewPivot
+      @model @Pathway_Puncher
+      @source assets/Buildings/Props/TestPE/Pathway_Puncher.fbx
+      ```
+      **This confirms `Pathway_Puncher.fbx` (TestPE) genuinely is the correct,
+      current, shipped mesh for this item** -- not a coincidental filename
+      collision with a slicing-tool test asset as finding 13 concluded. It
+      also explains the item's turret-like rig (`Barrel`, rotary constraint
+      targeting a `TurretWeapon.Rotary.Receiver` socket, a `WeaponDef` with
+      Impact/Eject/Projectile FX): the tool visually "fires" a projectile
+      effect to punch its pathway, reusing the generic turret-weapon rig
+      rather than having a bespoke animation system.
+    - **Net effect:** the outstanding "crumpled shard" render is a genuine,
+      still-unsolved bug in our TestPE G-style geometry parser for this
+      specific file (see finding 13's still-valid index-offset fix, plus
+      ongoing work on LOD-chain math -- LOD1's data was traced and found to
+      degrade into synthetic ramp/counter values after ~31k vertices,
+      meaning the LOD1-3 offset chain is still wrong even though LOD0 alone
+      parses to sane, bounded, valid-normal geometry). It is *not* a wrong
+      asset. Do not revert to "unresolved gap, wrong asset" framing again.
+    - Fixing `pak_extract.py`'s disc=0x02 drift bug for the whole `prefabs/`
+      subtree (not just this one item) is unstarted follow-up work -- it
+      would let every other `.prefab` we've had to guess-map by filename
+      instead be confirmed directly, the way this one now is.
+
+15. **The actual, final resolution: `PathwayPuncher.fbx` was never a "TestPE
+    legacy format" file at all -- it's a completely standard production
+    HMD\x06 file, identical in kind to every other tool mesh in this project.
+    Everything in findings 11-14 about a mysterious undocumented "G-style"
+    format was chasing two compounding, unrelated bugs, not a real format.**
+
+    - **Bug 1, in `tools/pak_extract.py`:** the stored disc=0x00 `pos` for
+      this one pak entry pointed 13 bytes *past* the file's real start. The
+      real `"HMD\x06"` magic sits at absolute pak offset 1,950,078,304; our
+      extraction started at 1,950,078,317 (exactly `HEADER_SIZE` bytes late)
+      and so began reading from partway through the real header/props
+      section instead of from the magic. Found by brute-force searching a
+      wide byte window around the assumed position for a literal `b'HMD'`
+      match -- the same technique that cracked the disc=0x02 prefab drift in
+      finding 14. Root cause not audited pak-wide (unclear if other disc=0x00
+      entries share it); fixed for this one file by re-extracting the
+      correct byte range by hand and overwriting the file in `pak_out/`.
+    - **This explains the entire "TestPE format" saga in retrospect:** our
+      `tools/hmd_parse.py` G-style heuristic parser was never reading a real
+      alternate format -- it was reading random offset data from partway
+      through a real production HMD file's own props/attribute-block
+      section, which happens to *also* contain literal `position`/`normal`/
+      `tangent`/`uv` attribute-name strings (both formats use the same
+      attribute-block encoding), enough to make the heuristic parser produce
+      plausible-looking but fundamentally wrong structure. Every fix layered
+      on top of it in findings 11-14 (index-offset refinement, axis
+      permutation, degenerate-triangle filtering) was really just
+      coincidentally-successful pattern-matching against garbage, not a
+      correct decode -- which is exactly why proportions and detail kept
+      coming out subtly wrong no matter how much the heuristics were tuned.
+    - **Confirmed via the actual game engine, not just inference:** built a
+      real HashLink bytecode decompiler (`hlbc`, github.com/Gui-Yom/hlbc,
+      installed via cargo) against the shipped `hlboot.dat`. It initially
+      failed to parse (`Invalid type kind '23'`, `Unknown opcode 101`) --
+      confirming this game runs a customized Heaps/HashLink fork, consistent
+      with CLAUDE.md's existing note -- fixed by patching hlbc to stub the
+      unknown type kind and add the missing `Catch` opcode (`OP(OCatch,J,X,X)`
+      per the real, current `hashlink/src/opcodes.h`, index 101, the one
+      opcode newer than hlbc's own bundled table). With that patch, `hlbc`
+      loads the game's real bytecode and decompiles it. Traced the actual
+      model-loading call chain end to end: `hrt.prefab.Model.makeObject` ->
+      `ContextShared.loadModel` -> `ModelCache.loadModel` ->
+      `ModelCache.loadLibraryData` -> `hxd.res.Model.toHmd` ->
+      `hxd.fmt.hmd.Reader.readHeader`, and confirmed `readHeader`'s real,
+      decompiled first check is a hard `if (h != "HMD") throw "FBX was not
+      converted to HMD"` with no legacy-format branch anywhere in the chain.
+      This is what proved the "legacy TestPE format" theory couldn't be
+      right (this call chain cannot load a file lacking real HMD magic) and
+      motivated re-checking the extraction itself rather than the format.
+      **To reproduce this setup in a future session** (cargo/rustc are
+      installed on this machine at `~/.cargo/bin`, just not always on PATH --
+      check there before assuming they're missing): `cargo install hlbc-cli`
+      installs a working but too-old `hlbc.exe` that fails on this game's
+      bytecode; instead `git clone --recursive https://github.com/Gui-Yom/hlbc`,
+      remove `"crates/gui"` from the root `Cargo.toml`'s workspace members
+      (its `egui_ui_refresh` path dependency isn't fetched by the clone and
+      isn't needed for CLI use), then in `crates/hlbc/src/read.rs`'s
+      `Type::read` add a `23 => Ok(Void)` arm (a stand-in for a modified-fork
+      type kind not in any public spec) before the catch-all error arm, and
+      in `crates/hlbc/src/opcodes.rs` add a final `Catch { offset: JumpOffset
+      }` variant to the `Opcode` enum after `Asm` (matching pattern of the
+      `Trap`/`JAlways` variants for how a `JumpOffset` field is declared).
+      Then `cargo install --path crates/cli --force`. Useful commands once
+      loaded: `sfn`/`fnamed` need an *exact* function name (both are
+      unimplemented substring search, despite `sstr` for strings being a real
+      substring search) -- more reliably, dump broad ranges (`string ..`,
+      `fnh ..`) to a file and `grep` locally; `refto string@<idx>` finds
+      references to a string constant; `decomp <idx>` decompiles a function
+      to pseudo-Haxe.
+    - **Bug 2, in `tools/hmd_parse_prod.py`/`hmd_convert_v2.py`:** once
+      re-extracted correctly and parsed as real production HMD via
+      `hmd_parse_heaps.parse`, conversion still crashed (`NaN` during
+      `write_bin`'s quantization). Cause: `read_verts_f16` hardcodes
+      float16-precision vertex positions, but this file's actual `position`
+      field type code decodes (per `stride_bytes`' own field-type table) to
+      **float32**, not float16 -- reading it as f16 reinterpreted real
+      float32 bit patterns as two garbage float16 values, producing NaN for
+      about 6% of vertices. Fixed generically with a new
+      `hmd_convert_v2.read_verts_generic()` that checks the real declared
+      precision of the position field (via the same `typ >> 4` precision
+      bits `stride_bytes` already decodes) and only falls back to
+      `read_verts_f16` when the field really is float16. This is a real,
+      previously-latent bug in the shared v2 pipeline -- worth keeping an
+      eye out for on any future file whose position field isn't float16.
+    - **Net result:** `PathwayPuncher` now converts through the exact same
+      `hmd_convert_v2.py`/`hmd_parse_heaps.py` pipeline as every other tool
+      mesh (removed from `FALLBACK_TO_V1` in
+      `batch_convert_modules_v2.py`), using the file's own real per-model
+      transform (position, a real 90 degree Z rotation, and a genuine
+      non-uniform scale `(0.9237, 0.9237, 0.4499)` -- the actual source of
+      the elongated, flattened proportions the in-game reference shows, not
+      a guessed/eyeballed `dims` value). Visually confirmed correct by the
+      user afterward. Also recovered `PathwayPuncher`'s real crafting recipe
+      from `data.cdb` while investigating (`Module Kitx1, Quantic
+      Graphenoidx3, Hyper Lensx1, Diffraction Gratingx20`), replacing the
+      `"Unknown"` placeholder.
+    - **Everything in findings 11-14 describing a "TestPE format," "G-style
+      parser," or `Pathway_Puncher` needing special-case legacy handling is
+      now historical only** -- kept for the record of how the investigation
+      unfolded, but do not treat it as current guidance. The file is a
+      normal production HMD file; use the normal pipeline.
+
 ---
 
 ## TestPE Format (legacy reference)

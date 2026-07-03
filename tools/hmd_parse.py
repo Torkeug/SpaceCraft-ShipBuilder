@@ -316,6 +316,55 @@ def read_index_counts(blocks):
 
 
 # ---------------------------------------------------------------------------
+# Index buffer offset refinement
+# ---------------------------------------------------------------------------
+
+def _index_buffer_coherence(data, ibuf_start, ic, vc):
+    """Score a candidate index-buffer start: (bad_count, coherence).
+
+    A naive vertex-to-index-buffer offset formula (see compute_lod_offsets's
+    "-3" constant) can land on a position where every index happens to be
+    in-range [0, vc) -- passing a naive bad-index check -- while still being
+    byte-misaligned and producing scrambled/non-local triangle connectivity
+    (confirmed on Pathway_Puncher.fbx: the "-3" formula gives 0 bad indices
+    but a garbled mesh; the true offset is 4 bytes later). Real triangle
+    lists for hard-surface meshes with little/no vertex sharing are strongly
+    *locally coherent* -- consecutive indices are usually close together or
+    identical to nearby ones -- so use that as the real correctness signal,
+    not just range-validity.
+    """
+    if ibuf_start < 0 or ibuf_start + ic * 2 > len(data):
+        return ic, 0.0
+    try:
+        idxs = struct.unpack_from(f'>{ic}H', data, ibuf_start)
+    except struct.error:
+        return ic, 0.0
+    bad = sum(1 for v in idxs if v >= vc)
+    if bad > ic * 0.05:
+        return bad, 0.0
+    close = sum(1 for i in range(1, len(idxs)) if abs(idxs[i] - idxs[i - 1]) <= 4)
+    return bad, close / max(1, len(idxs) - 1)
+
+
+def refine_ibuf_start(data, naive_start, ic, vc, search=16):
+    """Search a small window of byte offsets around a naive formula's result
+    and pick whichever produces the most locally-coherent index stream. Falls
+    back to the naive offset if nothing in the search window scores better."""
+    best = naive_start
+    best_bad, best_score = _index_buffer_coherence(data, naive_start, ic, vc)
+    for delta in range(-search, search + 1):
+        if delta == 0:
+            continue
+        candidate = naive_start + delta
+        bad, score = _index_buffer_coherence(data, candidate, ic, vc)
+        if bad <= ic * 0.05 and score > best_score:
+            best_score = score
+            best_bad = bad
+            best = candidate
+    return best
+
+
+# ---------------------------------------------------------------------------
 # Full parse pipeline
 # ---------------------------------------------------------------------------
 

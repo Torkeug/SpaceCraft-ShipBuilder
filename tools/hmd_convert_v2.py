@@ -24,9 +24,31 @@ import math
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+import struct
+
 from hmd_parse_heaps import parse, stride_bytes
 from hmd_parse_prod import read_verts_f16, read_indices_le_u16, read_indices_le_u32, _MAT_KEYWORDS
 from hmd_to_bin import write_bin, _DEFAULT_ROLES
+
+
+def read_verts_generic(data, vbuf_start, vc, stride, fields):
+    """Read vc vertex positions using the file's own declared position precision.
+
+    read_verts_f16 hardcodes float16 positions, which is wrong for files whose
+    position field is actually float32 (type code 3 -> fmt=3,prec=0=F32 per
+    stride_bytes' encoding) -- confirmed on Pathway_Puncher.fbx, where blindly
+    reading as f16 produced NaN for ~6% of vertices (raw float32 bit patterns
+    reinterpreted as two garbage float16 values).
+    """
+    pos_type = fields[0][1]
+    prec = pos_type >> 4
+    if prec == 0:  # F32
+        verts = []
+        for vi in range(vc):
+            off = vbuf_start + vi * stride
+            verts.append(struct.unpack_from('<3f', data, off))
+        return verts
+    return read_verts_f16(data, vbuf_start, vc, stride)
 
 _COLORS_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'material_colors.json')
 try:
@@ -127,7 +149,7 @@ def convert(hmd_path, out_path, verbose=True):
         ibuf_start = off + d['dataPosition'] + geom['indexPosition']
         ic = sum(geom['indexCounts'])
 
-        verts_local = read_verts_f16(raw, vbuf_start, vc, stride)
+        verts_local = read_verts_generic(raw, vbuf_start, vc, stride, geom['fields'])
         verts_world = [transform_vert_chain(v, m, d['models']) for v in verts_local]
 
         is_small = vc <= 0x10000

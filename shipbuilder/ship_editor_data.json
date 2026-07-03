@@ -8598,16 +8598,16 @@
       "wip": true,
       "color": "#a0c060",
       "dims": [
-        3.83,
-        6.06,
-        5.34
+        4.93,
+        2.73,
+        3.54
       ],
       "price": 1860,
       "stats": {
         "StorageUnits": 10,
         "SystemRequirement": 100
       },
-      "cost": "Unknown",
+      "cost": "Module Kitx1, Quantic Graphenoidx3, Hyper Lensx1, Diffraction Gratingx20",
       "grad": {
         "c": [
           "#2F323B",

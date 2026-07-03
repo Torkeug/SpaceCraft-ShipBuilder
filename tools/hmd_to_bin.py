@@ -669,7 +669,7 @@ def convert_prod_style(hmd_path, out_path):
 
 def convert_g_style_auto(hmd_path, out_path):
     """Try to parse and convert an HMD file as G-style. Returns True on success."""
-    from hmd_parse import parse_hmd_g, read_index_counts, role_from_material_name
+    from hmd_parse import parse_hmd_g, read_index_counts, role_from_material_name, refine_ibuf_start
 
     with open(hmd_path, 'rb') as f:
         data = f.read()
@@ -680,7 +680,12 @@ def convert_g_style_auto(hmd_path, out_path):
 
     lod0 = lods[0]
     verts = read_verts_float32(data, lod0['vbuf_start'], lod0['vc'], 32, 0)
-    raw_indices = read_indices_be_u16(data, lod0['ibuf_start'], lod0['ic'])
+    # The vertex-to-index-buffer offset formula can be byte-misaligned in a way
+    # that still produces all-in-range indices (passes a naive bad-index check)
+    # but scrambles triangle connectivity -- refine using local coherence too
+    # (confirmed necessary on Pathway_Puncher.fbx).
+    ibuf_start = refine_ibuf_start(data, lod0['ibuf_start'], lod0['ic'], lod0['vc'])
+    raw_indices = read_indices_be_u16(data, ibuf_start, lod0['ic'])
 
     vc = len(verts)
     bad = [i for i, v in enumerate(raw_indices) if v >= vc]
