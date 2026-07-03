@@ -779,6 +779,28 @@ further evidence it's simply the wrong source file, not a parsing issue.
     `MiningTool3`/`MiningTool3_OC` have `price: 0` (loot-only per data.cdb)
     and use `""` matching the established convention for other price-0 items.
 
+12. **A 5th missing item found (`Radar0`, Crude Resource Detector) --
+    resolved the RadarMK1 mystery from finding 8/9: `Radar.fbx`/`Radar.prefab`
+    was never RadarMK1's asset at all, it's Radar0's** (confirmed via
+    data.cdb's `visual.model`: `Radar0` -> `Radar.prefab`, `RadarMK1` ->
+    the *different* `RadarMK1.prefab`). This is exactly why RadarMK1 looked
+    "more obviously wrong" once real transforms were applied in finding 8 --
+    it was rendering an entirely different item's mesh, not a scale/rotation
+    bug in the shared code. Missed in finding 11's "exhaustive" data.cdb scan
+    because that scan assumed `"type"` always appears after `"id"` in the
+    JSON -- for some entries (including `Radar0`) it appears before, in a
+    different field order. Re-verify with a scan that checks both directions
+    if doing this kind of audit again.
+
+    `RadarMK1.prefab` itself has no recoverable mesh reference (same
+    prefab-corruption pattern as several other items). `Radar_Upgrade.fbx`
+    (otherwise completely unclaimed -- the other 3 radar-family items are
+    all confirmed elsewhere) was assigned to it on the user's suggestion: its
+    name plausibly means "the upgrade from Radar0", matching RadarMK1's tier
+    position (Simple = one step up from Crude). Not confirmed via data.cdb
+    like most other entries -- a reasoned name-based match, visually
+    confirmed correct by the user afterward alongside Radar0.
+
 ---
 
 ## TestPE Format (legacy reference)

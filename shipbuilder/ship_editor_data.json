@@ -8208,6 +8208,44 @@
       "m": "MiningTool3_OC"
     },
     {
+      "id": "Radar0",
+      "name": "Crude Resource Detector",
+      "type": "ShipRadars",
+      "kind": "module",
+      "group": "Radar",
+      "wip": true,
+      "color": "#6aa0d8",
+      "dims": [
+        0.33,
+        0.4,
+        1.7
+      ],
+      "price": 50,
+      "stats": {
+        "StorageUnits": 10,
+        "SystemRequirement": 100
+      },
+      "cost": "Unknown",
+      "grad": {
+        "c": [
+          "#2F323B",
+          "#B8A2A2",
+          "#E9D6D6",
+          "#9A9A9A"
+        ],
+        "p": [
+          0.048828125,
+          0.314453125,
+          0.689453125,
+          1
+        ]
+      },
+      "model": "prefabs/ships/parts/tool/Radar.prefab",
+      "mount": "outside",
+      "su": 10,
+      "m": "Radar0"
+    },
+    {
       "id": "RadarMK1",
       "name": "Simple Resource Detector",
       "type": "ShipRadars",
@@ -8216,9 +8254,9 @@
       "wip": true,
       "color": "#6aa0d8",
       "dims": [
-        1,
-        1,
-        1
+        0.51,
+        0.41,
+        2.09
       ],
       "price": 62,
       "stats": {

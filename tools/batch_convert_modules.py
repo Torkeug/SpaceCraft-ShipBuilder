@@ -46,7 +46,16 @@ MODULE_SOURCES = {
     # visual.model (HIPI_MiningLaser.prefab / HIPI_Overclocked_MiningLaser.prefab).
     'HiPiLaser':              'Tools/MiningTool_Medium.fbx',
     'HiPi_Overclocked_Laser': 'Tools/MiningTool_Medium.fbx',
-    'RadarMK1':               'Tools/Radar.fbx',
+    # Radar.fbx/Radar.prefab actually belongs to Radar0 (Crude Resource
+    # Detector, added below -- was missing from the catalogue entirely,
+    # confirmed via data.cdb's visual.model), NOT RadarMK1. RadarMK1 (Simple
+    # Resource Detector)'s own prefab (RadarMK1.prefab) has no recoverable
+    # mesh reference; Radar_Upgrade.fbx is otherwise completely unclaimed by
+    # any confirmed item and its name plausibly matches "the upgrade from
+    # Radar0" -- a reasoned name-based match, not confirmed via data.cdb like
+    # most other entries in this table.
+    'Radar0':                 'Tools/Radar.fbx',
+    'RadarMK1':               'Tools/Radar_Upgrade.fbx',
     'SmartRadar':             'Tools/SmartRadar.fbx',
     'Sniffer_Radar':          'Tools/Sniffer_radar.fbx',
     'Gravitron':              'Tools/Gravitron.fbx',
