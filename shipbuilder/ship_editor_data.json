@@ -6297,12 +6297,12 @@
       "type": "ShipDecorative",
       "kind": "build",
       "group": "Decorative",
-      "wip": true,
+      "wip": false,
       "color": "#9b8b6a",
       "dims": [
-        6,
-        4,
-        1
+        9,
+        5,
+        2
       ],
       "price": 0,
       "stats": {
@@ -6330,6 +6330,11 @@
           "p": "prefabs/ships/parts/Decoratives_Parts/Aerator_Thin_01.prefab",
           "m": "Aerator_Thin_01"
         }
+      ],
+      "_renderSize": [
+        8.6484,
+        1.9094,
+        5.291
       ]
     },
     {
@@ -6338,7 +6343,7 @@
       "type": "ShipDecorative",
       "kind": "build",
       "group": "Decorative",
-      "wip": true,
+      "wip": false,
       "color": "#9b8b6a",
       "dims": [
         5,
@@ -6371,6 +6376,11 @@
           "p": "prefabs/ships/parts/Decoratives_Parts/Aerator_Thin_02.prefab",
           "m": "Aerator_Thin_02"
         }
+      ],
+      "_renderSize": [
+        4.9141,
+        0.6937,
+        2.7773
       ]
     },
     {
@@ -6379,11 +6389,11 @@
       "type": "ShipDecorative",
       "kind": "build",
       "group": "Decorative",
-      "wip": true,
+      "wip": false,
       "color": "#9b8b6a",
       "dims": [
-        4,
         3,
+        2,
         1
       ],
       "price": 0,
@@ -6412,6 +6422,11 @@
           "p": "prefabs/ships/parts/Decoratives_Parts/Aerator_Circle_01.prefab",
           "m": "Aerator_Circle_01"
         }
+      ],
+      "_renderSize": [
+        2.5402,
+        0.6226,
+        2.0699
       ]
     },
     {

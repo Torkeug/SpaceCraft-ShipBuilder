@@ -1372,6 +1372,53 @@ further evidence it's simply the wrong source file, not a parsing issue.
     correct on both a thruster and Condor wing, flipped and toggled
     between horizontal/vertical orientation in all four combinations.
 
+23. **The 3 WIP "Decorative" catalogue items (Big Intake Vent/`Aerator_Thin_01`,
+    Intake Vent/`Aerator_Thin_02`, Round Hatch/`Aerator_Circle_01`) were never
+    actually blocked by an animation/skin section -- their `pak_out` copies
+    were just stale, extracted before finding 17's disc=0x02 position-formula
+    fix.** Investigating why `hmd_convert_v2.py` choked on
+    `Aerator_Thin_01.fbx` (`IndexError` deep inside `read_format()`) found the
+    file's only `HMD\x06` occurrence sitting 46 bytes from EOF instead of near
+    the start (compare `Water_Collector.fbx`: magic at byte 448 of 2.9MB, as
+    expected) -- i.e. the on-disk copy was reading mostly wrong/unrelated
+    bytes. Re-extracting fresh from `res.pak` with the current `pak_extract.py`
+    (`stored_pos + dir_size`, no cumulative-sum math) put the magic at byte 0
+    for every Decoratives_Parts `.fbx`, prefab, and even the 3 files previously
+    listed in `batch_convert_modules_v2.py`'s `FALLBACK_TO_V1` set
+    (`Spot_Light_01`, `Spot_Light_Barrel`, `Aerator_Spot_01`) specifically
+    because of a supposed "animation/skin section the new reader doesn't
+    handle" -- **that reason was never real; all 6 files convert cleanly
+    through `hmd_convert_v2.py` once freshly extracted, real per-model scale
+    and all** (e.g. `Aerator_Circle_01` scale 0.7, `Aerator_Thin_01` scale 1.5).
+
+    Root cause: `pak_out` is a point-in-time local mirror (per CLAUDE.md,
+    built via `--all` for reverse-engineering), not something re-synced
+    automatically when `pak_extract.py`'s position formula changes. Any
+    subtree extracted before finding 17 (or before any later extractor fix)
+    stays stale until someone re-runs extraction against it -- there is no
+    version check tying a `pak_out` file to the formula that produced it.
+    Confirmed via the user's own suspicion ("this is not the first file that
+    seems to have issues") that this wasn't an isolated case: a scoped rescan
+    of `Vehicules/Buildings_Parts/Tools` (the *other* subtree the modern
+    pipeline depends on) came back clean (every file's magic within the first
+    5,000 bytes), so the staleness was specific to Decoratives_Parts having
+    never been touched since finding 17, not a second live formula bug.
+
+    **Fix applied: re-ran `pak_extract.py --all --out pak_out`, refreshing
+    the entire local mirror (8,231 entries, 0 errors) in one pass** rather
+    than patching subtrees one at a time as they happen to get noticed --
+    this is now the recommended move any time a file looks structurally
+    wrong before assuming a new format quirk or a live extractor bug. `git
+    diff --stat` afterward is a fast way to see exactly which subtrees were
+    actually stale (only files whose extraction differed from before will
+    show as changed).
+
+    `FALLBACK_TO_V1` in `batch_convert_modules_v2.py` and the old
+    `hmd_to_bin.py`-path fallback code in `batch_convert_modules.py` are now
+    dead weight for these 3 files specifically and should be removed once
+    Spot_Light_01/Spot_Light_Barrel/Aerator_Spot_01 are reconverted through
+    v2 and re-verified.
+
 ---
 
 ## TestPE Format (legacy reference)

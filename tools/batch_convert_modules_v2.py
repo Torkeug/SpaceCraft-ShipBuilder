@@ -4,10 +4,12 @@ transform-aware converter (hmd_convert_v2.py), which applies each real HMD
 model node's own position/rotation/scale instead of the old heuristic merge
 that assumed every sub-part sat unscaled at the origin.
 
-Falls back to the old converter (hmd_to_bin.convert) for files the new parser
-can't yet handle (currently: the 3 Decoratives_Parts items, which hit an
-animation/skin section this port doesn't fully cover) so those aren't
-regressed.
+Every outside-mount module now converts cleanly through this path. The 3
+Decoratives_Parts items once thought to need a v1 (hmd_to_bin.py) fallback
+due to an "animation/skin section" (Spot_Light_01, Spot_Light_Barrel,
+Aerator_Spot_01) never actually had that problem -- their pak_out copies were
+just stale, extracted before finding 17's disc=0x02 position-formula fix. See
+finding 23 in hmd_format_notes.md.
 
 Updates shipbuilder/ship_meshes/_manifest.json with the new vc/ic/gc stats.
 
@@ -31,11 +33,6 @@ sys.path.insert(0, TOOLS_DIR)
 
 from batch_convert_modules import MODULE_SOURCES
 import hmd_convert_v2
-import hmd_to_bin
-
-# These fail the new HMD-model-hierarchy parser (animation/skin section not yet
-# ported); keep converting them with the old heuristic converter for now.
-FALLBACK_TO_V1 = {'Spot_Light_01', 'Spot_Light_Barrel', 'Aerator_Spot_01'}
 
 # PathwayPuncher used to be here too under a "legacy TestPE format" theory --
 # that was wrong. It's a genuine production HMD\x06 file; it was just
@@ -68,12 +65,8 @@ def main():
             errors += 1
             continue
         try:
-            if key in FALLBACK_TO_V1:
-                print(f"[{key}] (v1 fallback)")
-                hmd_to_bin.convert(src, out)
-            else:
-                print(f"[{key}]")
-                hmd_convert_v2.convert(src, out)
+            print(f"[{key}]")
+            hmd_convert_v2.convert(src, out)
             vc, ic, gc = read_bin_stats(out)
             manifest[key] = {'g': gc, 'i32': ic > 0 and vc > 0x10000, 't': ic // 3, 'v': vc}
             converted += 1
