@@ -803,65 +803,17 @@
     "t": 17736,
     "v": 15645
   },
-  "BESS_Battery": {
-    "g": 7,
-    "i32": false,
-    "t": 14646,
-    "v": 19992
-  },
-  "Batterie": {
-    "g": 6,
-    "i32": false,
-    "t": 10856,
-    "v": 13196
-  },
-  "BigReactive_Shield": {
-    "g": 2,
-    "i32": false,
-    "t": 7040,
-    "v": 11780
-  },
   "BigSolarPanel_Flat": {
     "g": 7,
     "i32": false,
     "t": 13788,
     "v": 19389
   },
-  "BoilerHeater": {
-    "g": 4,
-    "i32": false,
-    "t": 20303,
-    "v": 23500
-  },
   "Booster": {
-    "g": 4,
-    "i32": false,
-    "t": 9328,
-    "v": 13642
-  },
-  "CarbonGenerator_Small": {
-    "g": 4,
-    "i32": false,
-    "t": 17688,
-    "v": 20009
-  },
-  "CargoCrate_Big": {
-    "g": 4,
-    "i32": false,
-    "t": 13744,
-    "v": 15959
-  },
-  "CargoCrate_Mid": {
-    "g": 4,
-    "i32": false,
-    "t": 11608,
-    "v": 13091
-  },
-  "CargoCrate_Small": {
-    "g": 4,
-    "i32": false,
-    "t": 9938,
-    "v": 11215
+    "g": 12,
+    "i32": true,
+    "t": 79576,
+    "v": 91317
   },
   "Cockpit_AE1": {
     "g": 21,
@@ -983,48 +935,6 @@
     "t": 1783095849,
     "v": 24094
   },
-  "FTL_Engine": {
-    "g": 6,
-    "i32": false,
-    "t": 25588,
-    "v": 23941
-  },
-  "FTL_Engine_Heavy": {
-    "g": 3,
-    "i32": false,
-    "t": 5448,
-    "v": 9132
-  },
-  "FTL_Engine_medium": {
-    "g": 6,
-    "i32": false,
-    "t": 8856,
-    "v": 21362
-  },
-  "FTL_Tank_Big": {
-    "g": 2,
-    "i32": false,
-    "t": 6232,
-    "v": 7601
-  },
-  "FTL_Tank_Medium": {
-    "g": 2,
-    "i32": false,
-    "t": 20362,
-    "v": 22971
-  },
-  "FTL_Tank_Small": {
-    "g": 5,
-    "i32": false,
-    "t": 22625,
-    "v": 22571
-  },
-  "FlyWheel_Battery": {
-    "g": 7,
-    "i32": false,
-    "t": 11871,
-    "v": 17148
-  },
   "Gravitron": {
     "g": 8,
     "i32": false,
@@ -1042,30 +952,6 @@
     "i32": false,
     "t": 45810,
     "v": 60397
-  },
-  "Kinetic_Shield": {
-    "g": 6,
-    "i32": false,
-    "t": 22004,
-    "v": 20606
-  },
-  "Liquid_Storage": {
-    "g": 8,
-    "i32": false,
-    "t": 10473,
-    "v": 12896
-  },
-  "Liquid_Storage_Big": {
-    "g": 5,
-    "i32": false,
-    "t": 19699,
-    "v": 24552
-  },
-  "Liquid_Storage_Medium": {
-    "g": 5,
-    "i32": false,
-    "t": 11538,
-    "v": 14748
   },
   "MK1_Little_01": {
     "g": 6,
@@ -1090,18 +976,6 @@
     "i32": false,
     "t": 6016,
     "v": 5136
-  },
-  "Magnetic-Kinetic_Shield": {
-    "g": 5,
-    "i32": false,
-    "t": 15913,
-    "v": 16556
-  },
-  "MiningLaserControlMode": {
-    "g": 2,
-    "i32": false,
-    "t": 3084,
-    "v": 5830
   },
   "MiningTool0": {
     "g": 15,
@@ -1133,29 +1007,11 @@
     "t": 1783095849,
     "v": 32945
   },
-  "Navigator": {
-    "g": 5,
-    "i32": false,
-    "t": 14107,
-    "v": 21425
-  },
-  "Paradoxical_Battery": {
-    "g": 6,
-    "i32": false,
-    "t": 12116,
-    "v": 16808
-  },
   "PathwayPuncher": {
     "g": 4,
     "i32": false,
     "t": 18653,
     "v": 55830
-  },
-  "Pressure_Storage": {
-    "g": 8,
-    "i32": false,
-    "t": 14066,
-    "v": 16700
   },
   "Radar0": {
     "g": 17,
@@ -1168,18 +1024,6 @@
     "i32": false,
     "t": 31650,
     "v": 24612
-  },
-  "Radiator": {
-    "g": 3,
-    "i32": false,
-    "t": 12346,
-    "v": 16423
-  },
-  "Reactive_Shield": {
-    "g": 2,
-    "i32": false,
-    "t": 6124,
-    "v": 9560
   },
   "Scanner": {
     "g": 15,
@@ -1240,18 +1084,6 @@
     "i32": false,
     "t": 6936,
     "v": 6198
-  },
-  "ThrusterControlMode": {
-    "g": 2,
-    "i32": false,
-    "t": 3084,
-    "v": 5830
-  },
-  "VanadiumBattery": {
-    "g": 5,
-    "i32": false,
-    "t": 18780,
-    "v": 20380
   },
   "Water_Collector": {
     "g": 17,

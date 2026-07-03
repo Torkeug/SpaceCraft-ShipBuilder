@@ -6266,9 +6266,9 @@
       "wip": true,
       "color": "#e0843a",
       "dims": [
+        4,
         2,
-        1,
-        1
+        2
       ],
       "price": 115,
       "stats": {
@@ -6298,7 +6298,12 @@
           "m": "Booster"
         }
       ],
-      "unreleased": true
+      "unreleased": true,
+      "_renderSize": [
+        3.7021,
+        1.5167,
+        1.4863
+      ]
     },
     {
       "id": "Deco_05",
