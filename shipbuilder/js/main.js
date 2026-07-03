@@ -37,7 +37,7 @@ const _gridMat = new THREE.ShaderMaterial({
     uDiamondThick: { value: 0.09 },
     uMinorAlpha:   { value: 0.45 },
     uMajorAlpha:   { value: 0.80 },
-    uFade:         { value: 50.0 },
+    uFade:         { value: 140.0 },
   },
   vertexShader: `
     varying vec2 vW;
