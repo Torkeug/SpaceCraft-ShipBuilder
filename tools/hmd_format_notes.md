@@ -630,6 +630,48 @@ further evidence it's simply the wrong source file, not a parsing issue.
    (already-reasonable-looking) values even under the new parser, so those
    guesses may be closer to correct despite being unconfirmed.
 
+9. **Two more real bugs found after finding 8, both confirmed by the user
+   spotting wrong-looking results and asking for another look (not found by
+   static analysis alone):**
+
+   - **Parent-chain transforms were still being ignored.** Finding 8 fixed
+     reading each model's own position/rotation/scale, but every model also
+     has a `parent` index, and that transform is relative to the *parent's*
+     space, not world space — `hmd_convert_v2.py` was applying only each
+     part's own transform, never composing up through its ancestors. This
+     happened to be harmless on `Water_Collector` (every part parents to an
+     identity scene root, a no-op), which is exactly why it went unnoticed
+     there. It was NOT harmless on `MiningTool1_OC`: `Mining_Arm`, `Receiver`,
+     and `Plane` are all parented to `Base`, which carries a genuine 180°
+     rotation about Z — without composing that in, the children landed at
+     the wrong world position/orientation relative to Base, visibly
+     detached from the assembly ("the laser is not properly attached to the
+     arm"). Fixed with `transform_vert_chain()`: walk from the part up
+     through `parent` indices to the root (`parent == -1`), applying each
+     ancestor's own transform in turn. Regenerated all 7 affected meshes
+     (ColdLaser, HiPiLaser, HiPi_Overclocked_Laser, MiningTool1_OC, RadarMK1,
+     Simple_Mining_Laser, SmartRadar) — bbox spans were unchanged in every
+     case (rotating a part and its sibling together preserves their
+     relative gap/overlap), only internal arrangement corrected, so no
+     `dims` changes were needed.
+
+   - **`HiPiLaser.fbx` / `HiPi_Overclocked_Laser.fbx` are real files, but the
+     wrong ones for those items — pure name-guess, never checked against
+     data.cdb.** Both files exist in the pak and convert cleanly (which is
+     why this wasn't caught by finding 6's "file doesn't exist" check), but
+     `data.cdb`'s actual `"model"` field for `MiningTool2`/`MiningTool2_OC`
+     is `MiningTool_Medium.prefab`/`MiningTool_Medium_OC.prefab` — a
+     completely different asset. There is no `MiningTool_Medium_OC.fbx` in
+     the pak or `model.props`; the "OC" item variant reuses the plain
+     `MiningTool_Medium.fbx` with different stats/materials, not a separate
+     mesh. **Lesson: a file existing and converting without errors is not
+     confirmation it's the *correct* file — cross-check `data.cdb`'s
+     `visual.model` field by item id whenever a mapping was chosen by name
+     similarity rather than verified this way.** `ColdLaser.fbx` and
+     `MiningTool1_OC.fbx` were re-checked against `data.cdb` and are
+     confirmed correct (their filenames exactly match the prefab name in
+     `visual.model`).
+
 ---
 
 ## TestPE Format (legacy reference)
