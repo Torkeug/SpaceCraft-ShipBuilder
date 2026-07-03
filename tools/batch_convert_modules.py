@@ -35,8 +35,15 @@ MODULE_SOURCES = {
     'ColdLaser':              'Tools/ColdLaser.fbx',
     'MiningTool1_OC':         'Tools/MiningTool1_OC.fbx',
     'Water_Collector':        'Tools/Water_Collector.fbx',
-    'HiPiLaser':              'Tools/HiPiLaser.fbx',
-    'HiPi_Overclocked_Laser': 'Tools/HiPi_Overclocked_Laser.fbx',
+    # Both confirmed via data.cdb's actual "model" field (MiningTool2 ->
+    # MiningTool_Medium.prefab, MiningTool2_OC -> MiningTool_Medium_OC.prefab).
+    # No MiningTool_Medium_OC.fbx exists in the pak or model.props -- the OC
+    # variant reuses the same mesh with different stats/material. The old
+    # 'HiPiLaser.fbx'/'HiPi_Overclocked_Laser.fbx' files are real but wrong:
+    # they belong to some other weapon, not this item (name-guessed match,
+    # never verified against data.cdb).
+    'HiPiLaser':              'Tools/MiningTool_Medium.fbx',
+    'HiPi_Overclocked_Laser': 'Tools/MiningTool_Medium.fbx',
     'RadarMK1':               'Tools/Radar.fbx',
     'SmartRadar':             'Tools/SmartRadar.fbx',
     'Sniffer_Radar':          'Tools/Sniffer_radar.fbx',
