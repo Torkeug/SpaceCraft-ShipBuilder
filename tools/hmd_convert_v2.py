@@ -58,6 +58,26 @@ def transform_vert(v, pos):
     return (x + pos['x'], y + pos['y'], z + pos['z'])
 
 
+def transform_vert_chain(v, model, models):
+    """Apply a model's own transform, then walk up its `parent` chain applying
+    each ancestor's transform in turn, until reaching a node whose parent is
+    -1 (root). Models are NOT always direct children of the scene root --
+    e.g. MiningTool1_OC's Mining_Arm/Receiver/Plane are parented to Base
+    (which has a real 180-degree Z rotation baked in), so skipping the chain
+    leaves them at the wrong world position/orientation relative to Base even
+    though each part's own local transform is correct in isolation. This was
+    silently fine for files where every part parents directly to an identity
+    scene root (e.g. Water_Collector), which is why it went unnoticed there."""
+    node = model
+    while True:
+        v = transform_vert(v, node['position'])
+        parent_idx = node['parent']
+        if parent_idx < 0:
+            break
+        node = models[parent_idx]
+    return v
+
+
 def match_material_role(name):
     if name:
         for kw, role in _MAT_KEYWORDS:
@@ -91,7 +111,7 @@ def convert(hmd_path, out_path, verbose=True):
         ic = sum(geom['indexCounts'])
 
         verts_local = read_verts_f16(raw, vbuf_start, vc, stride)
-        verts_world = [transform_vert(v, m['position']) for v in verts_local]
+        verts_world = [transform_vert_chain(v, m, d['models']) for v in verts_local]
 
         is_small = vc <= 0x10000
         indices = read_indices_le_u16(raw, ibuf_start, ic) if is_small else read_indices_le_u32(raw, ibuf_start, ic)
