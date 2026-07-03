@@ -9192,7 +9192,8 @@
         8.1361,
         2.0,
         4.903
-      ]
+      ],
+      "unreleased": true
     },
     {
       "id": "Thruster1",
@@ -9242,7 +9243,8 @@
         11.4624,
         2.0,
         5.7559
-      ]
+      ],
+      "unreleased": true
     },
     {
       "id": "ExplodingToolMk1",
