@@ -99,7 +99,15 @@ export function fitGeom(base, dims, rotDeg, part, flip, rz) {
   if (part && part._cockpit) { g.rotateX(Math.PI / 2); g.rotateY(Math.PI); g.rotateZ(Math.PI); }
   else g.rotateX(-Math.PI / 2);
   if (part && part._meshRot) g.rotateY(part._meshRot * Math.PI / 180);
-  const [fx, fy, fz] = flip || [false, false, false];
+  let [fx, fy, fz] = flip || [false, false, false];
+  if (rz) {
+    // Flip is applied in local mesh space, before the extra rotateX(±90°)
+    // below -- that rotation swaps the local Y/Z axes, so a flip baked in
+    // beforehand ends up mirroring a different world-space axis depending on
+    // whether the orientation toggle is on. Swap fy/fz here so "Flip Y"
+    // always mirrors the same world axis regardless of toggle state.
+    const t = fy; fy = fz; fz = t;
+  }
   if (fx || fy || fz) {
     g.scale(fx ? -1 : 1, fy ? -1 : 1, fz ? -1 : 1);
     if (((fx ? 1 : 0) + (fy ? 1 : 0) + (fz ? 1 : 0)) % 2 === 1) reverseWinding(g);
@@ -107,7 +115,13 @@ export function fitGeom(base, dims, rotDeg, part, flip, rz) {
   let deg = rotDeg || 0;
   if (part && part._dimd) deg = Math.round(deg / 90) * 90;
   if (deg) g.rotateY(deg * Math.PI / 180);
-  if (rz) g.rotateX(Math.PI / 2);
+  if (rz) {
+    // Sign is mesh-orientation-dependent: thrusters need +90 (confirmed
+    // visually correct), but wings' anchor/mount side ends up facing up
+    // instead of down with the same sign -- confirmed by the user -- so
+    // wings need the opposite rotation direction.
+    g.rotateX(part && part.type === 'ShipWing' ? -Math.PI / 2 : Math.PI / 2);
+  }
   g.computeBoundingBox();
   const bb = g.boundingBox;
   const sp = new THREE.Vector3(); bb.getSize(sp);

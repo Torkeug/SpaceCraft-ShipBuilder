@@ -5323,6 +5323,11 @@
           "p": "prefabs/ships/parts/wing/MK1_Little_02.prefab",
           "m": "MK1_Little_02"
         }
+      ],
+      "_renderSize": [
+        2.7012,
+        0.5415,
+        3.6003
       ]
     },
     {
@@ -5371,6 +5376,11 @@
           "p": "prefabs/ships/parts/wing/MK1_Little_01.prefab",
           "m": "MK1_Little_01"
         }
+      ],
+      "_renderSize": [
+        1.6724,
+        0.4475,
+        3.058
       ]
     },
     {
@@ -5419,6 +5429,11 @@
           "p": "prefabs/ships/parts/wing/MK1_Little_02.prefab",
           "m": "MK1_Little_02"
         }
+      ],
+      "_renderSize": [
+        2.7012,
+        0.5415,
+        3.6003
       ]
     },
     {
@@ -5467,6 +5482,11 @@
           "p": "prefabs/ships/parts/wing/MK1_Little_01.prefab",
           "m": "MK1_Little_01"
         }
+      ],
+      "_renderSize": [
+        1.6724,
+        0.4475,
+        3.058
       ]
     },
     {
@@ -5478,7 +5498,7 @@
       "color": "#4a7fb5",
       "dims": [
         6,
-        3,
+        2,
         4
       ],
       "_meshRot": -90,
@@ -5515,6 +5535,11 @@
           "p": "prefabs/ships/parts/wing/MK1_Midd_01.prefab",
           "m": "MK1_Midd_01"
         }
+      ],
+      "_renderSize": [
+        5.9453,
+        3.5488,
+        2.0166
       ]
     },
     {
@@ -5526,7 +5551,7 @@
       "color": "#4a7fb5",
       "dims": [
         6,
-        3,
+        2,
         4
       ],
       "_meshRot": -90,
@@ -5563,6 +5588,11 @@
           "p": "prefabs/ships/parts/wing/MK1_Midd_01.prefab",
           "m": "MK1_Midd_01"
         }
+      ],
+      "_renderSize": [
+        5.9453,
+        3.5488,
+        2.0166
       ]
     },
     {
@@ -5573,7 +5603,7 @@
       "group": "Wings & spoilers",
       "color": "#4a7fb5",
       "dims": [
-        9,
+        8,
         7,
         1
       ],
@@ -5607,6 +5637,11 @@
           "p": "prefabs/ships/parts/wing/MK1_Midd_02.prefab",
           "m": "MK1_Midd_02"
         }
+      ],
+      "_renderSize": [
+        7.8691,
+        0.9897,
+        6.5957
       ]
     },
     {
@@ -5617,7 +5652,7 @@
       "group": "Wings & spoilers â€” Thermal plating",
       "color": "#4a7fb5",
       "dims": [
-        9,
+        8,
         7,
         1
       ],
@@ -5651,6 +5686,11 @@
           "p": "prefabs/ships/parts/wing/MK1_Midd_02.prefab",
           "m": "MK1_Midd_02"
         }
+      ],
+      "_renderSize": [
+        7.8691,
+        0.9897,
+        6.5957
       ]
     },
     {

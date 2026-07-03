@@ -1328,6 +1328,50 @@ further evidence it's simply the wrong source file, not a parsing issue.
     available during a change broad enough to touch every non-hull part's
     data.
 
+22. **Wings migrated to `_renderSize` too; two real bugs found in the
+    process, both from the same root cause -- axis-swapping rotations
+    applied around `fitGeom`'s bounding-box measurement without every
+    downstream consumer knowing about the swap.**
+
+    First bug: `_meshRot` (a per-part extra `rotateY`, `-90°` on the
+    `MK1_Little_*` wing shapes and `+90°` on `MK1_Midd_*`) was omitted
+    from the initial `_renderSize` computation for wings, since it isn't
+    applied anywhere else in the codebase. Checked whether `_meshRot`
+    itself is a real game value or another fan-tool invention like
+    `_meshScale`: it's not present in any real game data structure (only
+    `fitGeom`/`ship_editor_data.json` reference it), but unlike
+    `_meshScale` it isn't a droppable fudge factor either -- it was added
+    when the fanmade wing meshes were replaced with real PAK-extracted
+    ones, because the `Little` and `Midd` mesh families are genuinely
+    authored 90° apart in their own raw vertex data. Confirmed by
+    comparing each wing's X/Z bounding-box order with and without
+    `_meshRot` against that wing's original (long-validated) `dims`: only
+    the with-`_meshRot` computation matches the expected orientation on
+    all 4 wings. So `_meshRot` is kept, and `render_size_wing()` /
+    `dims_wing()` in `compute_render_size.py` now include it before
+    measuring the bounding box, same as `fitGeom` already did. Re-running
+    `--all-wings --write` produced `_renderSize` matching the mesh's real
+    proportions and only minor `dims` corrections for Wing_03 (w: 3->2)
+    and Wing_04/Condor (l: 9->8) -- consistent with the user's own
+    prediction that Condor "might be wrong as well as right" since its
+    mismatch was smaller and harder to spot by eye than the other three
+    wings' clearly-stretched meshes.
+
+    Second bug, found right after: the `Flip Y` button mirrored a
+    different world-space axis depending on whether the thruster/wing
+    orientation toggle (`rz`) was on. Root cause is the same shape as the
+    first bug and as finding 21's `rz`/`_renderSize` fix -- `fitGeom`
+    applies the user's flip (`g.scale(fx?-1:1, fy?-1:1, fz?-1:1)`) in
+    local mesh space *before* the extra `rotateX(±90°)` that `rz` adds
+    later, and that rotation swaps the local Y/Z axes. A flip baked in
+    beforehand therefore ends up mirroring whatever axis Y maps to after
+    the swap, not always the same world axis. Fixed by swapping `fy`/`fz`
+    right before the flip is applied whenever `rz` is set, mirroring the
+    exact pattern already used for `_renderSize`'s `rh`/`rd` swap and the
+    pre-existing `effDims()` `[h,d]` swap in `main.js`. Confirmed visually
+    correct on both a thruster and Condor wing, flipped and toggled
+    between horizontal/vertical orientation in all four combinations.
+
 ---
 
 ## TestPE Format (legacy reference)

@@ -38,10 +38,12 @@ from compute_part_dims import (
 )
 
 
-def raw_size(mesh_key, rotation_kind, real_scale=1.0):
+def raw_size(mesh_key, rotation_kind, real_scale=1.0, extra_rotations=None):
     bin_path = os.path.join(MESH_DIR, f'{mesh_key}.bin')
     verts = read_verts(bin_path)
     verts = apply_rotation_sequence(verts, ROTATION_SEQUENCES[rotation_kind])
+    if extra_rotations:
+        verts = apply_rotation_sequence(verts, extra_rotations)
     sx, sy, sz = bbox_size(verts)
     return (sx * real_scale, sy * real_scale, sz * real_scale)
 
@@ -55,6 +57,26 @@ def render_size_cockpit(part):
 def render_size_module(part):
     mesh_key = part['shapes'][0]['m'] if part.get('shapes') else part.get('m')
     return raw_size(mesh_key, 'default', 1.0)
+
+
+def render_size_wing(part):
+    # fitGeom applies part._meshRot (an extra rotateY) BEFORE computing the
+    # bounding box that gets scaled -- this must be included here too, or
+    # the computed target maps onto the wrong (rotated) axes and visibly
+    # stretches the mesh. See hmd_format_notes.md finding 22.
+    mesh_key = part['shapes'][0]['m'] if part.get('shapes') else part.get('m')
+    mesh_rot = part.get('_meshRot', 0)
+    extra = [('y', mesh_rot)] if mesh_rot else None
+    return raw_size(mesh_key, 'default', 1.0, extra_rotations=extra)
+
+
+def dims_wing(part):
+    """Recompute the stored [l,w,h] dims (the grid box) to match the same
+    real, meshRot-aware size used for _renderSize -- both must agree, or the
+    box and the mesh disagree about the part's real shape."""
+    size = render_size_wing(part)
+    l, h, w = size  # partDims(): stored[l,w,h] -> target[l,h,w] = [X,Y,Z]
+    return [round(l), round(w), max(1, round(h))]
 
 
 def render_size_thruster(part):
@@ -76,6 +98,7 @@ def main():
     ap.add_argument('--all-cockpits', action='store_true')
     ap.add_argument('--all-modules', action='store_true')
     ap.add_argument('--all-thrusters', action='store_true')
+    ap.add_argument('--all-wings', action='store_true')
     ap.add_argument('--write', action='store_true')
     args = ap.parse_args()
 
@@ -93,13 +116,19 @@ def main():
         jobs += [(p['id'], render_size_module) for p in parts if p.get('kind') == 'module' and p.get('mount') == 'outside']
     if args.all_thrusters:
         jobs += [(p['id'], render_size_thruster) for p in parts if p.get('group') == 'Engines & thrusters']
+    if args.all_wings:
+        jobs += [(p['id'], render_size_wing) for p in parts if p.get('type') == 'ShipWing']
 
     for pid, fn in jobs:
         part = by_id[pid]
         size = fn(part)
-        print(f'{pid:18s} _renderSize=({size[0]:.4f}, {size[1]:.4f}, {size[2]:.4f})  (current dims={part.get("dims")}, _meshScale={part.get("_meshScale")})')
+        new_dims = dims_wing(part) if fn is render_size_wing else None
+        extra = f'  new dims={new_dims}' if new_dims else ''
+        print(f'{pid:18s} _renderSize=({size[0]:.4f}, {size[1]:.4f}, {size[2]:.4f})  (current dims={part.get("dims")}, _meshScale={part.get("_meshScale")}){extra}')
         if args.write:
             part['_renderSize'] = [round(v, 4) for v in size]
+            if new_dims:
+                part['dims'] = new_dims
             # _meshScale is now dead once _renderSize takes over in fitGeom
             # (the fallback branch that reads it is only reached when
             # _renderSize is absent) -- drop it so there's no stale,
