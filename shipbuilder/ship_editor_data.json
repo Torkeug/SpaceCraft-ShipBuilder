@@ -5662,9 +5662,9 @@
       "wip": true,
       "color": "#2bb0c0",
       "dims": [
+        4,
         3,
-        2,
-        4
+        2
       ],
       "price": 415,
       "stats": {
@@ -5708,9 +5708,9 @@
       "wip": true,
       "color": "#2bb0c0",
       "dims": [
+        4,
         3,
-        2,
-        5
+        2
       ],
       "price": 1300,
       "stats": {
@@ -5755,9 +5755,9 @@
       "wip": true,
       "color": "#2bb0c0",
       "dims": [
+        8,
         4,
-        4,
-        8
+        4
       ],
       "price": 1490,
       "stats": {
@@ -5801,9 +5801,9 @@
       "wip": true,
       "color": "#2bb0c0",
       "dims": [
+        4,
         3,
-        2,
-        4
+        2
       ],
       "price": 1510,
       "stats": {
@@ -5848,9 +5848,9 @@
       "wip": true,
       "color": "#2bb0c0",
       "dims": [
+        5,
         3,
-        3,
-        6
+        3
       ],
       "price": 1550,
       "stats": {
@@ -5895,9 +5895,9 @@
       "wip": true,
       "color": "#2bb0c0",
       "dims": [
+        12,
         11,
-        5,
-        12
+        5
       ],
       "price": 18900,
       "stats": {
@@ -5941,8 +5941,8 @@
       "color": "#2bb0c0",
       "dims": [
         11,
-        5,
-        11
+        11,
+        5
       ],
       "price": 18900,
       "stats": {
@@ -5986,9 +5986,9 @@
       "wip": true,
       "color": "#2bb0c0",
       "dims": [
+        7,
         6,
-        3,
-        7
+        3
       ],
       "price": 18900,
       "stats": {
@@ -6030,9 +6030,9 @@
       "wip": true,
       "color": "#2bb0c0",
       "dims": [
+        12,
         11,
-        5,
-        12
+        6
       ],
       "price": 18900,
       "stats": {
@@ -6075,9 +6075,9 @@
       "wip": true,
       "color": "#2bb0c0",
       "dims": [
+        9,
         6,
-        3,
-        9
+        3
       ],
       "price": 21700,
       "stats": {
@@ -6119,9 +6119,9 @@
       "wip": true,
       "color": "#2bb0c0",
       "dims": [
+        7,
         6,
-        3,
-        7
+        3
       ],
       "price": 22900,
       "stats": {
@@ -7807,7 +7807,12 @@
       },
       "model": "prefabs/ships/parts/Decoratives_Parts/Spot_Light_01.prefab",
       "mount": "outside",
-      "m": "Spot_Light_01"
+      "m": "Spot_Light_01",
+      "_meshScale": [
+        0.8228,
+        0.8228,
+        0.8228
+      ]
     },
     {
       "id": "Light_02",
@@ -7820,7 +7825,7 @@
       "dims": [
         1,
         1,
-        3
+        4
       ],
       "price": 13.2,
       "stats": {
@@ -7843,7 +7848,12 @@
       },
       "model": "prefabs/ships/parts/Decoratives_Parts/Spot_Light_Barrel.prefab",
       "mount": "outside",
-      "m": "Spot_Light_Barrel"
+      "m": "Spot_Light_Barrel",
+      "_meshScale": [
+        0.9702,
+        0.9702,
+        0.9702
+      ]
     },
     {
       "id": "Light_01",
@@ -7854,9 +7864,9 @@
       "wip": true,
       "color": "#e6dd5a",
       "dims": [
-        3,
+        4,
         1,
-        3
+        4
       ],
       "price": 13.2,
       "stats": {
@@ -7879,7 +7889,12 @@
       },
       "model": "prefabs/ships/parts/Decoratives_Parts/Aerator_Spot_01.prefab",
       "mount": "outside",
-      "m": "Aerator_Spot_01"
+      "m": "Aerator_Spot_01",
+      "_meshScale": [
+        0.8579,
+        0.8579,
+        0.8579
+      ]
     },
     {
       "id": "MiningTool1",
@@ -7890,9 +7905,9 @@
       "wip": true,
       "color": "#5ec0a0",
       "dims": [
-        1.72,
-        1.35,
-        1.07
+        2,
+        2,
+        2
       ],
       "price": 91,
       "stats": {
@@ -7917,7 +7932,12 @@
       "model": "prefabs/ships/parts/tool/Simple_Mining_Laser.prefab",
       "mount": "outside",
       "su": 10,
-      "m": "Simple_Mining_Laser"
+      "m": "Simple_Mining_Laser",
+      "_meshScale": [
+        0.8577,
+        0.8577,
+        0.8577
+      ]
     },
     {
       "id": "MiningTool0",
@@ -7928,9 +7948,9 @@
       "wip": true,
       "color": "#5ec0a0",
       "dims": [
-        1.72,
-        1.35,
-        1.07
+        2,
+        2,
+        2
       ],
       "price": 50,
       "stats": {
@@ -7955,7 +7975,12 @@
       "model": "prefabs/ships/parts/tool/DefaultLaser.prefab",
       "mount": "outside",
       "su": 10,
-      "m": "MiningTool0"
+      "m": "MiningTool0",
+      "_meshScale": [
+        0.8577,
+        0.8577,
+        0.8577
+      ]
     },
     {
       "id": "MiningTool_Cold",
@@ -7966,9 +7991,9 @@
       "wip": true,
       "color": "#5ec0a0",
       "dims": [
-        3.04,
-        1.4,
-        1.36
+        4,
+        2,
+        2
       ],
       "price": 162,
       "stats": {
@@ -7993,7 +8018,12 @@
       "model": "prefabs/ships/parts/tool/ColdLaser.prefab",
       "mount": "outside",
       "su": 10,
-      "m": "ColdLaser"
+      "m": "ColdLaser",
+      "_meshScale": [
+        0.7612,
+        0.7612,
+        0.7612
+      ]
     },
     {
       "id": "MiningTool1_OC",
@@ -8004,9 +8034,9 @@
       "wip": true,
       "color": "#5ec0a0",
       "dims": [
-        1.91,
-        1.35,
-        1.07
+        2,
+        2,
+        2
       ],
       "price": 212,
       "stats": {
@@ -8031,7 +8061,12 @@
       "model": "prefabs/ships/parts/tool/MiningTool1_OC.prefab",
       "mount": "outside",
       "su": 10,
-      "m": "MiningTool1_OC"
+      "m": "MiningTool1_OC",
+      "_meshScale": [
+        0.9556,
+        0.9556,
+        0.9556
+      ]
     },
     {
       "id": "FluidPumpingTool1",
@@ -8042,9 +8077,9 @@
       "wip": true,
       "color": "#5ec0a0",
       "dims": [
-        4.55,
-        1.22,
-        0.88
+        5,
+        2,
+        1
       ],
       "price": 289,
       "stats": {
@@ -8069,7 +8104,12 @@
       "model": "prefabs/ships/parts/tool/Water_Collector.prefab",
       "mount": "outside",
       "su": 10,
-      "m": "Water_Collector"
+      "m": "Water_Collector",
+      "_meshScale": [
+        0.909,
+        0.909,
+        0.909
+      ]
     },
     {
       "id": "MiningTool2",
@@ -8080,9 +8120,9 @@
       "wip": true,
       "color": "#5ec0a0",
       "dims": [
-        2.8,
-        1.62,
-        1.6
+        3,
+        2,
+        2
       ],
       "price": 1010,
       "stats": {
@@ -8103,7 +8143,12 @@
       "model": "prefabs/ships/parts/tool/MiningTool_Medium.prefab",
       "mount": "outside",
       "su": 25,
-      "m": "HiPiLaser"
+      "m": "HiPiLaser",
+      "_meshScale": [
+        0.9336,
+        0.9336,
+        0.9336
+      ]
     },
     {
       "id": "MiningTool2_OC",
@@ -8114,9 +8159,9 @@
       "wip": true,
       "color": "#5ec0a0",
       "dims": [
-        2.8,
-        1.62,
-        1.6
+        3,
+        2,
+        2
       ],
       "price": 2240,
       "stats": {
@@ -8137,7 +8182,12 @@
       "model": "prefabs/ships/parts/tool/MiningTool_Medium_OC.prefab",
       "mount": "outside",
       "su": 25,
-      "m": "HiPi_Overclocked_Laser"
+      "m": "HiPi_Overclocked_Laser",
+      "_meshScale": [
+        0.9336,
+        0.9336,
+        0.9336
+      ]
     },
     {
       "id": "MiningTool3",
@@ -8148,9 +8198,9 @@
       "wip": true,
       "color": "#5ec0a0",
       "dims": [
-        4.88,
-        3.45,
-        2.55
+        5,
+        4,
+        3
       ],
       "price": 0,
       "stats": {
@@ -8171,7 +8221,12 @@
       "model": "prefabs/ships/parts/tool/HIPI_MiningLaser.prefab",
       "mount": "outside",
       "su": 50,
-      "m": "MiningTool3"
+      "m": "MiningTool3",
+      "_meshScale": [
+        0.9767,
+        0.9767,
+        0.9767
+      ]
     },
     {
       "id": "MiningTool3_OC",
@@ -8182,9 +8237,9 @@
       "wip": true,
       "color": "#5ec0a0",
       "dims": [
-        3.77,
-        3.64,
-        2.55
+        4,
+        4,
+        3
       ],
       "price": 0,
       "stats": {
@@ -8205,7 +8260,12 @@
       "model": "prefabs/ships/parts/tool/HIPI_Overclocked_MiningLaser.prefab",
       "mount": "outside",
       "su": 50,
-      "m": "MiningTool3_OC"
+      "m": "MiningTool3_OC",
+      "_meshScale": [
+        0.9427,
+        0.9427,
+        0.9427
+      ]
     },
     {
       "id": "Radar0",
@@ -8216,9 +8276,9 @@
       "wip": true,
       "color": "#6aa0d8",
       "dims": [
-        0.33,
-        0.4,
-        1.7
+        1,
+        1,
+        2
       ],
       "price": 50,
       "stats": {
@@ -8243,7 +8303,12 @@
       "model": "prefabs/ships/parts/tool/Radar.prefab",
       "mount": "outside",
       "su": 10,
-      "m": "Radar0"
+      "m": "Radar0",
+      "_meshScale": [
+        0.8521,
+        0.8521,
+        0.8521
+      ]
     },
     {
       "id": "RadarMK1",
@@ -8254,9 +8319,9 @@
       "wip": true,
       "color": "#6aa0d8",
       "dims": [
-        0.51,
-        0.41,
-        2.09
+        1,
+        1,
+        3
       ],
       "price": 62,
       "stats": {
@@ -8281,7 +8346,12 @@
       "model": "prefabs/ships/parts/tool/RadarMK1.prefab",
       "mount": "outside",
       "su": 10,
-      "m": "RadarMK1"
+      "m": "RadarMK1",
+      "_meshScale": [
+        0.6966,
+        0.6966,
+        0.6966
+      ]
     },
     {
       "id": "Radar_Smart",
@@ -8292,9 +8362,9 @@
       "wip": true,
       "color": "#6aa0d8",
       "dims": [
-        0.59,
-        0.41,
-        2.09
+        1,
+        1,
+        3
       ],
       "price": 116,
       "stats": {
@@ -8319,7 +8389,12 @@
       "model": "prefabs/ships/parts/tool/SmartRadar.prefab",
       "mount": "outside",
       "su": 10,
-      "m": "SmartRadar"
+      "m": "SmartRadar",
+      "_meshScale": [
+        0.6966,
+        0.6966,
+        0.6966
+      ]
     },
     {
       "id": "Radar_Sniffer",
@@ -8330,9 +8405,9 @@
       "wip": true,
       "color": "#6aa0d8",
       "dims": [
-        0.79,
-        0.79,
-        0.88
+        1,
+        1,
+        1
       ],
       "price": 168,
       "stats": {
@@ -8357,7 +8432,12 @@
       "model": "prefabs/ships/parts/tool/Sniffer_Radar.prefab",
       "mount": "outside",
       "su": 10,
-      "m": "Sniffer_Radar"
+      "m": "Sniffer_Radar",
+      "_meshScale": [
+        0.884,
+        0.884,
+        0.884
+      ]
     },
     {
       "id": "GraviteDetector",
@@ -8368,9 +8448,9 @@
       "wip": true,
       "color": "#6aa0d8",
       "dims": [
-        3.0,
-        0.9,
-        1.23
+        3,
+        1,
+        2
       ],
       "price": 790,
       "stats": {
@@ -8394,7 +8474,12 @@
       "model": "prefabs/ships/parts/tool/Gravitron.prefab",
       "mount": "outside",
       "su": 10,
-      "m": "Gravitron"
+      "m": "Gravitron",
+      "_meshScale": [
+        0.9993,
+        0.9993,
+        0.9993
+      ]
     },
     {
       "id": "SolarPanel1",
@@ -8405,9 +8490,9 @@
       "wip": true,
       "color": "#d8c040",
       "dims": [
-        1.67,
-        0.63,
-        1.1
+        2,
+        1,
+        2
       ],
       "price": 202,
       "stats": {
@@ -8433,7 +8518,12 @@
       "model": "prefabs/ships/parts/tool/CrudeSolarPanel_Flat.prefab",
       "mount": "outside",
       "su": 10,
-      "m": "CrudeSolarPanel_Flat"
+      "m": "CrudeSolarPanel_Flat",
+      "_meshScale": [
+        0.8359,
+        0.8359,
+        0.8359
+      ]
     },
     {
       "id": "SolarPanel2",
@@ -8444,9 +8534,9 @@
       "wip": true,
       "color": "#d8c040",
       "dims": [
-        2.3,
-        0.65,
-        2.32
+        3,
+        1,
+        3
       ],
       "price": 1040,
       "stats": {
@@ -8472,7 +8562,12 @@
       "model": "prefabs/ships/parts/tool/SmallSolarPanel_Flat.prefab",
       "mount": "outside",
       "su": 25,
-      "m": "SmallSolarPanel_Flat"
+      "m": "SmallSolarPanel_Flat",
+      "_meshScale": [
+        0.7741,
+        0.7741,
+        0.7741
+      ]
     },
     {
       "id": "SolarPanel3",
@@ -8483,9 +8578,9 @@
       "wip": true,
       "color": "#d8c040",
       "dims": [
-        5.38,
-        0.61,
-        3.53
+        6,
+        1,
+        4
       ],
       "price": 15600,
       "stats": {
@@ -8511,7 +8606,12 @@
       "model": "prefabs/ships/parts/tool/BigSolarPanel_Flat.prefab",
       "mount": "outside",
       "su": 50,
-      "m": "BigSolarPanel_Flat"
+      "m": "BigSolarPanel_Flat",
+      "_meshScale": [
+        0.8965,
+        0.8965,
+        0.8965
+      ]
     },
     {
       "id": "Scanner0",
@@ -8522,9 +8622,9 @@
       "wip": true,
       "color": "#a0c060",
       "dims": [
+        2,
         1,
-        1,
-        1
+        2
       ],
       "price": 51,
       "stats": {
@@ -8549,7 +8649,12 @@
       "model": "prefabs/ships/parts/tool/Scanner.prefab",
       "mount": "outside",
       "su": 10,
-      "m": "Scanner"
+      "m": "Scanner",
+      "_meshScale": [
+        0.8185,
+        0.8185,
+        0.8185
+      ]
     },
     {
       "id": "Scanner1",
@@ -8560,9 +8665,9 @@
       "wip": true,
       "color": "#a0c060",
       "dims": [
-        1.07,
-        0.82,
-        1.07
+        2,
+        1,
+        2
       ],
       "price": 95,
       "stats": {
@@ -8587,7 +8692,12 @@
       "model": "prefabs/ships/parts/tool/Scanner.prefab",
       "mount": "outside",
       "su": 10,
-      "m": "Scanner"
+      "m": "Scanner",
+      "_meshScale": [
+        0.8185,
+        0.8185,
+        0.8185
+      ]
     },
     {
       "id": "PathwayPuncher",
@@ -8598,9 +8708,9 @@
       "wip": true,
       "color": "#a0c060",
       "dims": [
-        4.93,
-        2.73,
-        3.54
+        5,
+        3,
+        4
       ],
       "price": 1860,
       "stats": {
@@ -8625,7 +8735,12 @@
       "model": "prefabs/ships/parts/tool/Pathway_Puncher.prefab",
       "mount": "outside",
       "su": 10,
-      "m": "PathwayPuncher"
+      "m": "PathwayPuncher",
+      "_meshScale": [
+        0.9863,
+        0.9863,
+        0.9863
+      ]
     },
     {
       "id": "Thruster0",

@@ -1122,6 +1122,162 @@ further evidence it's simply the wrong source file, not a parsing issue.
     pak_read_stored_position.py` and `tools/pak_verify_positions.py` are kept
     as the derivation proof and the regression guard, respectively.
 
+18. **`_meshScale` fudge factors on non-hull "build" parts (engines,
+    cockpits) were fixing the wrong thing -- the real bug is always in
+    `dims`, never a missing multiplier.** `fitGeom()` (shipbuilder/js/
+    meshLoader.js) fits a part's *raw, unscaled* mesh bbox into its `dims`
+    grid box via a single uniform `s = min(dims/bbox)`, then applies
+    `_meshScale` as an *extra* multiplier on top. `dims` for non-hull parts
+    is NOT sourced from real game data (confirmed: no footprint/size field
+    exists in `data.cdb` for engines or cockpits, unlike hull frames whose
+    `WxHxD` comes directly from real pak folder/shape names) -- it was
+    invented/eyeballed by an earlier session for this fan tool's own grid
+    placement system. When that eyeballing was done against old, badly
+    wrong/incomplete meshes (see below), the resulting `dims` no longer
+    matches the real mesh's true proportions, and someone then reached for
+    `_meshScale` to paper over the mismatch instead of fixing `dims` itself.
+
+    This was tried and failed twice before landing on the right fix:
+    - First attempt: computed `_meshScale` from `real bbox × real prefab
+      scale ÷ dims`, i.e. tried to make the mesh's true absolute size (real
+      prefab `scale` field, read directly from the .prefab -- see finding
+      16 for the discovery that this is applied as a literal, un-transformed
+      multiply, not any "2 - scale" formula) fill the *existing* `dims` box.
+      Backfired immediately: Quiet Breeze Thruster visibly overflowed its
+      grid-cell wireframe (any `_meshScale` > 1 necessarily does, since
+      `s=1` already means "just touching the box on the tightest axis"),
+      and Silent Thruster/Long Haul Booster -- already flagged *before* any
+      of this as "too big" with no correction applied at all -- got a
+      `_meshScale` > 1, making a known-oversized part even bigger. Reverted.
+    - Root cause of the failure: **the shipbuilder's own render pipeline
+      does not apply a part's real prefab `scale` field to the mesh at
+      all** -- `hmd_convert_v2.py` only ever reads the `.fbx`, never the
+      `.prefab`, so the "raw bbox" fed into `fitGeom` is unscaled native
+      mesh geometry, and comparing `bbox × real_scale` against the
+      *existing* `dims` conflates two different reference frames.
+    - **The actual fix**: recompute `dims` itself as `raw_bbox ×
+      real_prefab_scale` (in the same axis convention the stored `dims`
+      field already uses -- see `partDims()` in main.js for the swap
+      per part kind), round to whole numbers, and delete `_meshScale`
+      entirely. This makes the box match the mesh's true proportions
+      directly, so `fitGeom`'s existing uniform-fit-to-box logic does the
+      right thing on its own with no extra multiplier needed. Confirmed
+      visually correct (mesh fills its box with no overflow and no
+      floating) for all 6 engines and all 11 cockpits.
+
+    Concretely, for the 6 engines: 4 of 6 (Cart Pusher, Voidseeker, Silent
+    Thruster, Long Haul Booster) already had `dims` matching their real
+    `bbox × scale` almost exactly once computed properly -- meaning their
+    old `_meshScale` values (Voidseeker's `0.68`, in particular) were pure
+    accidental compensation for finding 16's Voidseeker/Quiet-Breeze
+    real-scale attribution swap, not a real, independent finding. Only
+    Quiet Breeze (`[5,2,3]` -> `[7,3,4]`) and Grasshopper (`[5,3,3]` ->
+    `[5,3,2]`) needed an actual `dims` correction.
+
+    For the 11 cockpits, the old `dims` were wrong on every single one, in
+    a consistent direction (height underestimated, width overestimated) --
+    strong evidence the original values were eyeballed against `.bin` mesh
+    files that were themselves badly incomplete: swapping in the real,
+    fully re-converted meshes (via `hmd_convert_v2.py`) increased vertex
+    counts by roughly 5-9x and material group counts by roughly 3-8x
+    across the board (e.g. Cockpit_TC1: 15,467 -> 138,370 vertices, 4 -> 32
+    groups) -- the previously-shipped cockpit meshes were, in effect, a
+    much cruder placeholder than the real available data, not just
+    slightly-off proportions.
+
+    One cockpit, Cockpit_DA1 ("Cocoon"), is a genuine two-file compound
+    mesh: its real prefab (`prefabs/ships/parts/cockpit/Cockpit_DA1.prefab`)
+    places `Cockpit_DA1_INT.fbx` and `Cockpit_DA1_EXT.fbx` as siblings
+    under a shared node with its own scale, each with its own additional
+    position/scale. `tools/merge_prefab_parts.py` is a new, reusable tool
+    that composes each source file's own internal model hierarchy (via the
+    same `hmd_convert_v2` machinery) and then applies the additional
+    cross-file scale-then-translate transform read from the real prefab,
+    before merging vertex/index/group buffers into one `.bin`. Use this
+    for any future item found to be a genuine multi-file compound (check a
+    part's real `.prefab` for more than one sibling `model` node under a
+    shared parent, the same way Cockpit_DA1 was found here) rather than
+    guessing at a merge.
+
+19. **Cockpits needed a completely different rotation than the old
+    single `rotateY(90°)`, AND `partDims()` had an inverted, cockpit-only
+    storage convention bug -- both had to be found before dims made sense
+    at all.** The old comment ("cockpits are already Y-up in source but
+    face +X") was simply wrong for the real, fully-converted meshes (it may
+    have been true for the old placeholder meshes finding 18 replaced).
+    Guessing single-axis corrections one at a time (`rotateX`, extra
+    `rotateY`, sign flips) each produced a different wrong result (sitting
+    on the wrong side, facing backward, facing upward) -- the only thing
+    that actually worked was brute-forcing it: render **all 64**
+    combinations of `rotateX/Y/Z` at 0/90/180/270 for one cockpit and
+    visually pick the correct one against the real game. Confirmed answer,
+    applied in that exact order: `rotateX(90°) -> rotateY(180°) ->
+    rotateZ(180°)`.
+
+    Separately, `partDims()`'s cockpit branch destructured `part.dims` as
+    `[l, h, w]` -- note the **h and w swapped** from every other part kind's
+    `[l, w, h]` -- a leftover compensation for the old (wrong) rotation.
+    With the rotation fixed, this became actively harmful: the inspector
+    correctly shows `dims.join('×')` for every part, but a `[l,h,w]`-stored
+    array reads back as `L×H×W`, not `L×W×H` (confirmed concretely: Cocoon
+    Cockpit displayed "4×4×8" while its real proportions read as "8×4×4").
+    Fix: deleted the special-case branch entirely so cockpits use the exact
+    same `[l,w,h]` formula as hull frames, and rederived every cockpit's
+    `dims` from scratch to match (see `tools/compute_part_dims.py` below).
+
+    New tool **`tools/compute_part_dims.py`** derives a part's `dims`
+    directly from its real `.bin` mesh (applies the same rotation sequence
+    `fitGeom()` uses, computes the resulting bounding box, inverts
+    `partDims()`'s formula) instead of hand-reading a screenshot and typing
+    rounded numbers into JSON -- the manual version of this process is what
+    produced most of this session's dims mistakes (wrong axis order, wrong
+    storage convention, arithmetic slips). Prefer this tool over hand
+    calculation for any future part whose dims need rederiving.
+
+20. **Outside-mount modules had a real display-text bug (not a rendering
+    bug): `partDims()` intentionally passes their `dims` straight through
+    as raw `[X,Y,Z]` mesh-space values (X=length,Y=height,Z=width per this
+    session's now-confirmed axis convention), to avoid re-deriving their
+    real per-part dims (see the existing comment about Large Solar Panel
+    at the top of `partDims()`).** That's fine for rendering, but the
+    inspector's dims text (`part.dims.join('×')`, main.js) assumes every
+    part's stored array already reads as `L×W×H` -- true for hull/cockpit
+    (`[l,w,h]`) but NOT for outside modules, whose stored order is
+    `[L,H,W]`. Concretely, Large Solar Panel stored `[5.38, 0.61, 3.53]`
+    displayed as "5.38×0.61×3.53", misreadable as 3.53 tall (its real
+    height is 0.61 -- the flat panel's thickness -- and 3.53 is its real
+    width). Fixed with a display-only `displayDims()` helper that reorders
+    `[X,Y,Z] -> [X,Z,Y]` for outside-mount modules before joining; it does
+    not touch `part.dims` itself, so rendering and grid placement (which
+    correctly rely on the raw `[X,Y,Z]` order) are untouched.
+
+    Separately (same session, prompted by "modules box dimensions might
+    need to be rounded"): outside-module `dims` were stored as raw,
+    unrounded mesh-space floats (e.g. `[5.38, 0.61, 3.53]`), which is ugly
+    to display and awkward for grid placement. Simply rounding those
+    numbers up is unsafe on its own -- `fitGeom()` scales the mesh
+    uniformly to fill whatever box `dims` specifies, so growing the box
+    (rounding up) grows the rendered mesh unless compensated. New tool
+    **`tools/round_module_dims.py`** rounds every outside-module's `dims`
+    up to the nearest integer per axis, then computes the exact single
+    uniform `_meshScale = 1 / min(rounded_dims_i / raw_size_i)` that cancels
+    the resulting box growth back out -- confirmed algebraically that this
+    factor is axis-independent (final size on every axis reduces to
+    `raw_size_i` again, unchanged), and confirmed visually on Large Solar
+    Panel and Giant Laser that the rendered mesh size didn't change.
+    Applied to all 23 outside-mount modules.
+
+    **Open architecture concern, not addressed this session:** `dims`
+    is forced to serve two different roles at once -- the grid-placement
+    footprint (`isFree`/`stackHeight` in main.js) and the `fitGeom` render-
+    scale target -- and every dims bug this session (thrusters, cockpits,
+    modules) came from those two roles drifting apart. A more robust design
+    would derive render scale from the mesh's own bounding box directly
+    (always self-consistent) and let `dims` be a pure placement stat that
+    never feeds `fitGeom`'s scale-to-fit math at all. Flagged to the user;
+    not attempted since it would touch `fitGeom`, `partDims`, and every
+    part's data.
+
 ---
 
 ## TestPE Format (legacy reference)

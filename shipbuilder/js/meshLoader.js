@@ -93,8 +93,10 @@ export function fitGeom(base, dims, rotDeg, part, flip, rz) {
   const [w, h, d] = dims;
   const g = base.clone();
   // Game meshes stored in Z-up; rotate to Y-up for all parts except cockpits.
-  // Cockpits are already Y-up in source but face +X; rotate 90° Y to face -Z (forward).
-  if (part && part._cockpit) g.rotateY(Math.PI / 2);
+  // Cockpits need rotateX(90°), rotateY(180°), rotateZ(180°) (in that order) to
+  // sit upright and face forward -- confirmed against the real game via a
+  // full 64-combination visual comparison grid.
+  if (part && part._cockpit) { g.rotateX(Math.PI / 2); g.rotateY(Math.PI); g.rotateZ(Math.PI); }
   else g.rotateX(-Math.PI / 2);
   if (part && part._meshRot) g.rotateY(part._meshRot * Math.PI / 180);
   const [fx, fy, fz] = flip || [false, false, false];

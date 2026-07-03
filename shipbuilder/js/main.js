@@ -255,10 +255,6 @@ function getSlotHoverTex(part, isSwap) {
 
 function partDims(part) {
   if (isInsideMod(part)) return [1, 1, 1];
-  if (part._cockpit) {
-    const [l, h, w] = part.dims;
-    return [w, h, l];   // fitGeom applies 90°Y, which swaps X↔Z extents
-  }
   if (part.kind === 'module' && part.mount === 'outside') {
     // Outside-mount module dims were authored directly as [X, Y, Z] (matching the
     // literal "WxHxD" shown in the inspector), unlike hull frames below — applying
@@ -1494,6 +1490,22 @@ function isThruster(part) { return !!(part && part.group === 'Engines & thruster
 function isWing(part) { return !!(part && part.type === 'ShipWing'); }
 function supportsOrient(part) { return isThruster(part) || isWing(part); }
 
+// part.dims is stored as [l,w,h] for every part EXCEPT outside-mount modules,
+// which store raw [X,Y,Z] mesh-space values (X=length,Y=height,Z=width -- see
+// partDims()) to avoid re-deriving their real per-part mesh dims. Reorder to
+// [l,w,h] for display only, so the inspector text reads correctly (otherwise
+// a flat panel's real height ends up printed in the "width" slot and vice
+// versa, e.g. Large Solar Panel showing "5.38x0.61x3.53" reads as if it were
+// 3.53 tall instead of the real 0.61).
+function displayDims(part) {
+  if (!part || !part.dims) return null;
+  if (part.kind === 'module' && part.mount === 'outside') {
+    const [x, y, z] = part.dims;
+    return [x, z, y];
+  }
+  return part.dims;
+}
+
 function updateInspector() {
   updateSelOutline();
   const part = state.inspected?.part ?? state.selected;
@@ -1501,7 +1513,7 @@ function updateInspector() {
   document.getElementById('piece-name').textContent = part ? part.name : 'Select a part';
   const rz = entry ? entry.rz : state.rz;
   const dims = part ? (entry ? entry.dims : effDims(partDims(part), state.rotDeg, state.rz)) : null;
-  document.getElementById('piece-dims').textContent = part?.dims ? part.dims.join('×') : '';
+  document.getElementById('piece-dims').textContent = part?.dims ? displayDims(part).join('×') : '';
   document.getElementById('piece-rot').textContent  = part ? ((entry ? entry.rotDeg : state.rotDeg) ? `${entry ? entry.rotDeg : state.rotDeg}°` : '') : '';
   const showRot = !!entry;
   document.getElementById('rot-left') .style.display = showRot ? '' : 'none';
