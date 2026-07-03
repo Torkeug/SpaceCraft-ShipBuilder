@@ -145,6 +145,7 @@ def main():
     ap.add_argument('--out', default='pak_out', help='Output root directory')
     ap.add_argument('--extract', metavar='PATTERN',
                     help='Extract files whose path contains PATTERN (case-insensitive)')
+    ap.add_argument('--all', action='store_true', help='Extract every file in the pak')
     ap.add_argument('--list', action='store_true', help='List all files (no extraction)')
     ap.add_argument('--d02-only', action='store_true',
                     help='When listing, show only disc=0x02 (production) files')
@@ -161,7 +162,7 @@ def main():
     d02_count = sum(1 for f in files if f[3])
     print(f'Found {len(files):,} file entries  ({d00_count:,} disc=0x00,  {d02_count:,} disc=0x02)')
 
-    if args.list or not args.extract:
+    if args.list or not (args.extract or args.all):
         for path, abs_pos, size, is_d02 in sorted(files, key=lambda t: t[0]):
             if args.d02_only and not is_d02:
                 continue
@@ -171,9 +172,13 @@ def main():
         reader.close()
         return
 
-    pattern = args.extract.lower()
-    matched = [(p, pos, size, d02) for p, pos, size, d02 in files if pattern in p.lower()]
-    print(f'Matched {len(matched):,} files for pattern {args.extract!r}')
+    if args.all:
+        matched = files
+        print(f'Extracting all {len(matched):,} files')
+    else:
+        pattern = args.extract.lower()
+        matched = [(p, pos, size, d02) for p, pos, size, d02 in files if pattern in p.lower()]
+        print(f'Matched {len(matched):,} files for pattern {args.extract!r}')
 
     if not matched:
         reader.close()

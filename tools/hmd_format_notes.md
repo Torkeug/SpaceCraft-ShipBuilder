@@ -523,11 +523,12 @@ same pattern as `batch_convert_hulls.py`).
    and by regex-scanning all LOD names in the file (16, ignoring end-of-file
    name-scan overrun duplicates) — they agree. Fix: if the sentinel-derived
    `lod_count` is 0, fall back to `len(blocks)` (the number of attribute blocks
-   `_parse_attr_blocks` actually found). All 3 files now convert correctly; the
-   parsed `Water_Collector` base object's bbox (~13.8 units on its long axis)
-   closely matches this item's authoritative in-game dims `[3, 14, 4]` from
-   `ship_editor_data.json`, a good independent sanity check that the fix is
-   correct and not just "no longer crashing."
+   `_parse_attr_blocks` actually found). All 3 files now convert correctly.
+   **Correction (see finding 8 below): the "matches [3,14,4]" sanity check
+   originally written here was wrong** — `[3,14,4]` was itself an unverified
+   guess in `ship_editor_data.json`, and the real in-game size (confirmed by
+   the user against a screenshot) is ~4.5x1.2x0.9. The bbox match was
+   coincidental, not confirmation of correctness.
 
 **All 18 of 18 outside modules now convert successfully.** 3 part ids
 (`Simple_Mining_Laser`, `RadarMK1`, `Scanner`) still use unconfirmed fallback
@@ -537,6 +538,64 @@ fallback) in particular shows a crowded/disconnected-looking sub-object
 arrangement with no evidence of a parser bug (no vbuf corrections triggered,
 each sub-object's own geometry reads as internally consistent) — most likely
 further evidence it's simply the wrong source file, not a parsing issue.
+
+8. **Root cause of Water_Collector's (and others') wrong absolute size/orientation
+   found and fixed: the entire from-scratch heuristic parser above (`hmd_parse_prod.py`)
+   only ever reads raw geometry buffers and never reads the file's actual
+   `models[]` scene-node hierarchy.** The real HMD format (confirmed by cloning
+   HeapsIO/heaps and porting its actual `hxd/fmt/hmd/Reader.hx` byte-for-byte —
+   see `tools/hmd_parse_heaps.py`) stores geometry (`geometries[]`, raw vertex/
+   index buffers) *separately* from a `models[]` array of named scene nodes.
+   Each model has its own `position` (translation + quaternion rotation +
+   **scale**, 9 floats: x,y,z,qx,qy,qz,sx,sy,sz) and a `geometry` index. Multiple
+   models reference the same or different geometries; a compound part like
+   `Water_Collector` is 4 real named models (`Water_Collector` body,
+   `_Pannel_L`, `_Pannel_R`, `_Piston`, each with LOD0-3 variants), **not** one
+   object mis-split by a heuristic. The old parser/converter dropped this
+   entire transform layer, merging every sub-part's raw vertices as if they
+   all sat unscaled at the shared origin. For Water_Collector this meant: the
+   body+piston's real scale (0.33, found directly in the model node, not
+   guessed) was never applied, and every part's real rotation (present on
+   nearly every model in nearly every file checked) was dropped, which is what
+   actually caused the "wrong orientation" symptom investigated at length
+   earlier in this file — not a hull-vs-tool axis-convention mismatch.
+
+   Confirmed by direct calibration: the real model-hierarchy bbox for
+   Water_Collector is [4.54, 0.88, 1.22] (HMD X,Y,Z), matching the user's own
+   screenshot measurement (~4×1×1, shape/orientation visually confirmed
+   against the real in-game mesh) almost exactly — with **zero guessed
+   values**, purely from applying the file's own stored transforms.
+
+   **Second bug found while implementing this:** the raw `stride` byte stored
+   per-geometry in the file is NOT the byte size — it's the total *component
+   count* across vertex fields (matches `BufferFormat.stride`, e.g. position+
+   normal+tangent DVec3 + uv DVec2 = 11), used only as an internal assertion
+   in the real reader. The actual per-vertex byte stride must be computed
+   field-by-field from each field's component count × precision byte-size,
+   with 4-byte alignment padding applied cumulatively after each field
+   (`tools/hmd_parse_heaps.py`'s `stride_bytes()`, ported from
+   `BufferFormat`'s constructor). Using the raw `stride` byte directly as a
+   byte count (an easy mistake — it's genuinely misleading) misaligns every
+   vertex read and produces garbage/NaN positions.
+
+   **New tools:** `tools/hmd_parse_heaps.py` (faithful reader port — use this
+   for any new format investigation, not the old heuristic parser),
+   `tools/hmd_convert_v2.py` (converter: selects each `*LOD0` model, applies
+   its real scale→rotate→translate transform, merges parts using the file's
+   own material index per group instead of keyword-guessing sub-object
+   boundaries), `tools/batch_convert_modules_v2.py` (batch runner; falls back
+   to the old `hmd_to_bin.py` path for the 3 Decoratives_Parts files that hit
+   an animation/skin section not yet ported).
+
+   **Still open:** `RadarMK1`'s new real-transform bbox (0.33×0.4×1.7) is
+   *more* obviously wrong than before (contradicts the user's confirmed ~1×1×1
+   in-game knowledge) — strong further evidence `Radar.fbx` (finding 6's
+   unconfirmed fallback) is simply the wrong source file, now that its
+   geometry is being read correctly. Not re-guessed; left as `dims: [1,1,1]`
+   pending a real source file. `Simple_Mining_Laser`'s and `Scanner`'s
+   fallback files, by contrast, produced dims very close to their prior
+   (already-reasonable-looking) values even under the new parser, so those
+   guesses may be closer to correct despite being unconfirmed.
 
 ---
 

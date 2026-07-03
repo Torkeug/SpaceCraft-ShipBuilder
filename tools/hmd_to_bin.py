@@ -13,9 +13,34 @@ See tools/hmd_format_notes.md for full format documentation.
 import struct
 import sys
 import os
+import re
 
 # Allow importing hmd_parse from the same directory
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+
+_MODEL_PROPS_CACHE = {}
+
+
+def _true_object_names(hmd_path):
+    """Ground-truth sub-object names for hmd_path's fbx stem, read from the
+    model.props manifest in the same directory. model.props is the game's own
+    asset-pipeline LOD config, keyed "<Stem>.fbx/<ObjectName>" — it lists every
+    real object a compound fbx contains, independent of our own HMD parsing.
+    Returns None if no props file exists or the stem isn't listed there.
+    """
+    props_path = os.path.join(os.path.dirname(hmd_path), 'model.props')
+    if props_path not in _MODEL_PROPS_CACHE:
+        table = {}
+        if os.path.exists(props_path):
+            text = open(props_path, encoding='utf-8', errors='replace').read()
+            start = text.find('{')
+            if start != -1:
+                for fstem, obj in re.findall(r'"([^"]+)\.fbx/([^"]+)"\s*:\s*\{', text[start:]):
+                    table.setdefault(fstem, []).append(obj)
+        _MODEL_PROPS_CACHE[props_path] = table
+    stem = os.path.splitext(os.path.basename(hmd_path))[0]
+    return _MODEL_PROPS_CACHE[props_path].get(stem)
 
 
 # ---------------------------------------------------------------------------
@@ -625,6 +650,16 @@ def convert_prod_style(hmd_path, out_path):
     # more than one, the real visual is their assembly, not just the first one.
     object_starts = [l for l in lods if l.get('is_object_start') and
                       l['ibuf_start'] + l['ic'] * (l.get('idx_size', 2)) <= len(data)]
+
+    # When no embedded LOD names were found, is_object_start falls back to an
+    # unreliable vc-increase heuristic that can false-positive on a single
+    # object's own LOD chain. model.props (the game's own asset manifest) lists
+    # the true object count per fbx — trust it over the heuristic when they
+    # disagree and it says there's only one real object.
+    true_names = _true_object_names(hmd_path)
+    if true_names is not None and len(true_names) == 1 and len(object_starts) > 1:
+        object_starts = object_starts[:1]
+
     if len(object_starts) > 1:
         _finish_prod_conversion_merged(raw, data, object_starts, blocks, None, out_path)
     else:
