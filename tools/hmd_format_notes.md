@@ -352,12 +352,15 @@ Bounds check in `_detect_ring_buffer_hmd`: `off + 8 <= len(raw)` prevents buffer
 
 **All tools must be saved to `tools/` immediately after writing, even if incomplete.**
 
-**Reference source (not committed, gitignored):** `hmd_parse_heaps.py` was written
-by cloning `HeapsIO/heaps` (and, for other format work, `HeapsIO/hxbit`,
-`HeapsIO/hide`, `HaxeFoundation/hashlink`, `Gui-Yom/hlbc`) into `tools/heaps_ref/`
-and reading the actual engine source rather than guessing. That folder isn't
-kept in the repo (large external clones) — recreate it if further format
-investigation is needed:
+**Reference source:** `hmd_parse_heaps.py` was written by cloning `HeapsIO/heaps`
+(and, for other format work, `HeapsIO/hxbit`, `HeapsIO/hide`,
+`HaxeFoundation/hashlink`, `Gui-Yom/hlbc`) into `tools/heaps_ref/` and reading
+the actual engine source rather than guessing. The full clones aren't kept in
+the repo (large, mostly-unrelated code + build artifacts, gitignored), but the
+3 specific files actually used as reference — `Reader.hx`, `Data.hx`,
+`BufferFormat.hx` — are vendored unmodified (MIT licensed) in
+`tools/heaps_ref_excerpts/`. Recreate the full clone if deeper investigation
+is needed:
 ```bash
 git clone --depth 1 https://github.com/HeapsIO/heaps.git tools/heaps_ref/heaps
 ```
