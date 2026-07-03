@@ -732,6 +732,53 @@ further evidence it's simply the wrong source file, not a parsing issue.
     means the overall look shifted in ways that need visual sign-off rather
     than being assumed correct just because the source data is real now.
 
+11. **4 real items were missing from `ship_editor_data.json` entirely --
+    never added, not a conversion bug.** Found by systematically cross-checking
+    every `data.cdb` item with `type` in
+    (`MiningTool`, `ShipRadars`, `ShipPowerTools`, `ShipToolSpecial`) against
+    what already existed in the catalogue, rather than assuming the existing
+    18 outside-mount parts were the complete set. Missing: `MiningTool0`
+    (Crude Mining Laser), `MiningTool3` (Giant Laser), `MiningTool3_OC`
+    (Overclocked Giant Laser), `PathwayPuncher` (Spacetime Puncher).
+
+    - **`MiningTool3`/`MiningTool3_OC` resolved the `HiPiLaser.fbx`/
+      `HiPi_Overclocked_Laser.fbx` mystery from finding 9.** Those files were
+      wrong for `MiningTool2`/`MiningTool2_OC` (Hi-Pi Laser), but they aren't
+      orphaned/wrong assets -- `data.cdb` shows `MiningTool3` ->
+      `HIPI_MiningLaser.prefab` and `MiningTool3_OC` ->
+      `HIPI_Overclocked_MiningLaser.prefab`. "HIPI" here is apparently a
+      weapon-tier/brand prefix in the prefab naming for the "Giant Laser"
+      line, unrelated to the "Hi-Pi Laser" item's display name despite the
+      near-identical string -- a naming coincidence that caused the original
+      wrong assignment. Both convert cleanly via the normal `hmd_convert_v2.py`
+      pipeline with no dims/assembly issues.
+    - **`MiningTool0`'s prefab (`DefaultLaser.prefab`) has no recoverable mesh
+      reference** -- same prefab-boundary-corruption pattern as finding 6.
+      Reuses the same unconfirmed placeholder as `MiningTool1`
+      (`Tools/MiningTool.fbx`), documented as such, not presented as verified.
+    - **`PathwayPuncher` is a genuine, currently-shipped TestPE-format asset**
+      (`assets/Buildings/Props/TestPE/Pathway_Puncher.fbx`, disc=0x00) --
+      confirmed via `data.cdb`'s own `visual.model` pointing to
+      `Pathway_Puncher.prefab`, which really does reference this file. This
+      **contradicts the older blanket assumption** in this file's "TestPE
+      Format" section below ("these files were used for early research but
+      are not the assets shown in-game") -- that's true for most TestPE
+      files checked so far, but not a safe assumption for every one. Converts
+      fine with the existing legacy `hmd_to_bin.py` G-style path; no changes
+      needed to that converter itself.
+
+    All 4 added to `ship_editor_data.json` with dims computed from their real
+    (transform-corrected) bboxes, following the same `[hmdX, hmdZ, hmdY]`
+    convention as every other outside module. `cost` (crafting recipe text)
+    could not be verified from any data source found so far -- data.cdb has
+    no separate recipe table keyed by these item ids, and the existing `cost`
+    strings elsewhere in the file appear to be manually curated, not
+    programmatically extracted. Left as `"Unknown"` for `MiningTool0` and
+    `PathwayPuncher` (both have non-zero `price`, so they're presumably
+    craftable) rather than fabricate plausible-sounding ingredients;
+    `MiningTool3`/`MiningTool3_OC` have `price: 0` (loot-only per data.cdb)
+    and use `""` matching the established convention for other price-0 items.
+
 ---
 
 ## TestPE Format (legacy reference)
@@ -739,6 +786,14 @@ further evidence it's simply the wrong source file, not a parsing issue.
 TestPE files (`assets/Buildings/Props/TestPE/`) use disc=0x00 and are extractable via pak_extract.py.
 Format differs from production: float32 positions in game units (÷100 to get grid units), big-endian uint16 indices.
 
-These files were used for early research but are not the assets shown in-game. The G-style parser (`tools/hmd_parse.py`) handles them. No further work planned on TestPE format.
+Most of these files were used for early research and are not the assets shown
+in-game. **Correction (finding 11): this is not true for every TestPE file** --
+`Pathway_Puncher.fbx` is confirmed via `data.cdb`'s own `visual.model` field
+to be the real, currently-shipped mesh for `PathwayPuncher` (Spacetime
+Puncher). Don't assume a TestPE file is a research leftover without checking
+whether any current `data.cdb` item actually references its prefab. The
+G-style parser (`tools/hmd_parse.py` / `hmd_to_bin.py`'s G-style path) handles
+them; no further format work is planned, but individual TestPE-sourced items
+may still need adding if more are found missing.
 
 Key difference from production: **big-endian** uint16 indices (production uses little-endian).

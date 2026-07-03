@@ -7920,6 +7920,44 @@
       "m": "Simple_Mining_Laser"
     },
     {
+      "id": "MiningTool0",
+      "name": "Crude Mining Laser",
+      "type": "MiningTool",
+      "kind": "module",
+      "group": "Gathering",
+      "wip": true,
+      "color": "#5ec0a0",
+      "dims": [
+        1.72,
+        1.18,
+        1.07
+      ],
+      "price": 50,
+      "stats": {
+        "StorageUnits": 10,
+        "SystemRequirement": 100
+      },
+      "cost": "Unknown",
+      "grad": {
+        "c": [
+          "#2F323B",
+          "#665C5C",
+          "#E9D6D6",
+          "#9A9A9A"
+        ],
+        "p": [
+          0,
+          0.224609375,
+          0.642578125,
+          0.919921875
+        ]
+      },
+      "model": "prefabs/ships/parts/tool/DefaultLaser.prefab",
+      "mount": "outside",
+      "su": 10,
+      "m": "MiningTool0"
+    },
+    {
       "id": "MiningTool_Cold",
       "name": "Cooling Laser",
       "type": "MiningTool",
@@ -8100,6 +8138,74 @@
       "mount": "outside",
       "su": 25,
       "m": "HiPi_Overclocked_Laser"
+    },
+    {
+      "id": "MiningTool3",
+      "name": "Giant Laser",
+      "type": "MiningTool",
+      "kind": "module",
+      "group": "Gathering",
+      "wip": true,
+      "color": "#5ec0a0",
+      "dims": [
+        4.88,
+        3.45,
+        2.55
+      ],
+      "price": 0,
+      "stats": {
+        "StorageUnits": 50,
+        "SystemRequirement": 3500
+      },
+      "cost": "",
+      "grad": {
+        "c": [
+          "#465B75",
+          "#ACC7DC"
+        ],
+        "p": [
+          0,
+          1
+        ]
+      },
+      "model": "prefabs/ships/parts/tool/HIPI_MiningLaser.prefab",
+      "mount": "outside",
+      "su": 50,
+      "m": "MiningTool3"
+    },
+    {
+      "id": "MiningTool3_OC",
+      "name": "Overclocked Giant Laser",
+      "type": "MiningTool",
+      "kind": "module",
+      "group": "Gathering",
+      "wip": true,
+      "color": "#5ec0a0",
+      "dims": [
+        3.77,
+        3.64,
+        2.55
+      ],
+      "price": 0,
+      "stats": {
+        "StorageUnits": 50,
+        "SystemRequirement": 7000
+      },
+      "cost": "",
+      "grad": {
+        "c": [
+          "#465B75",
+          "#ACC7DC"
+        ],
+        "p": [
+          0,
+          1
+        ]
+      },
+      "model": "prefabs/ships/parts/tool/HIPI_Overclocked_MiningLaser.prefab",
+      "mount": "outside",
+      "su": 50,
+      "m": "MiningTool3_OC"
     },
     {
       "id": "RadarMK1",
@@ -8444,6 +8550,44 @@
       "mount": "outside",
       "su": 10,
       "m": "Scanner"
+    },
+    {
+      "id": "PathwayPuncher",
+      "name": "Spacetime Puncher",
+      "type": "ShipToolSpecial",
+      "kind": "module",
+      "group": "Specialized tools",
+      "wip": true,
+      "color": "#a0c060",
+      "dims": [
+        3.83,
+        6.06,
+        5.34
+      ],
+      "price": 1860,
+      "stats": {
+        "StorageUnits": 10,
+        "SystemRequirement": 100
+      },
+      "cost": "Unknown",
+      "grad": {
+        "c": [
+          "#2F323B",
+          "#665C5C",
+          "#E9D6D6",
+          "#9A9A9A"
+        ],
+        "p": [
+          0,
+          0.251953125,
+          0.623046875,
+          0.919921875
+        ]
+      },
+      "model": "prefabs/ships/parts/tool/Pathway_Puncher.prefab",
+      "mount": "outside",
+      "su": 10,
+      "m": "PathwayPuncher"
     },
     {
       "id": "Thruster0",

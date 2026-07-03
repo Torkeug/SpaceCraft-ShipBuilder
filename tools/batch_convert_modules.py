@@ -39,9 +39,11 @@ MODULE_SOURCES = {
     # MiningTool_Medium.prefab, MiningTool2_OC -> MiningTool_Medium_OC.prefab).
     # No MiningTool_Medium_OC.fbx exists in the pak or model.props -- the OC
     # variant reuses the same mesh with different stats/material. The old
-    # 'HiPiLaser.fbx'/'HiPi_Overclocked_Laser.fbx' files are real but wrong:
-    # they belong to some other weapon, not this item (name-guessed match,
-    # never verified against data.cdb).
+    # 'HiPiLaser.fbx'/'HiPi_Overclocked_Laser.fbx' files are real but were
+    # wrong for THIS item (name-guessed match, never verified against
+    # data.cdb) -- they actually belong to MiningTool3/MiningTool3_OC (Giant
+    # Laser / Overclocked Giant Laser, see below), confirmed via data.cdb's
+    # visual.model (HIPI_MiningLaser.prefab / HIPI_Overclocked_MiningLaser.prefab).
     'HiPiLaser':              'Tools/MiningTool_Medium.fbx',
     'HiPi_Overclocked_Laser': 'Tools/MiningTool_Medium.fbx',
     'RadarMK1':               'Tools/Radar.fbx',
@@ -52,6 +54,20 @@ MODULE_SOURCES = {
     'SmallSolarPanel_Flat':   'Tools/SmallSolarPanel_Flat.fbx',
     'BigSolarPanel_Flat':     'Tools/BigSolarPanel_Flat.fbx',
     'Scanner':                'Tools/ScanningTool.fbx',
+    # 4 items missing from the catalogue entirely until found by cross-checking
+    # data.cdb for every MiningTool/ShipRadars/ShipPowerTools/ShipToolSpecial
+    # id against what we'd already added (see hmd_format_notes.md finding 11).
+    'MiningTool3':            'Tools/HiPiLaser.fbx',
+    'MiningTool3_OC':         'Tools/HiPi_Overclocked_Laser.fbx',
+    # No reliable mesh found (same red-herring prefab-boundary pattern as
+    # Simple_Mining_Laser/RadarMK1/Scanner) -- reuses the same unconfirmed
+    # placeholder as MiningTool1/Simple_Mining_Laser.
+    'MiningTool0':            'Tools/MiningTool.fbx',
+    # Legacy TestPE-format asset (disc=0x00, not production HMD) -- genuinely
+    # the real shipped visual per data.cdb, not a research-only leftover as
+    # previously assumed for all TestPE files. Path is relative to PAK_OUT
+    # (Vehicules/Buildings_Parts), escaping up to assets/Buildings/Props/TestPE.
+    'PathwayPuncher':         '../../Buildings/Props/TestPE/Pathway_Puncher.fbx',
 }
 
 

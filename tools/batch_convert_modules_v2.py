@@ -37,6 +37,11 @@ import hmd_to_bin
 # ported); keep converting them with the old heuristic converter for now.
 FALLBACK_TO_V1 = {'Spot_Light_01', 'Spot_Light_Barrel', 'Aerator_Spot_01'}
 
+# Legacy TestPE format (disc=0x00), not production HMD -- needs hmd_to_bin's
+# G-style converter, not hmd_parse_heaps/hmd_convert_v2 which only understand
+# the production models[] hierarchy.
+FALLBACK_TO_V1.add('PathwayPuncher')
+
 
 def read_bin_stats(path):
     with open(path, 'rb') as f:
