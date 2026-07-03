@@ -1738,7 +1738,8 @@
           "p": "prefabs/ships/parts/hull/4x3x1/4x3x1_N.prefab",
           "m": "4x3x1_N"
         }
-      ]
+      ],
+      "unreleased": true
     },
     {
       "id": "HullMK1_005_AX",
@@ -1853,7 +1854,8 @@
           "p": "prefabs/ships/parts/hull/6x3x1/6x3x1_N.prefab",
           "m": "6x3x1_N"
         }
-      ]
+      ],
+      "unreleased": true
     },
     {
       "id": "HullMK1_001_AX",
@@ -1968,7 +1970,8 @@
           "p": "prefabs/ships/parts/hull/4x3x2/4x3x2_N.prefab",
           "m": "4x3x2_N"
         }
-      ]
+      ],
+      "unreleased": true
     },
     {
       "id": "HullMK1_006_AX",
@@ -2078,7 +2081,8 @@
           "p": "prefabs/ships/parts/hull/8x3x1/8x3x1_M.prefab",
           "m": "8x3x1_M"
         }
-      ]
+      ],
+      "unreleased": true
     },
     {
       "id": "HullMK1_002_AX",
@@ -2193,7 +2197,8 @@
           "p": "prefabs/ships/parts/hull/6x3x2/6x3x2_N.prefab",
           "m": "6x3x2_N"
         }
-      ]
+      ],
+      "unreleased": true
     },
     {
       "id": "HullMK1_003_AX",
@@ -2308,7 +2313,8 @@
           "p": "prefabs/ships/parts/hull/8x3x2/8x3x2_N.prefab",
           "m": "8x3x2_N"
         }
-      ]
+      ],
+      "unreleased": true
     },
     {
       "id": "HullMK2_004_AX",
@@ -2423,7 +2429,8 @@
           "p": "prefabs/ships/parts/hull/8x6x2/8x6x2_N.prefab",
           "m": "8x6x2_N"
         }
-      ]
+      ],
+      "unreleased": true
     },
     {
       "id": "HullMK2_005_AX",
@@ -2538,7 +2545,8 @@
           "p": "prefabs/ships/parts/hull/12x6x2/12x6x2_N.prefab",
           "m": "12x6x2_N"
         }
-      ]
+      ],
+      "unreleased": true
     },
     {
       "id": "HullMK2_007_AX",
@@ -2653,7 +2661,8 @@
           "p": "prefabs/ships/parts/hull/16x6x2/16x6x2_N.prefab",
           "m": "16x6x2_N"
         }
-      ]
+      ],
+      "unreleased": true
     },
     {
       "id": "HullMK1_004_Plat",
@@ -7441,7 +7450,8 @@
       "cost": "Small Module Kitx1, Magnetic Coilx2",
       "model": "prefabs/ships/parts/tool/Batterie.prefab",
       "mount": "inside",
-      "m": "Batterie"
+      "m": "Batterie",
+      "unreleased": true
     },
     {
       "id": "IsotopicGenerator",
@@ -7465,7 +7475,8 @@
       "model": "prefabs/ships/parts/tool/Batterie.prefab",
       "mount": "inside",
       "su": 10,
-      "m": "Batterie"
+      "m": "Batterie",
+      "unreleased": true
     },
     {
       "id": "PowerSharerPH",
@@ -7484,7 +7495,8 @@
       "cost": "Small Module Kitx1, Magnetic Coilx2",
       "model": "prefabs/ships/parts/tool/Batterie.prefab",
       "mount": "inside",
-      "m": "Batterie"
+      "m": "Batterie",
+      "unreleased": true
     },
     {
       "id": "CarbonGenerator",
@@ -7557,7 +7569,8 @@
       "model": "prefabs/ships/parts/tool/Paradoxical_Battery.prefab",
       "mount": "inside",
       "su": 10,
-      "m": "Paradoxical_Battery"
+      "m": "Paradoxical_Battery",
+      "unreleased": true
     },
     {
       "id": "Battery0",
@@ -7671,7 +7684,8 @@
       "model": "prefabs/ships/parts/tool/VanadiumBattery.prefab",
       "mount": "inside",
       "su": 10,
-      "m": "VanadiumBattery"
+      "m": "VanadiumBattery",
+      "unreleased": true
     },
     {
       "id": "Battery2",
