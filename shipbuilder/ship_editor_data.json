@@ -5697,6 +5697,11 @@
           "p": "prefabs/ships/parts/cockpit/Cockpit_TC1.prefab",
           "m": "Cockpit_TC1"
         }
+      ],
+      "_renderSize": [
+        3.9102,
+        2.2214,
+        3.0527
       ]
     },
     {
@@ -5744,6 +5749,11 @@
           "p": "prefabs/ships/parts/cockpit/Cockpit_LR1.prefab",
           "m": "Cockpit_LR1"
         }
+      ],
+      "_renderSize": [
+        4.0371,
+        2.0459,
+        2.5586
       ]
     },
     {
@@ -5790,6 +5800,11 @@
           "p": "prefabs/ships/parts/cockpit/Cockpit_DA1.prefab",
           "m": "Cockpit_DA1"
         }
+      ],
+      "_renderSize": [
+        8.3236,
+        3.8826,
+        3.7824
       ]
     },
     {
@@ -5837,6 +5852,11 @@
           "p": "prefabs/ships/parts/cockpit/Cockpit_MK1.prefab",
           "m": "Cockpit_MK1"
         }
+      ],
+      "_renderSize": [
+        4.1436,
+        2.2339,
+        3.0527
       ]
     },
     {
@@ -5884,6 +5904,11 @@
           "p": "prefabs/ships/parts/cockpit/Cockpit_AE1.prefab",
           "m": "Cockpit_AE1"
         }
+      ],
+      "_renderSize": [
+        4.9117,
+        2.6684,
+        3.1366
       ]
     },
     {
@@ -5929,6 +5954,11 @@
           "p": "prefabs/ships/parts/cockpit/Cockpit_AE3.prefab",
           "m": "Cockpit_AE3"
         }
+      ],
+      "_renderSize": [
+        12.4414,
+        4.7397,
+        11.2422
       ]
     },
     {
@@ -5975,6 +6005,11 @@
           "p": "prefabs/ships/parts/cockpit/Cockpit_LR3.prefab",
           "m": "Cockpit_LR3"
         }
+      ],
+      "_renderSize": [
+        11.0938,
+        5.2207,
+        11.2031
       ]
     },
     {
@@ -6019,6 +6054,11 @@
           "p": "prefabs/ships/parts/cockpit/Cockpit_LR2.prefab",
           "m": "Cockpit_LR2"
         }
+      ],
+      "_renderSize": [
+        6.6213,
+        2.5505,
+        5.9828
       ]
     },
     {
@@ -6064,6 +6104,11 @@
           "p": "prefabs/ships/parts/cockpit/Cockpit_MK3.prefab",
           "m": "Cockpit_MK3"
         }
+      ],
+      "_renderSize": [
+        11.5859,
+        5.5195,
+        10.8164
       ]
     },
     {
@@ -6108,6 +6153,11 @@
           "p": "prefabs/ships/parts/cockpit/Cockpit_AE2.prefab",
           "m": "Cockpit_AE2"
         }
+      ],
+      "_renderSize": [
+        8.5938,
+        3.407,
+        5.85
       ]
     },
     {
@@ -6152,6 +6202,11 @@
           "p": "prefabs/ships/parts/cockpit/Cockpit_MK2.prefab",
           "m": "Cockpit_MK2"
         }
+      ],
+      "_renderSize": [
+        6.8266,
+        3.3828,
+        6.0312
       ]
     },
     {
@@ -7808,9 +7863,9 @@
       "model": "prefabs/ships/parts/Decoratives_Parts/Spot_Light_01.prefab",
       "mount": "outside",
       "m": "Spot_Light_01",
-      "_meshScale": [
-        0.8228,
-        0.8228,
+      "_renderSize": [
+        1.6108,
+        0.6426,
         0.8228
       ]
     },
@@ -7849,10 +7904,10 @@
       "model": "prefabs/ships/parts/Decoratives_Parts/Spot_Light_Barrel.prefab",
       "mount": "outside",
       "m": "Spot_Light_Barrel",
-      "_meshScale": [
+      "_renderSize": [
         0.9702,
-        0.9702,
-        0.9702
+        0.5806,
+        3.0537
       ]
     },
     {
@@ -7890,10 +7945,10 @@
       "model": "prefabs/ships/parts/Decoratives_Parts/Aerator_Spot_01.prefab",
       "mount": "outside",
       "m": "Aerator_Spot_01",
-      "_meshScale": [
-        0.8579,
-        0.8579,
-        0.8579
+      "_renderSize": [
+        3.4316,
+        0.8291,
+        3.4297
       ]
     },
     {
@@ -7933,10 +7988,10 @@
       "mount": "outside",
       "su": 10,
       "m": "Simple_Mining_Laser",
-      "_meshScale": [
-        0.8577,
-        0.8577,
-        0.8577
+      "_renderSize": [
+        1.7153,
+        1.3496,
+        1.0664
       ]
     },
     {
@@ -7976,10 +8031,10 @@
       "mount": "outside",
       "su": 10,
       "m": "MiningTool0",
-      "_meshScale": [
-        0.8577,
-        0.8577,
-        0.8577
+      "_renderSize": [
+        1.7153,
+        1.3496,
+        1.0664
       ]
     },
     {
@@ -8019,10 +8074,10 @@
       "mount": "outside",
       "su": 10,
       "m": "ColdLaser",
-      "_meshScale": [
-        0.7612,
-        0.7612,
-        0.7612
+      "_renderSize": [
+        3.0449,
+        1.4041,
+        1.3574
       ]
     },
     {
@@ -8062,10 +8117,10 @@
       "mount": "outside",
       "su": 10,
       "m": "MiningTool1_OC",
-      "_meshScale": [
-        0.9556,
-        0.9556,
-        0.9556
+      "_renderSize": [
+        1.9111,
+        1.3498,
+        1.0664
       ]
     },
     {
@@ -8105,10 +8160,10 @@
       "mount": "outside",
       "su": 10,
       "m": "Water_Collector",
-      "_meshScale": [
-        0.909,
-        0.909,
-        0.909
+      "_renderSize": [
+        4.5449,
+        1.2166,
+        0.881
       ]
     },
     {
@@ -8144,10 +8199,10 @@
       "mount": "outside",
       "su": 25,
       "m": "HiPiLaser",
-      "_meshScale": [
-        0.9336,
-        0.9336,
-        0.9336
+      "_renderSize": [
+        2.8008,
+        1.621,
+        1.6016
       ]
     },
     {
@@ -8183,10 +8238,10 @@
       "mount": "outside",
       "su": 25,
       "m": "HiPi_Overclocked_Laser",
-      "_meshScale": [
-        0.9336,
-        0.9336,
-        0.9336
+      "_renderSize": [
+        2.8008,
+        1.621,
+        1.6016
       ]
     },
     {
@@ -8222,10 +8277,10 @@
       "mount": "outside",
       "su": 50,
       "m": "MiningTool3",
-      "_meshScale": [
-        0.9767,
-        0.9767,
-        0.9767
+      "_renderSize": [
+        4.8833,
+        3.4484,
+        2.5469
       ]
     },
     {
@@ -8261,10 +8316,10 @@
       "mount": "outside",
       "su": 50,
       "m": "MiningTool3_OC",
-      "_meshScale": [
-        0.9427,
-        0.9427,
-        0.9427
+      "_renderSize": [
+        3.771,
+        3.644,
+        2.5469
       ]
     },
     {
@@ -8304,10 +8359,10 @@
       "mount": "outside",
       "su": 10,
       "m": "Radar0",
-      "_meshScale": [
-        0.8521,
-        0.8521,
-        0.8521
+      "_renderSize": [
+        0.328,
+        0.4042,
+        1.7041
       ]
     },
     {
@@ -8347,10 +8402,10 @@
       "mount": "outside",
       "su": 10,
       "m": "RadarMK1",
-      "_meshScale": [
-        0.6966,
-        0.6966,
-        0.6966
+      "_renderSize": [
+        0.5137,
+        0.4111,
+        2.0898
       ]
     },
     {
@@ -8390,10 +8445,10 @@
       "mount": "outside",
       "su": 10,
       "m": "SmartRadar",
-      "_meshScale": [
-        0.6966,
-        0.6966,
-        0.6966
+      "_renderSize": [
+        0.5938,
+        0.4111,
+        2.0898
       ]
     },
     {
@@ -8433,9 +8488,9 @@
       "mount": "outside",
       "su": 10,
       "m": "Sniffer_Radar",
-      "_meshScale": [
-        0.884,
-        0.884,
+      "_renderSize": [
+        0.7874,
+        0.788,
         0.884
       ]
     },
@@ -8475,10 +8530,10 @@
       "mount": "outside",
       "su": 10,
       "m": "Gravitron",
-      "_meshScale": [
-        0.9993,
-        0.9993,
-        0.9993
+      "_renderSize": [
+        2.998,
+        0.9044,
+        1.2349
       ]
     },
     {
@@ -8519,10 +8574,10 @@
       "mount": "outside",
       "su": 10,
       "m": "CrudeSolarPanel_Flat",
-      "_meshScale": [
-        0.8359,
-        0.8359,
-        0.8359
+      "_renderSize": [
+        1.6719,
+        0.6304,
+        1.0986
       ]
     },
     {
@@ -8563,10 +8618,10 @@
       "mount": "outside",
       "su": 25,
       "m": "SmallSolarPanel_Flat",
-      "_meshScale": [
-        0.7741,
-        0.7741,
-        0.7741
+      "_renderSize": [
+        2.2988,
+        0.6538,
+        2.3223
       ]
     },
     {
@@ -8607,10 +8662,10 @@
       "mount": "outside",
       "su": 50,
       "m": "BigSolarPanel_Flat",
-      "_meshScale": [
-        0.8965,
-        0.8965,
-        0.8965
+      "_renderSize": [
+        5.3789,
+        0.6055,
+        3.5254
       ]
     },
     {
@@ -8650,10 +8705,10 @@
       "mount": "outside",
       "su": 10,
       "m": "Scanner",
-      "_meshScale": [
+      "_renderSize": [
+        1.0664,
         0.8185,
-        0.8185,
-        0.8185
+        1.0664
       ]
     },
     {
@@ -8693,10 +8748,10 @@
       "mount": "outside",
       "su": 10,
       "m": "Scanner",
-      "_meshScale": [
+      "_renderSize": [
+        1.0664,
         0.8185,
-        0.8185,
-        0.8185
+        1.0664
       ]
     },
     {
@@ -8736,10 +8791,10 @@
       "mount": "outside",
       "su": 10,
       "m": "PathwayPuncher",
-      "_meshScale": [
-        0.9863,
-        0.9863,
-        0.9863
+      "_renderSize": [
+        4.9313,
+        2.7269,
+        3.5384
       ]
     },
     {
@@ -8787,6 +8842,11 @@
           "p": "prefabs/ships/parts/engine/Engine_TC_Small.prefab",
           "m": "Engine_TC_Small_prod"
         }
+      ],
+      "_renderSize": [
+        3.8201,
+        1.0,
+        2.2931
       ]
     },
     {
@@ -8828,17 +8888,17 @@
           1
         ]
       },
-      "_meshScale": [
-        0.68,
-        0.68,
-        0.68
-      ],
       "shapes": [
         {
           "s": "",
           "p": "prefabs/ships/parts/engine/Engine_DA_Small.prefab",
           "m": "Engine_DA_Small_prod"
         }
+      ],
+      "_renderSize": [
+        3.9602,
+        1.36,
+        1.9986
       ]
     },
     {
@@ -8885,6 +8945,11 @@
           "p": "prefabs/ships/parts/engine/Engine_AE_Small.prefab",
           "m": "Engine_AE_Small_prod"
         }
+      ],
+      "_renderSize": [
+        4.4652,
+        2.3284,
+        2.0
       ]
     },
     {
@@ -8926,17 +8991,17 @@
           1
         ]
       },
-      "_meshScale": [
-        0.97,
-        0.87,
-        0.97
-      ],
       "shapes": [
         {
           "s": "",
           "p": "prefabs/ships/parts/engine/Motor_Bulky.prefab",
           "m": "Motor_Bulky_prod"
         }
+      ],
+      "_renderSize": [
+        4.5597,
+        2.0286,
+        2.91
       ]
     },
     {
@@ -8982,6 +9047,11 @@
           "p": "prefabs/ships/parts/engine/Engine_Explorer_MK2.prefab",
           "m": "Engine_Explorer_MK2_prod"
         }
+      ],
+      "_renderSize": [
+        8.1361,
+        2.0,
+        4.903
       ]
     },
     {
@@ -9027,6 +9097,11 @@
           "p": "prefabs/ships/parts/engine/Engine_MK_Big.prefab",
           "m": "Engine_MK_Big_prod"
         }
+      ],
+      "_renderSize": [
+        11.4624,
+        2.0,
+        5.7559
       ]
     }
   ],

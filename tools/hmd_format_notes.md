@@ -1278,6 +1278,56 @@ further evidence it's simply the wrong source file, not a parsing issue.
     not attempted since it would touch `fitGeom`, `partDims`, and every
     part's data.
 
+21. **Follow-up to finding 20's architecture concern: `dims` and render
+    scale are now decoupled for every non-hull part kind, via a new
+    `part._renderSize` field.** Confirmed with the user first that this
+    should NOT touch hull frames (`_dimd` parts) at all -- those genuinely
+    are grid-tiled in the real game (real `WxHxD` sourced from pak folder
+    names, meshes modeled to nearly exactly fill their box), so the
+    "stretch mesh to fill dims exactly" behavior is correct and desired
+    there. For everything else, `data.cdb` has no footprint/size field at
+    all (checked directly) -- `dims` for engines/cockpits/outside-modules
+    was always a fan-tool invention for grid placement, never a real game
+    value, so tying render scale to it was never correct in the first
+    place.
+
+    `fitGeom()` (meshLoader.js) now checks, in order: `_dimd` (hull,
+    unchanged) -> `_renderSize` (new: scale directly to this real,
+    independent size, then center the result in the `dims` box on X/Z,
+    floor on Y) -> old dims-fit + `_meshScale` fallback (only reached for
+    parts not yet migrated, e.g. wings, which weren't touched this
+    session since their sizing hasn't been reviewed at all).
+
+    New tool **`tools/compute_render_size.py`** derives `_renderSize` per
+    part kind:
+    - cockpit / outside-module: the real, *unrounded* mesh size (same
+      computation as `compute_part_dims.py`/`round_module_dims.py`, just
+      without the integer rounding those use for the separate, now fully
+      independent `dims` display/placement value).
+    - thruster: deliberately NOT re-derived from scratch. Back-solved from
+      each thruster's *current* rendered appearance (existing dims-fit
+      scale x existing `_meshScale`, both already in the data) so this
+      refactor is a pure mechanism change with zero visual difference --
+      thrusters' real size is still an open, unresolved question (see
+      finding 18) the user wants to check against real in-game references
+      before touching again, and this refactor deliberately does not
+      reopen that question.
+
+    `_meshScale` is now dead everywhere it was set (Voidseeker, Grasshopper,
+    every outside-module) and was deleted from those parts' data rather
+    than left as stale, unused residue.
+
+    Confirmed visually identical (byte-for-byte same render) for cockpits,
+    outside-modules, and thrusters after migration, and confirmed hull
+    frames and the `fitGeom` fallback path are completely untouched.
+
+    This work was done on a separate branch/worktree
+    (`decouple-dims-render`, with a `backup-pre-decouple` branch/worktree
+    at `../Spacecraft-backup` holding the exact pre-refactor state) at the
+    user's request, specifically so there was a known-working fallback
+    available during a change broad enough to touch every non-hull part's
+    data.
+
 ---
 
 ## TestPE Format (legacy reference)

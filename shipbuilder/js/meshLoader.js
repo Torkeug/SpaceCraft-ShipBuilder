@@ -113,8 +113,23 @@ export function fitGeom(base, dims, rotDeg, part, flip, rz) {
   const sp = new THREE.Vector3(); bb.getSize(sp);
   g.translate(-bb.min.x, -bb.min.y, -bb.min.z);
   if (part && part._dimd) {
+    // Structural grid pieces (hull frames): stretch per-axis to exactly fill
+    // the cell. This part kind genuinely IS grid-tiled in the real game, so
+    // dims and render size are correctly the same thing here.
     g.scale(w / (sp.x || 1), h / (sp.y || 1), d / (sp.z || 1));
+  } else if (part && part._renderSize) {
+    // Real mesh size (computed once from the actual mesh + real prefab
+    // scale -- see tools/compute_render_size.py), completely independent of
+    // `dims` (which is purely a grid-placement/display stat for these parts
+    // in the real game, not a real footprint -- see hmd_format_notes.md
+    // finding 21). The mesh renders at its true size and sits centered in
+    // its (possibly differently-sized) grid cell.
+    const [rw, rh, rd] = part._renderSize;
+    g.scale(rw / (sp.x || 1), rh / (sp.y || 1), rd / (sp.z || 1));
+    g.translate((w - rw) / 2, 0, (d - rd) / 2);
   } else {
+    // Fallback for parts not yet migrated to _renderSize: fit uniformly to
+    // the dims box (the pre-decoupling behavior).
     const s = Math.min(w / (sp.x || 1), h / (sp.y || 1), d / (sp.z || 1));
     g.scale(s, s, s);
     const [mx, my, mz] = (part && part._meshScale) || [1, 1, 1];
