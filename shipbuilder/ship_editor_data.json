@@ -8661,11 +8661,37 @@
       "model": "prefabs/ships/parts/tool/CrudeSolarPanel_Flat.prefab",
       "mount": "outside",
       "su": 10,
-      "m": "CrudeSolarPanel_Flat",
-      "_renderSize": [
-        1.6719,
-        0.6304,
-        1.0986
+      "shapes": [
+        {
+          "s": "",
+          "p": "prefabs/ships/parts/tool/CrudeSolarPanel_Flat.prefab",
+          "m": "CrudeSolarPanel_Flat",
+          "_renderSize": [
+            1.6719,
+            0.6304,
+            1.0986
+          ]
+        },
+        {
+          "s": "",
+          "p": "prefabs/ships/parts/tool/CrudeSolarPanel_Angular.prefab",
+          "m": "CrudeSolarPanel_Angular",
+          "_renderSize": [
+            1.5506,
+            0.6467,
+            1.0986
+          ]
+        },
+        {
+          "s": "",
+          "p": "prefabs/ships/parts/tool/CrudeSolarPanel_Curvy.prefab",
+          "m": "CrudeSolarPanel_Curvy",
+          "_renderSize": [
+            1.0142,
+            0.8792,
+            1.0986
+          ]
+        }
       ]
     },
     {
@@ -8678,7 +8704,7 @@
       "color": "#d8c040",
       "dims": [
         3,
-        1,
+        2,
         3
       ],
       "price": 1040,
@@ -8705,11 +8731,37 @@
       "model": "prefabs/ships/parts/tool/SmallSolarPanel_Flat.prefab",
       "mount": "outside",
       "su": 25,
-      "m": "SmallSolarPanel_Flat",
-      "_renderSize": [
-        2.2988,
-        0.6538,
-        2.3223
+      "shapes": [
+        {
+          "s": "",
+          "p": "prefabs/ships/parts/tool/SmallSolarPanel_Flat.prefab",
+          "m": "SmallSolarPanel_Flat",
+          "_renderSize": [
+            2.2988,
+            0.6538,
+            2.3223
+          ]
+        },
+        {
+          "s": "",
+          "p": "prefabs/ships/parts/tool/SmallSolarPanel_Angular.prefab",
+          "m": "SmallSolarPanel_Angular",
+          "_renderSize": [
+            2.2056,
+            0.9688,
+            2.2305
+          ]
+        },
+        {
+          "s": "",
+          "p": "prefabs/ships/parts/tool/SmallSolarPanel_Curvy.prefab",
+          "m": "SmallSolarPanel_Curvy",
+          "_renderSize": [
+            1.4253,
+            1.2332,
+            2.2227
+          ]
+        }
       ]
     },
     {

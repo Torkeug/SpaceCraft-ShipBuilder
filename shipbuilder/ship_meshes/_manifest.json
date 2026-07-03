@@ -935,6 +935,18 @@
     "t": 36928,
     "v": 47960
   },
+  "CrudeSolarPanel_Angular": {
+    "g": 11,
+    "i32": false,
+    "t": 6810,
+    "v": 8521
+  },
+  "CrudeSolarPanel_Curvy": {
+    "g": 9,
+    "i32": false,
+    "t": 7338,
+    "v": 9238
+  },
   "CrudeSolarPanel_Flat": {
     "g": 10,
     "i32": false,
@@ -1186,6 +1198,18 @@
     "i32": false,
     "t": 22658,
     "v": 20482
+  },
+  "SmallSolarPanel_Angular": {
+    "g": 10,
+    "i32": false,
+    "t": 12676,
+    "v": 14525
+  },
+  "SmallSolarPanel_Curvy": {
+    "g": 9,
+    "i32": false,
+    "t": 13836,
+    "v": 16268
   },
   "SmallSolarPanel_Flat": {
     "g": 10,

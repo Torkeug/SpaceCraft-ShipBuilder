@@ -89,7 +89,7 @@ function reverseWinding(g) {
 
 // Fit a raw geometry into a cell [0..w, 0..h, 0..d] with rotation + flip applied.
 // Dimensioned parts (frames) fill the cell exactly; others scale uniformly.
-export function fitGeom(base, dims, rotDeg, part, flip, rz) {
+export function fitGeom(base, dims, rotDeg, part, flip, rz, shapeIdx) {
   const [w, h, d] = dims;
   const g = base.clone();
   // Game meshes stored in Z-up; rotate to Y-up for all parts except cockpits.
@@ -138,14 +138,19 @@ export function fitGeom(base, dims, rotDeg, part, flip, rz) {
     // the cell. This part kind genuinely IS grid-tiled in the real game, so
     // dims and render size are correctly the same thing here.
     g.scale(w / (sp.x || 1), h / (sp.y || 1), d / (sp.z || 1));
-  } else if (part && part._renderSize) {
+  } else if (part && (part._renderSize || (part.shapes && part.shapes[shapeIdx || 0] && part.shapes[shapeIdx || 0]._renderSize))) {
     // Real mesh size (computed once from the actual mesh + real prefab
     // scale -- see tools/compute_render_size.py), completely independent of
     // `dims` (which is purely a grid-placement/display stat for these parts
     // in the real game, not a real footprint -- see hmd_format_notes.md
     // finding 21). The mesh renders at its true size and sits centered in
     // its (possibly differently-sized) grid cell.
-    let [rw, rh, rd] = part._renderSize;
+    // Multi-shape parts (e.g. solar panel Flat/Angular/Curvy variants) can
+    // have meaningfully different real sizes per shape -- prefer the active
+    // shape's own _renderSize when present, falling back to the part-level
+    // one for single-shape/no-shape-array parts.
+    const activeShape = part.shapes && part.shapes[shapeIdx || 0];
+    let [rw, rh, rd] = (activeShape && activeShape._renderSize) || part._renderSize;
     // The `rz` orientation toggle rotates the mesh 90° around X *before* the
     // bbox above is measured, swapping what sp.y/sp.z mean -- swap the
     // matching target components too, or per-axis scaling maps the wrong

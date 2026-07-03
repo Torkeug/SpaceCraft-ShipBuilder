@@ -309,7 +309,7 @@ function stackDepth(gx, gz, dims, exclude = null) {
 
 // Build a mesh synchronously (box fallback if real mesh not cached yet).
 // Geometry origin is at min corner [0..w, 0..h, 0..d].
-function buildPartMesh(part, dims, meshKey, rotDeg, mx, my, mz, rz) {
+function buildPartMesh(part, dims, meshKey, rotDeg, mx, my, mz, rz, shapeIdx) {
   const [w, h, d] = dims;
 
   if (isInsideMod(part)) {
@@ -321,7 +321,7 @@ function buildPartMesh(part, dims, meshKey, rotDeg, mx, my, mz, rz) {
 
   const cached = meshKey ? getCached(meshKey) : null;
   if (cached) {
-    const g = fitGeom(cached.geom, dims, rotDeg, part, [mx, my, mz], rz);
+    const g = fitGeom(cached.geom, dims, rotDeg, part, [mx, my, mz], rz, shapeIdx);
     const mats = cached.groups.map(gr => roleMaterial(gr.role, gr.hex, part));
     return { mesh: new THREE.Mesh(g, mats), edges: null, needsSwap: false };
   }
@@ -339,7 +339,7 @@ function swapToRealMesh(entry, cached) {
   scene.remove(entry.mesh);
   if (entry.edges) { scene.remove(entry.edges); entry.edges.geometry.dispose(); entry.edges = null; }
   disposeMesh(entry.mesh);
-  const g = fitGeom(cached.geom, entry.dims, entry.rotDeg, entry.part, [entry.mx, entry.my, entry.mz], entry.rz);
+  const g = fitGeom(cached.geom, entry.dims, entry.rotDeg, entry.part, [entry.mx, entry.my, entry.mz], entry.rz, entry.shapeIdx);
   const mats = cached.groups.map(gr => roleMaterial(gr.role, gr.hex, entry.part));
   const mesh = new THREE.Mesh(g, mats);
   mesh.position.set(entry.gx, entry.gy, entry.gz);
@@ -372,7 +372,7 @@ function refreshGhostGeo() {
   const cached = mk ? getCached(mk) : null;
   ghost.geometry.dispose();
   if (cached) {
-    ghost.geometry = fitGeom(cached.geom, dims, state.rotDeg, part, [state.mx, state.my, state.mz], state.rz);
+    ghost.geometry = fitGeom(cached.geom, dims, state.rotDeg, part, [state.mx, state.my, state.mz], state.rz, state.shapeIdx);
   } else {
     ghost.geometry = boxGeom(...dims);
     if (mk) loadGeom(mk).then(c => {
@@ -396,7 +396,7 @@ function refreshGhostForDrag(entry) {
   ghost.geometry.dispose();
   const cached = entry.meshKey ? getCached(entry.meshKey) : null;
   ghost.geometry = cached
-    ? fitGeom(cached.geom, entry.dims, entry.rotDeg, entry.part, [entry.mx, entry.my, entry.mz], entry.rz)
+    ? fitGeom(cached.geom, entry.dims, entry.rotDeg, entry.part, [entry.mx, entry.my, entry.mz], entry.rz, entry.shapeIdx)
     : boxGeom(...entry.dims);
 }
 
@@ -409,7 +409,7 @@ function placePiece(gx, gy, gz) {
   const dims = effDims(partDims(part), state.rotDeg, state.rz);
   if (!isFree(gx, gy, gz, dims)) return;
   const meshKey = getMeshKey(part, state.shapeIdx);
-  const { mesh, edges, needsSwap } = buildPartMesh(part, dims, meshKey, state.rotDeg, state.mx, state.my, state.mz, state.rz);
+  const { mesh, edges, needsSwap } = buildPartMesh(part, dims, meshKey, state.rotDeg, state.mx, state.my, state.mz, state.rz, state.shapeIdx);
   mesh.position.set(gx, gy, gz);
   if (edges) { edges.position.set(gx, gy, gz); scene.add(edges); }
   scene.add(mesh);
@@ -432,7 +432,7 @@ function placePiece(gx, gy, gz) {
 function placePieceDirect(part, gx, gy, gz, shapeIdx, rotDeg, mx, my, mz, rz) {
   const dims = effDims(partDims(part), rotDeg, rz);
   const meshKey = getMeshKey(part, shapeIdx);
-  const { mesh, edges, needsSwap } = buildPartMesh(part, dims, meshKey, rotDeg, mx, my, mz, rz);
+  const { mesh, edges, needsSwap } = buildPartMesh(part, dims, meshKey, rotDeg, mx, my, mz, rz, shapeIdx);
   mesh.position.set(gx, gy, gz);
   if (edges) { edges.position.set(gx, gy, gz); scene.add(edges); }
   scene.add(mesh);
@@ -454,7 +454,7 @@ function rebuildPlacedMesh(entry, shapeIdx, rotDeg, mx, my, mz, rz) {
   const meshKey = getMeshKey(entry.part, shapeIdx);
   entry.shapeIdx = shapeIdx; entry.rotDeg = rotDeg; entry.dims = dims;
   entry.meshKey = meshKey; entry.mx = mx; entry.my = my; entry.mz = mz; entry.rz = rz || false;
-  const { mesh, edges, needsSwap } = buildPartMesh(entry.part, dims, meshKey, rotDeg, mx, my, mz, rz);
+  const { mesh, edges, needsSwap } = buildPartMesh(entry.part, dims, meshKey, rotDeg, mx, my, mz, rz, shapeIdx);
   mesh.position.set(entry.gx, entry.gy, entry.gz);
   if (edges) { edges.position.set(entry.gx, entry.gy, entry.gz); scene.add(edges); }
   mesh._entry = entry;
@@ -764,7 +764,7 @@ function buildGroupGhosts() {
   for (const en of state.groupSel) {
     if (en.slotOwner || en === anchor) continue;
     const cached = en.meshKey ? getCached(en.meshKey) : null;
-    const geom = cached ? fitGeom(cached.geom, en.dims, en.rotDeg, en.part, [en.mx, en.my, en.mz], en.rz) : boxGeom(...en.dims);
+    const geom = cached ? fitGeom(cached.geom, en.dims, en.rotDeg, en.part, [en.mx, en.my, en.mz], en.rz, en.shapeIdx) : boxGeom(...en.dims);
     const m = new THREE.Mesh(geom, ghostMatOk);
     m.position.set(en.gx, en.gy, en.gz);
     m._groupEntry = en;
