@@ -19,6 +19,7 @@ Usage:
 
 import json
 import os
+import re
 import sys
 import math
 
@@ -29,6 +30,7 @@ import struct
 from hmd_parse_heaps import parse, stride_bytes
 from hmd_parse_prod import read_verts_f16, read_indices_le_u16, read_indices_le_u32, _MAT_KEYWORDS
 from hmd_to_bin import write_bin, _DEFAULT_ROLES
+from find_socket_chain import find_socket_chain
 
 
 def read_verts_generic(data, vbuf_start, vc, stride, fields):
@@ -108,12 +110,89 @@ def transform_vert_chain(v, model, models):
     return v
 
 
+def _base_name(name):
+    m = re.match(r'^(.*?)(LOD\d+)$', name or '')
+    return (m.group(1), m.group(2)) if m else (name, '')
+
+
+def _pak_relative_path(hmd_path):
+    """Turn a filesystem path to a source .fbx into the "assets/..." form
+    used both in prefab "source" fields and as find_socket_chain's lookup
+    key, e.g. ".../pak_out/assets/Vehicules/.../MiningTool1_OC.fbx" ->
+    "assets/Vehicules/.../MiningTool1_OC.fbx"."""
+    norm = hmd_path.replace('\\', '/')
+    idx = norm.find('assets/')
+    return norm[idx:] if idx >= 0 else None
+
+
+def apply_socket_chain(models, chain):
+    """Override each named part's `parent` to match the REAL, prefab-
+    confirmed mount chain (e.g. ['Rotary', 'Mining_Arm', 'Receiver'], from
+    find_socket_chain.py) wherever it disagrees with the file's own declared
+    parent, for every LOD variant of an affected part (not just LOD0, so all
+    LODs stay internally consistent). Returns a new list; models not
+    mentioned in the chain, or already agreeing with it, keep their original
+    dict object.
+
+    This replaces an earlier from-scratch bounding-box-overlap heuristic
+    that kept producing conflicting results across known cases (fixing one
+    file's Receiver/Mining_Arm joint broke another's) -- ground truth read
+    directly from the game's own prefab constraint data doesn't have that
+    problem where it's available. Where it isn't (chain is None, e.g.
+    Radar.fbx's prefab has no constraints at all), this is a no-op: the
+    file's own declared parents are left completely alone rather than
+    guessed at.
+    """
+    if not chain:
+        return models
+    name_to_idx = {mm['name']: i for i, mm in enumerate(models)}
+    out = list(models)
+    for i, mm in enumerate(models):
+        prefix, lod = _base_name(mm['name'])
+        pos = next((j for j, seg in enumerate(chain) if seg == prefix), None)
+        if pos is None or pos == 0:
+            continue  # not part of this chain, or is the chain's own root
+        parent_idx = name_to_idx.get(chain[pos - 1] + lod)
+        if parent_idx is not None and parent_idx != mm['parent']:
+            out[i] = dict(mm, parent=parent_idx)
+    return out
+
+
 def match_material_role(name):
     if name:
         for kw, role in _MAT_KEYWORDS:
             if kw.decode() in name:
+                if role == 4:
+                    # Emissive keyword match, but if the real extracted texture
+                    # color is dark, this is very likely a non-glowing signage
+                    # backing variant rather than a genuine bright indicator
+                    # light -- rendering a dark color as emissive (additive
+                    # glow at 1.25 intensity, see meshLoader.js's roleMaterial)
+                    # produces a jarring, wrongly-lit patch. Confirmed on the
+                    # bare "Signaletique_01"/"Signaletique_02" name (used by
+                    # ColdLaser, HiPiLaser, HiPi_Overclocked_Laser,
+                    # MiningTool1_OC, Sniffer_radar, Gravitron), whose real
+                    # average color is dark navy/purple (~20-80 range), not a
+                    # bright indicator color.
+                    real = _REAL_COLORS.get(name)
+                    if real and max(real) < 110:
+                        return 2
                 return role
     return 2  # dark, matching the old fallback default
+
+
+# Specific, manually-confirmed correspondences between a material name used
+# by a mesh and a *differently-named* real basecolor texture that's actually
+# the same material family -- extract_material_colors.py's exact/fuzzy name
+# matching doesn't catch these because the naming diverges too much (word
+# order, inserted words). Confirmed on ColdLaser (Cooling Laser), whose real
+# in-game colors are mostly white/light gray, not the near-black default it
+# was falling back to for every material below.
+_COLOR_ALIASES = {
+    'Metal_Painted_Color1': 'MetallicPaint_white_color1',  # light gray, not dark
+    'POM_Decals_01': 'POM_Decals_03',  # same decal family, only _03 has a real texture
+    'POM_Decals_02': 'POM_Decals_03',
+}
 
 
 def match_material_color(name, role):
@@ -122,6 +201,9 @@ def match_material_color(name, role):
     per-role placeholder when no real texture was found for this name."""
     if name and name in _REAL_COLORS:
         return tuple(_REAL_COLORS[name])
+    alias = _COLOR_ALIASES.get(name) if name else None
+    if alias and alias in _REAL_COLORS:
+        return tuple(_REAL_COLORS[alias])
     return _DEFAULT_ROLES[role][1] if role < len(_DEFAULT_ROLES) else (128, 128, 128)
 
 
@@ -132,7 +214,29 @@ def convert(hmd_path, out_path, verbose=True):
         raise ValueError(f"No HMD\\x06 magic in {hmd_path}")
     d = parse(raw, off)
 
-    targets = [m for m in d['models'] if m['geometry'] >= 0 and m['name'] and m['name'].endswith('LOD0')]
+    # Correct any sub-part's declared `parent` against the REAL mount chain
+    # read from this mesh's own .prefab constraint data (see
+    # find_socket_chain.py) -- a no-op when no prefab constraint data exists
+    # (e.g. Radar.fbx), leaving the file's own declared parents untouched
+    # rather than guessing.
+    mesh_source_path = _pak_relative_path(hmd_path)
+    chain = None
+    if mesh_source_path:
+        known_names = {_base_name(mm['name'])[0] for mm in d['models']}
+        try:
+            chain = find_socket_chain(mesh_source_path, known_names=known_names)
+        except OSError:
+            chain = None  # pak not available (e.g. running off already-extracted files only)
+    models = apply_socket_chain(d['models'], chain)
+    if verbose and chain:
+        print(f"  socket chain (from prefab): {' -> '.join(chain)}")
+        for old, new in zip(d['models'], models):
+            if old is not new:
+                old_parent = d['models'][old['parent']]['name'] if old['parent'] >= 0 else None
+                print(f"  note: {new['name']!r} parent corrected to "
+                      f"{models[new['parent']]['name']!r} (was {old_parent!r})")
+
+    targets = [m for m in models if m['geometry'] >= 0 and m['name'] and m['name'].endswith('LOD0')]
     if not targets:
         raise ValueError(f"No *LOD0 models found in {hmd_path}")
 
@@ -150,7 +254,7 @@ def convert(hmd_path, out_path, verbose=True):
         ic = sum(geom['indexCounts'])
 
         verts_local = read_verts_generic(raw, vbuf_start, vc, stride, geom['fields'])
-        verts_world = [transform_vert_chain(v, m, d['models']) for v in verts_local]
+        verts_world = [transform_vert_chain(v, m, models) for v in verts_local]
 
         is_small = vc <= 0x10000
         indices = read_indices_le_u16(raw, ibuf_start, ic) if is_small else read_indices_le_u32(raw, ibuf_start, ic)

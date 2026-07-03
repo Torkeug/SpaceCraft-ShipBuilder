@@ -1000,6 +1000,54 @@ further evidence it's simply the wrong source file, not a parsing issue.
       unfolded, but do not treat it as current guidance. The file is a
       normal production HMD file; use the normal pipeline.
 
+16. **Sub-part mounting bug affecting multiple turret-rig tool items (Simple/
+    Crude/Overclocked Mining Laser, Cooling Laser, Scanner) fixed with real
+    ground-truth data instead of a geometric guess.** Some of these files'
+    raw HMD `parent` index for a sub-part (e.g. "Mining_Arm", "Receiver") is
+    simply wrong -- it resolves to some arbitrary `Base` LOD slot instead of
+    the real mount point, confirmed by comparing bounding boxes (e.g.
+    MiningTool1_OC's Receiver ends up with a world position that doesn't
+    overlap "Mining_Arm" on any axis). Severity varies a lot per file (from
+    "barely noticeable" to "visibly floating"), which is why it went
+    unnoticed on some items and not others.
+
+    A from-scratch bounding-box-overlap heuristic (test every sibling as a
+    candidate parent, pick whichever maximizes overlap) was tried first and
+    discarded: tuning it to fix one confirmed-broken file's joint kept
+    silently breaking another confirmed-fine file's joint, because "the two
+    parts' bounding boxes happen to overlap" is not the same thing as "this
+    part is actually mounted here" -- a bbox is a crude, non-manifold-aware
+    proxy, and the user correctly pushed back on trusting it blindly across
+    the whole catalog.
+
+    **The real, unambiguous answer already exists in the game's own data:**
+    every one of these items' `.prefab` defines a `constraint` object (e.g.
+    "BarrelConstraint") whose `target` field is a dotted socket path --
+    e.g. `"MiningTool1_OC.Rotary.Mining_Arm.Receiver"` -- the literal,
+    authoritative mount chain. `tools/find_socket_chain.py` locates a mesh's
+    own prefab in the raw pak (keyed on the mesh's `.fbx` source path, not
+    the prefab's file name or the item id -- confirmed these can all
+    disagree: `Simple_Mining_Laser.prefab`'s internal model node is actually
+    named "MiningTool") and parses its constraint target(s) using
+    `hbson_parse.py`. A single prefab can have multiple constraints
+    referencing the same socket at different, inconsistent depths (one
+    targets `"MiningTool1_OC.Rotary.Receiver"`, another targets
+    `"MiningTool_Upgrade.Rotary.Mining_Arm.Receiver"` -- a stale root name
+    apparently copy-pasted from a template item, but a more complete path)
+    -- `find_socket_chain` collects all of them and keeps the longest
+    validated chain. `hmd_convert_v2.py`'s `apply_socket_chain()` then
+    overrides any part whose declared parent disagrees with this confirmed
+    chain, for every LOD variant.
+
+    Where a prefab has no constraint at all (`Radar.fbx` / Crude Resource
+    Detector's `Camera`/`Arms` relationship -- visually looks like it might
+    have the same kind of issue, ~4% bbox overlap vs ~98% if reparented, but
+    unconfirmed), this is a deliberate no-op: the file's own declared parent
+    is left completely untouched rather than guessed at. That item's joint
+    may still need attention if it turns out to look wrong in practice, but
+    fixing it would require either finding some other ground-truth source or
+    accepting a heuristic guess -- not done here.
+
 ---
 
 ## TestPE Format (legacy reference)
