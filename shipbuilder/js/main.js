@@ -1419,13 +1419,15 @@ document.getElementById('modal-load-ok').addEventListener('click', () => {
 // ── Palette ───────────────────────────────────────────────────────────────────
 
 let paletteTab = 'build';
+let showUnreleased = false;
 
 function buildPalette(filter = '') {
   const list = document.getElementById('piece-list');
   list.innerHTML = '';
   const lower = filter.toLowerCase();
   GROUPS.forEach(groupName => {
-    const items = PARTS.filter(p => p.group === groupName && p.kind === paletteTab && (!lower || p.name.toLowerCase().includes(lower)));
+    const items = PARTS.filter(p => p.group === groupName && p.kind === paletteTab
+      && (showUnreleased || !p.unreleased) && (!lower || p.name.toLowerCase().includes(lower)));
     if (!items.length) return;
     const hdr = document.createElement('div');
     hdr.className = 'category-header';
@@ -1447,6 +1449,9 @@ function buildPalette(filter = '') {
       if (p.wip) {
         el.innerHTML += `<span class="wip-badge" title="Work in progress — stats/mesh may be incomplete">WIP</span>`;
       }
+      if (p.unreleased) {
+        el.innerHTML += `<span class="unreleased-badge" title="Found in game data but not yet confirmed as actually in-game">?</span>`;
+      }
       el.addEventListener('pointerdown', () => selectPart(state.selected?.id === p.id ? null : p));
       group.appendChild(el);
     });
@@ -1455,6 +1460,11 @@ function buildPalette(filter = '') {
 }
 
 document.getElementById('search').addEventListener('input', e => buildPalette(e.target.value));
+
+document.getElementById('show-unreleased').addEventListener('change', e => {
+  showUnreleased = e.target.checked;
+  buildPalette(document.getElementById('search').value);
+});
 
 document.getElementById('palette-tabs').addEventListener('click', e => {
   const btn = e.target.closest('.pal-tab');

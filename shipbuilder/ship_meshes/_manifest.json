@@ -1181,6 +1181,12 @@
     "t": 70789,
     "v": 56101
   },
+  "Single_MissileLauncher": {
+    "g": 21,
+    "i32": false,
+    "t": 22658,
+    "v": 20482
+  },
   "SmallSolarPanel_Flat": {
     "g": 10,
     "i32": false,

@@ -34,6 +34,7 @@ MODULE_SOURCES = {
     'Aerator_Thin_01':        'Decoratives_Parts/Aerator_Thin_01.fbx',
     'Aerator_Thin_02':        'Decoratives_Parts/Aerator_Thin_02.fbx',
     'Aerator_Circle_01':      'Decoratives_Parts/Aerator_Circle_01.fbx',
+    'Single_MissileLauncher': 'Tools/Single_MissileLauncher.fbx',
     'Simple_Mining_Laser':    'Tools/MiningTool.fbx',
     'ColdLaser':              'Tools/ColdLaser.fbx',
     'MiningTool1_OC':         'Tools/MiningTool1_OC.fbx',

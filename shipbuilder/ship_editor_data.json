@@ -9158,6 +9158,49 @@
         2.0,
         5.7559
       ]
+    },
+    {
+      "id": "ExplodingToolMk1",
+      "name": "Single-Tube Missile Launcher",
+      "type": "ShipWeapon",
+      "kind": "module",
+      "group": "Weapons",
+      "wip": true,
+      "color": "#c85a4a",
+      "dims": [
+        3,
+        1,
+        1
+      ],
+      "price": 61,
+      "stats": {
+        "SystemRequirement": 150,
+        "StorageUnits": 10,
+        "PatchSlots": 1
+      },
+      "cost": "Unknown",
+      "grad": {
+        "c": [
+          "#2F323B",
+          "#665C5C",
+          "#E9D6D6",
+          "#9A9A9A"
+        ],
+        "p": [
+          0,
+          0.224609375,
+          0.642578125,
+          0.919921875
+        ]
+      },
+      "model": "prefabs/ships/parts/tool/Single_MissileLauncher.prefab",
+      "mount": "outside",
+      "m": "Single_MissileLauncher",
+      "_renderSize": [
+        2.9258,
+        1.4846,
+        0.9524
+      ]
     }
   ],
   "groupOrder": [
@@ -9184,7 +9227,8 @@
     "Gathering",
     "Radar",
     "Solar & power",
-    "Specialized tools"
+    "Specialized tools",
+    "Weapons"
   ],
   "palette": [
     "#2F7FB0",

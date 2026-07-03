@@ -61,6 +61,18 @@ body {
 }
 #search:focus { border-color: #4488cc; }
 
+#show-unreleased-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 6px;
+  font-size: 11px;
+  color: #8b949e;
+  cursor: pointer;
+  user-select: none;
+}
+#show-unreleased-label input { accent-color: #8b7bd8; }
+
 #piece-list {
   flex: 1;
   overflow-y: auto;
@@ -135,6 +147,15 @@ body {
   flex-shrink: 0;
   color: #ff6b6b;
   border: 1px solid rgba(255,107,107,.5);
+}
+.unreleased-badge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 0px 5px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  color: #8b7bd8;
+  border: 1px solid rgba(139,123,216,.5);
 }
 
 /* ── Viewport (center) ── */
