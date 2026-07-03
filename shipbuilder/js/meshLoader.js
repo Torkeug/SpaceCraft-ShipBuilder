@@ -99,6 +99,13 @@ export function fitGeom(base, dims, rotDeg, part, flip, rz) {
   if (part && part._cockpit) { g.rotateX(Math.PI / 2); g.rotateY(Math.PI); g.rotateZ(Math.PI); }
   else g.rotateX(-Math.PI / 2);
   if (part && part._meshRot) g.rotateY(part._meshRot * Math.PI / 180);
+  // Wings face the opposite way on X from cockpits by default -- rotate to
+  // match, then mirror on Z on top of that (confirmed visually correct).
+  if (part && part.type === 'ShipWing') {
+    g.rotateY(Math.PI);
+    g.scale(1, 1, -1);
+    reverseWinding(g);
+  }
   let [fx, fy, fz] = flip || [false, false, false];
   if (rz) {
     // Flip is applied in local mesh space, before the extra rotateX(±90°)
