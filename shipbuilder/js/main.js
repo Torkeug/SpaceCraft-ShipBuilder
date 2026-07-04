@@ -1,6 +1,10 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { PARTS, BYID, GROUPS, loadData, loadStats, statsFor } from './data.js';
+import {
+  PARTS, BYID, GROUPS, CONST, loadData, loadConstants, attrLabel, attrUnit, isDisplayable,
+  calcIntegrity, calcHullDisplay, calcSystemSupport, calcSystemEfficiency,
+  calcHeatInterface, calcShipPoints, calcManeuverability, calcSpeed, calcBatteryAggregate,
+} from './data.js';
 import { loadManifest, getMeshKey, loadGeom, fitGeom, boxGeom, roleMaterial, getCached } from './meshLoader.js';
 
 // ── Scene ─────────────────────────────────────────────────────────────────────
@@ -1560,27 +1564,41 @@ function updateShapePicker(part) {
 
 function updateFlipButtons() {}
 
-const STAT_LABELS = {
-  Frame: 'Frame', Hull: 'Hull', ShipWeight: 'Weight',
-  SystemSupport: 'Sys. Support', SystemRequirement: 'Sys. Required',
-  EngineForce: 'Engine Force', EngineThrust: 'Engine Thrust',
-  PowerProduction: 'Power Gen', PowerUsage: 'Power Use',
-  HeatCapacity: 'Heat Cap.',
-  HeatInterfaceMaterial: 'Heat conductivity',
-  SolidStorage: 'Cargo (su)', FluidStorage: 'Fluid Store',
-  FTOilStorage: 'FTL Oil', FakeFTLOptimalMaxWeight: 'FTL Cap.',
-};
+// Per-part raw stats are labelled straight from the game's own attribute
+// sheet (ship_attributes.json, id -> {name, unit}) via attrLabel/attrUnit,
+// so every real attribute a part carries shows up here — not just a
+// hand-picked subset.
+function appendStatRows(el, stats) {
+  Object.entries(stats || {}).forEach(([k, v]) => {
+    if (!v || !isDisplayable(k)) return;
+    const unit = attrUnit(k);
+    const val = typeof v === 'number' ? v.toLocaleString() : v;
+    const row = document.createElement('div');
+    row.className = 'spec-row';
+    row.innerHTML = `<span>${attrLabel(k)}</span><span>${val}${unit ? ' ' + unit : ''}</span>`;
+    el.appendChild(row);
+  });
+}
 
 function renderPartStats(part) {
   const el = document.getElementById('specs');
   el.innerHTML = '';
   if (!part?.stats) return;
-  Object.entries(part.stats).forEach(([k, v]) => {
-    if (!v || !STAT_LABELS[k]) return;
-    const row = document.createElement('div');
-    row.className = 'spec-row';
-    row.innerHTML = `<span>${STAT_LABELS[k]}</span><span>${typeof v === 'number' ? v.toLocaleString() : v}</span>`;
-    el.appendChild(row);
+  appendStatRows(el, part.stats);
+  // Per-action stats (a mining laser's "Mine" vs "MinerAttack" mode, a
+  // shield's "Shield" skill, a radar's "RadarPing" skill, ...) carry their
+  // own power/heat/damage costs distinct from the part's baseline stats
+  // above — shown as their own labelled sub-block per skill/mode.
+  (part.skills || []).forEach(sk => {
+    if (!Object.values(sk.stats).some(v => v)) return;
+    const divider = document.createElement('div');
+    divider.className = 'inspector-divider';
+    el.appendChild(divider);
+    const label = document.createElement('div');
+    label.className = 'stat-section-label';
+    label.textContent = sk.skill;
+    el.appendChild(label);
+    appendStatRows(el, sk.stats);
   });
 }
 
@@ -1595,44 +1613,118 @@ function updateShipStats() {
   const sum  = k => state.placed.reduce((a, e) => a + ((e.part.stats?.[k]) || 0), 0);
   const anyM = k => state.placed.some(e => e.part.kind === 'module' && e.part.stats?.[k]);
 
+  // Per-action stats (a mining laser's "Mine" vs "MinerAttack" mode, a
+  // shield's "Shield" skill, a radar's "RadarPing" skill, a scanner's "Scan"
+  // skill, ...) live under each part's `skills` list (data.cdb
+  // item.props.skills), separate from its baseline `stats`. A part's skills
+  // are mutually-exclusive action modes (it can't mine and attack at the
+  // same instant), so `partSkillMax` takes the highest value across a
+  // part's own skills (falling back to its baseline stats), and `skillSum`/
+  // `skillPeak` total or peak that per-part max across the whole ship.
+  // `skillNames`, when given, restricts to those named skills only and does
+  // NOT fall back to the part's baseline stats -- needed for a key like
+  // PowerUsage that exists both as a baseline stat (already counted in the
+  // ship's main Power section) and per-skill (e.g. a mining laser's "Mine"
+  // vs "MinerAttack" draw), so mining-active power isn't conflated with
+  // combat-active power for the same tool.
+  // No artificial 0 floor here: some skills carry genuinely negative values
+  // (e.g. Cooling Laser's "Mine" skill has ActiveHeatGeneration: -2500, a
+  // real cooling effect) that Math.max(0, ...) would otherwise clamp away.
+  // Only fall back to 0 when there's truly nothing to compare.
+  const partSkillMax = (e, k, skillNames) => {
+    const skills = (e.part.skills || []).filter(sk => !skillNames || skillNames.includes(sk.skill));
+    const vals = skills.map(sk => sk.stats[k] || 0);
+    if (!skillNames) vals.push(e.part.stats?.[k] || 0);
+    return vals.length ? Math.max(...vals) : 0;
+  };
+  const skillSum  = (k, skillNames) => state.placed.reduce((a, e) => a + partSkillMax(e, k, skillNames), 0);
+  const skillPeak = (k, skillNames) => Math.max(0, ...state.placed.map(e => partSkillMax(e, k, skillNames)));
+
   const hasCockpit = state.placed.some(e => e.part.group === 'Cockpits');
   const hasEngine  = state.placed.some(e => e.part.stats?.EngineThrust);
-  const weight  = sum('ShipWeight');
-  const frames  = sum('Frame');
-  const force   = sum('EngineForce');
-  const thrust  = sum('EngineThrust');
-  const support = sum('SystemSupport');
-  const req     = sum('SystemRequirement');
-  const powProd = sum('PowerProduction');
-  const powUse  = sum('PowerUsage') + sum('EngineConsumption');
-  const powStorage = sum('PowerStorage');
-  const heat    = sum('HeatCapacity');
-  const heatCond = sum('HeatInterfaceParts');
-  const steering = sum('SteeringStrength');
 
-  // Fan-data stats (not yet in game data): heat gen, shields, recharge
-  const fanSum = field => state.placed.reduce((acc, e) => {
-    const s = statsFor(e.part.name); return acc + ((s?.[field]) || 0);
-  }, 0);
-  const heatGen  = fanSum('heat');
-  const shields  = fanSum('shields');
-  const recharge = fanSum('recharge');
-  const solid   = sum('SolidStorage');
-  const fluid   = sum('FluidStorage');
-  const ftlOil  = sum('FTOilStorage');
-  const ftlCap  = Math.max(0, ...state.placed.map(e => e.part.stats?.FakeFTLOptimalMaxWeight || 0));
-  const hasFTL  = anyM('FTOilStorage') || anyM('FakeFTLOptimalMaxWeight');
+  const weight    = sum('ShipWeight');
+  const frames    = sum('Frame');
+  const rawHull   = sum('Hull');
+  const force     = sum('EngineForce');
+  const thrust    = sum('EngineThrust');
+  const boostThrust = sum('BoostThrust');
+  const support   = calcSystemSupport(sum('SystemSupport'));
+  const req       = sum('SystemRequirement');
+  const sysMalus  = sum('SystemMalusForShipPoints');
+  const powProd   = sum('PowerProduction');
+  const powUse    = sum('PowerUsage') + sum('EngineConsumption');
+  const boostPowUse = sum('BoostConsumption');
+  const powStorage = sum('PowerStorage');
+  const heatCap   = sum('HeatCapacity');
+  const heatInterfaceParts = sum('HeatInterfaceParts');
+  const steering  = sum('SteeringStrength');
+  const solid     = sum('SolidStorage');
+  const fluid     = sum('FluidStorage');
+  const ftlOil     = sum('FTOilStorage');
+  const ftlCap     = Math.max(0, ...state.placed.map(e => e.part.stats?.FakeFTLOptimalMaxWeight || 0));
+  const ftlClass   = Math.max(0, ...state.placed.map(e => e.part.stats?.FakeFTLEngineClass || 0));
+  const ftlCrit    = sum('FTLMaxCritProbaReduction');
+  const ftlJumpCost = skillPeak('FTLEngineJumpCost');       // real per-jump fuel cost (Travel skill)
+  const ftlRealCap  = skillPeak('FTLEngineWeightCapacity'); // real weight cap (Travel skill) — FakeFTLOptimalMaxWeight above is a simplified UI proxy for this
+  const hasFTL     = anyM('FTOilStorage') || anyM('FakeFTLOptimalMaxWeight') || anyM('FakeFTLEngineClass');
   const slotsTotal = state.placed.filter(e => e.part.kind === 'build').length;
   const slotsUsed  = state.placed.filter(e => e.slotOwner != null).length;
-  const suProvided = state.placed.filter(e => e.part.kind !== 'module').reduce((a, e) => a + (e.part.stats?.StorageUnits || 0), 0);
-  const suUsed     = state.placed.filter(e => e.part.kind === 'module').reduce((a, e) => a + (e.part.stats?.StorageUnits || 0), 0);
 
-  // Integrity = 200 − (7 × weight²) / (25 × frames). Warn below 20.
-  const integrity     = frames > 0 ? 200 - (7 * weight * weight) / (25 * frames) : null;
-  const integrityOk   = integrity !== null && integrity >= 20;
-  const maneuver      = weight > 0 && steering > 0 ? 280 * steering / Math.pow(weight, 1.5) : null;
-  const powNet        = powProd - powUse;
-  const spPct         = support > 0 ? Math.min(100, (req / support) * 100) : 0;
+  // Lights don't sum meaningfully (each fixture has its own angle/range/power),
+  // so this is a fixture count + the brightest/farthest-reaching one installed.
+  const lights = state.placed.filter(e => e.part.stats?.SpotLightRange != null);
+  const lightMaxRange = Math.max(0, ...lights.map(e => e.part.stats.SpotLightRange || 0));
+  const lightMaxPower = Math.max(0, ...lights.map(e => e.part.stats.SpotLightPower || 0));
+
+  // Mining/scanning stats live on the relevant tool's skill (Mine/RadarPing/
+  // Scan), not its baseline stats -- see skillSum/skillPeak above. Power
+  // Usage/Heat Generation here are "while active" costs, distinct from the
+  // ship's baseline Power/Heat sections.
+  const miningPower   = skillSum('MiningPower');
+  const miningTier    = skillPeak('MiningTier');
+  const scanningPower = skillSum('ResourceScanningPower');
+  const scanningTier  = skillPeak('MaxScanningTier');
+  const radarRange    = skillPeak('RadarRange');
+  const miningPowerUse = skillSum('PowerUsage', ['Mine', 'RadarPing', 'Scan']);
+  const miningHeatGen  = skillSum('ActiveHeatGeneration', ['Mine']);
+  const hasMining = miningPower || miningTier || scanningPower || scanningTier || radarRange;
+
+  // Combat/shield stats live on the relevant weapon/shield's skill
+  // (GunFire/MissileAttack/MinerAttack/Shield), not baseline stats.
+  const shipDamage     = skillSum('Damage');
+  const ammoUse        = skillSum('AmmoConsumption');
+  const shieldCharge   = skillSum('ShieldMaxCharge');
+  const dmgNegation    = skillSum('DamageNegation');
+  const shieldRegen    = skillSum('RegenSpeed');
+  const shieldPowerUse = skillSum('PowerUsage', ['Shield', 'GunFire', 'MissileAttack', 'MinerAttack']);
+  const combatHeatGen  = skillSum('ActiveHeatGeneration', ['MinerAttack', 'GunFire', 'MissileAttack']);
+  const hullDmgReduct  = sum('HullImpactDamageReduction');
+  const hasCombat = shipDamage || ammoUse || shieldCharge || dmgNegation || hullDmgReduct;
+
+  const batteries = state.placed
+    .filter(e => e.part.stats?.BatteryChargeSpeed != null || e.part.stats?.BatteryEfficiency != null)
+    .map(e => ({
+      chargeSpeed:  e.part.stats.BatteryChargeSpeed || 0,
+      efficiency:   e.part.stats.BatteryEfficiency || 0,
+      wastage:      e.part.stats.BatteryWastage || 0,
+      powerStorage: e.part.stats.PowerStorage || 0,
+    }));
+  const battery = calcBatteryAggregate(batteries, powStorage);
+
+  const integrity    = calcIntegrity(weight, frames);       // ratio, 1.0 = 100%
+  const integrityPct = integrity !== null ? integrity * 100 : null;
+  const integrityOk  = integrityPct !== null && integrityPct >= CONST.ShipStatMinIntegrity * 100;
+  const hull         = integrity !== null ? calcHullDisplay(rawHull, integrity) : null;
+  const efficiency   = calcSystemEfficiency(req, support);  // ratio, 1.0 = 100%
+  const efficiencyPct = efficiency !== null ? efficiency * 100 : null;
+  const heatInterface = calcHeatInterface(heatInterfaceParts);
+  const shipPoints    = hull !== null ? calcShipPoints(hull, req, sysMalus, support) : null;
+  const maneuver      = calcManeuverability(steering, weight);
+  const { speed, boostSpeed } = calcSpeed(thrust, force, weight, efficiency, boostThrust);
+
+  const powNet = powProd - powUse;
+  const spPct  = support > 0 ? Math.min(100, (req / support) * 100) : 0;
 
   const flyable = hasCockpit && hasEngine && force >= weight && support >= req && integrityOk;
 
@@ -1641,7 +1733,7 @@ function updateShipStats() {
     ['Cockpit',       hasCockpit,           hasCockpit ? 'yes' : 'missing'],
     ['Engine',        hasEngine,            hasEngine  ? 'yes' : 'missing'],
     ['Thrust / Mass', force >= weight,      `${fmt(force)} / ${fmt(weight)} t`],
-    ['Integrity',     integrityOk,          integrity !== null ? `${integrity.toFixed(1)}%` : '—'],
+    ['Integrity',     integrityOk,          integrityPct !== null ? `${integrityPct.toFixed(1)}%` : '—'],
     ['Sys. support',  support >= req,       `${fmt(req)} / ${fmt(support)}`],
     ['Power',         powProd >= powUse,    `${fmt(powUse)} / ${fmt(powProd)}`],
     ...(hasFTL ? [['FTL cap.', ftlCap >= weight, `${fmt(ftlCap)} / ${fmt(weight)} t`]] : []),
@@ -1657,7 +1749,15 @@ function updateShipStats() {
     </div>`;
   });
 
-  // ── SP bar ──
+  // ── Summary ── (Ship Points is a bespoke game value, not part of any stat category)
+  if (shipPoints !== null) {
+    h += `<div class="stat-section"><div class="stat-section-label">Summary</div><div class="stat-grid">`;
+    h += statBlock('Ship Points', fmt(shipPoints), 'neutral');
+    h += statBlock('Parts', `${new Set(state.placed.map(e => e.part.id)).size} / ${state.placed.length}`, 'neutral');
+    h += `</div></div>`;
+  }
+
+  // ── Current Status ── (System Support + Hull/Integrity bars, System Efficiency)
   const spOver = req > support && support > 0;
   h += `<div class="stat-section">
     <div class="stat-section-label">System Support</div>
@@ -1665,22 +1765,20 @@ function updateShipStats() {
     <div class="sp-bar-foot${spOver ? ' over' : ''}"><span>${fmt(req)} used</span><span>${fmt(support)} cap</span></div>
   </div>`;
 
-  // ── Structure ──
-  h += `<div class="stat-section"><div class="stat-section-label">Structure</div><div class="stat-grid">`;
-  h += statBlock('Weight',    `${weight % 1 ? weight.toFixed(1) : fmt(weight)} t`, 'neutral');
-  h += statBlock('Frames',    fmt(frames), 'neutral');
-  const intCls = integrity === null ? 'neutral' : integrity < 20 ? 'bad' : integrity < 60 ? 'warn' : 'neutral';
-  h += statBlock('Integrity', integrity !== null ? `${integrity.toFixed(1)}%` : '—', intCls);
-  h += statBlock('Maneuver',  maneuver !== null ? maneuver.toFixed(2) : '—', 'neutral');
+  h += `<div class="stat-section"><div class="stat-section-label">Current Status</div><div class="stat-grid">`;
+  h += statBlock('Weight', `${weight % 1 ? weight.toFixed(1) : fmt(weight)} t`, 'neutral');
+  h += statBlock('Frames', fmt(frames), 'neutral');
+  const intCls = integrityPct === null ? 'neutral' : integrityPct < CONST.ShipStatMinIntegrity * 100 ? 'bad' : integrityPct < 60 ? 'warn' : 'neutral';
+  h += statBlock('Integrity', integrityPct !== null ? `${integrityPct.toFixed(1)}%` : '—', intCls);
+  h += statBlock('Hull', hull !== null ? `${fmt(hull)} / ${fmt(rawHull)}` : '—', 'neutral');
+  h += statBlock('Sys. Efficiency', efficiencyPct !== null ? `${efficiencyPct.toFixed(0)}%` : '—', 'neutral');
   h += `</div></div>`;
 
-  // ── Propulsion ──
-  if (thrust > 0 || force > 0) {
-    h += `<div class="stat-section"><div class="stat-section-label">Propulsion</div><div class="stat-grid">`;
-    if (thrust > 0) h += statBlock('Thrust', fmt(thrust));
-    if (force  > 0) h += statBlock('Force',  fmt(force), force < weight ? 'bad' : '');
-    h += `</div></div>`;
-  }
+  // ── Heat Management ──
+  h += `<div class="stat-section"><div class="stat-section-label">Heat Management</div><div class="stat-grid">`;
+  h += statBlock('Heat Cap.', fmt(heatCap), 'neutral');
+  h += statBlock('Heat Interface', heatInterface.toFixed(1), 'neutral', true);
+  h += `</div></div>`;
 
   // ── Power ──
   h += `<div class="stat-section"><div class="stat-section-label">Power</div><div class="stat-grid">`;
@@ -1688,11 +1786,22 @@ function updateShipStats() {
   h += statBlock('Usage', fmt(powUse), 'neutral');
   h += statBlock('Net', (powNet >= 0 ? '+' : '') + fmt(powNet), powNet < 0 ? 'bad' : 'good', true);
   h += `</div>`;
-  if (powStorage) h += `<div class="stat-row" style="margin-top:3px"><span class="stat-label">Battery cap.</span><span class="stat-val">${fmt(powStorage)}</span></div>`;
-  if (recharge)   h += `<div class="stat-row"><span class="stat-label">Recharge</span><span class="stat-val">${fmt(recharge)}/s</span></div>`;
-  if (heat)      h += `<div class="stat-row"><span class="stat-label">Heat cap.</span><span class="stat-val">${fmt(heat)}</span></div>`;
-  if (heatCond)  h += `<div class="stat-row"><span class="stat-label">Heat conductivity</span><span class="stat-val">${fmt(heatCond)}</span></div>`;
+  if (powStorage) h += `<div class="stat-row" style="margin-top:3px"><span class="stat-label">Power Storage</span><span class="stat-val">${fmt(powStorage)}</span></div>`;
+  if (batteries.length) {
+    h += `<div class="stat-row"><span class="stat-label">Max Charge Speed</span><span class="stat-val">${fmt(battery.chargeSpeed)}</span></div>`;
+    h += `<div class="stat-row"><span class="stat-label">Theoretical Efficiency</span><span class="stat-val">${(battery.efficiency * 100).toFixed(0)}%</span></div>`;
+    h += `<div class="stat-row"><span class="stat-label">Self-Discharge</span><span class="stat-val">${(battery.wastage * 100).toFixed(2)}%/s</span></div>`;
+  }
   h += `</div>`;
+
+  // ── Engine ──
+  h += `<div class="stat-section"><div class="stat-section-label">Engine</div><div class="stat-grid">`;
+  h += statBlock('Weight / Force', `${fmt(weight)} / ${fmt(force)}`, force < weight ? 'bad' : 'neutral');
+  h += statBlock('Thrust (Boosted)', `${fmt(thrust)} (${fmt(thrust + boostThrust)})`, 'neutral');
+  h += statBlock('Speed (Boosted)', speed !== null ? `${speed.toFixed(2)} (${boostSpeed.toFixed(2)})` : '—', 'neutral');
+  h += statBlock('Maneuverability', maneuver !== null ? maneuver.toFixed(2) : '—', 'neutral');
+  h += statBlock('Power Usage (Boosted)', `${fmt(powUse)} (${fmt(powUse + boostPowUse)})`, 'neutral', true);
+  h += `</div></div>`;
 
   // ── Module slots ──
   if (slotsTotal > 0) {
@@ -1709,24 +1818,61 @@ function updateShipStats() {
     </div>`;
   }
 
-  // ── Cargo capacity ──
-  const hasCargo = solid || fluid || ftlOil || hasFTL;
+  // ── Storage ──
+  const hasCargo = solid || fluid;
   if (hasCargo) {
-    h += `<div class="stat-section"><div class="stat-section-label">Cargo</div>`;
-    if (solid)  h += `<div class="stat-row"><span class="stat-label">Solid cargo</span><span class="stat-val">${fmt(solid)}</span></div>`;
-    if (fluid)  h += `<div class="stat-row"><span class="stat-label">Liquid</span><span class="stat-val">${fmt(fluid)}</span></div>`;
-    if (ftlOil) h += `<div class="stat-row"><span class="stat-label">Mag fuel</span><span class="stat-val">${fmt(ftlOil)}</span></div>`;
-    if (hasFTL) h += `<div class="stat-row${ftlCap < weight ? ' bad' : ''}"><span class="stat-label">FTL cap.</span><span class="stat-val">${fmt(ftlCap)} t</span></div>`;
+    h += `<div class="stat-section"><div class="stat-section-label">Storage</div>`;
+    if (solid) h += `<div class="stat-row"><span class="stat-label">Solid Storage</span><span class="stat-val">${fmt(solid)}</span></div>`;
+    if (fluid) h += `<div class="stat-row"><span class="stat-label">Fluid Storage</span><span class="stat-val">${fmt(fluid)}</span></div>`;
     h += `</div>`;
   }
 
-  // ── Heat & shields (fan data) ──
-  const hasHeatShield = heatGen || shields;
-  if (hasHeatShield) {
-    h += `<div class="stat-section"><div class="stat-section-label">Combat & Heat</div><div class="stat-grid">`;
-    if (shields) h += statBlock('Shields', fmt(shields));
-    if (heatGen) h += statBlock('Heat gen.', (heatGen > 0 ? '+' : '') + fmt(heatGen), heatGen > 0 ? 'warn' : 'good');
-    h += `</div></div>`;
+  // ── FTL ──
+  if (hasFTL) {
+    h += `<div class="stat-section"><div class="stat-section-label">FTL</div>`;
+    if (ftlOil)     h += `<div class="stat-row"><span class="stat-label">Mag-Plasma Storage</span><span class="stat-val">${fmt(ftlOil)} L</span></div>`;
+    if (ftlCap)     h += `<div class="stat-row${ftlCap < weight ? ' bad' : ''}"><span class="stat-label">Optimal up to</span><span class="stat-val">${fmt(ftlCap)} t</span></div>`;
+    if (ftlRealCap) h += `<div class="stat-row"><span class="stat-label">Weight Capacity</span><span class="stat-val">${fmt(ftlRealCap)} t</span></div>`;
+    if (ftlJumpCost) h += `<div class="stat-row"><span class="stat-label">FTL Jump Cost</span><span class="stat-val">${ftlJumpCost} L/np</span></div>`;
+    if (ftlClass)   h += `<div class="stat-row"><span class="stat-label">Engine Class</span><span class="stat-val">${ftlClass}</span></div>`;
+    if (ftlCrit)    h += `<div class="stat-row"><span class="stat-label">FTL Crit Chance Reduction</span><span class="stat-val">${fmt(ftlCrit)}%</span></div>`;
+    h += `</div>`;
+  }
+
+  // ── Lights ──
+  if (lights.length) {
+    h += `<div class="stat-section"><div class="stat-section-label">Lights</div>`;
+    h += `<div class="stat-row"><span class="stat-label">Fixtures Installed</span><span class="stat-val">${lights.length}</span></div>`;
+    h += `<div class="stat-row"><span class="stat-label">Max Range</span><span class="stat-val">${fmt(lightMaxRange)} np</span></div>`;
+    h += `<div class="stat-row"><span class="stat-label">Max Luminous Power</span><span class="stat-val">${fmt(lightMaxPower)} lm</span></div>`;
+    h += `</div>`;
+  }
+
+  // ── Mining & Scanning ── (real per-skill attributes: Mine/RadarPing/Scan)
+  if (hasMining) {
+    h += `<div class="stat-section"><div class="stat-section-label">Mining & Scanning</div>`;
+    if (miningPower)    h += `<div class="stat-row"><span class="stat-label">Mining Power</span><span class="stat-val">${fmt(miningPower)} MJ</span></div>`;
+    if (miningTier)     h += `<div class="stat-row"><span class="stat-label">Max Mining Tier</span><span class="stat-val">${fmt(miningTier)}</span></div>`;
+    if (scanningPower)  h += `<div class="stat-row"><span class="stat-label">Scanning Power</span><span class="stat-val">${fmt(scanningPower)} MJ</span></div>`;
+    if (scanningTier)   h += `<div class="stat-row"><span class="stat-label">Max Scanning Tier</span><span class="stat-val">${fmt(scanningTier)}</span></div>`;
+    if (radarRange)     h += `<div class="stat-row"><span class="stat-label">Max Radar Range</span><span class="stat-val">${fmt(radarRange)} np</span></div>`;
+    if (miningPowerUse) h += `<div class="stat-row"><span class="stat-label">Power Usage (active)</span><span class="stat-val">${fmt(miningPowerUse)} MA</span></div>`;
+    if (miningHeatGen)  h += `<div class="stat-row"><span class="stat-label">Heat Generation (active)</span><span class="stat-val">${fmt(miningHeatGen)} MW</span></div>`;
+    h += `</div>`;
+  }
+
+  // ── Combat & Defense ── (real per-skill attributes: GunFire/MissileAttack/MinerAttack/Shield)
+  if (hasCombat) {
+    h += `<div class="stat-section"><div class="stat-section-label">Combat & Defense</div>`;
+    if (shipDamage)     h += `<div class="stat-row"><span class="stat-label">Structural Damage</span><span class="stat-val">${fmt(shipDamage)} hp</span></div>`;
+    if (ammoUse)        h += `<div class="stat-row"><span class="stat-label">Ammo Consumption</span><span class="stat-val">${fmt(ammoUse)}</span></div>`;
+    if (shieldCharge)   h += `<div class="stat-row"><span class="stat-label">Shield Max Charge</span><span class="stat-val">${fmt(shieldCharge)}</span></div>`;
+    if (dmgNegation)    h += `<div class="stat-row"><span class="stat-label">Damage Negation</span><span class="stat-val">${fmt(dmgNegation)}</span></div>`;
+    if (shieldRegen)    h += `<div class="stat-row"><span class="stat-label">Shield Regen Speed</span><span class="stat-val">${fmt(shieldRegen)}</span></div>`;
+    if (shieldPowerUse) h += `<div class="stat-row"><span class="stat-label">Power Usage (active)</span><span class="stat-val">${fmt(shieldPowerUse)} MA</span></div>`;
+    if (combatHeatGen)  h += `<div class="stat-row"><span class="stat-label">Heat Generation (active)</span><span class="stat-val">${fmt(combatHeatGen)} MW</span></div>`;
+    if (hullDmgReduct)  h += `<div class="stat-row"><span class="stat-label">Hull Impact Damage Reduction</span><span class="stat-val">${fmt(hullDmgReduct)}%</span></div>`;
+    h += `</div>`;
   }
 
   el.innerHTML = h;
@@ -1755,7 +1901,7 @@ function animate() { requestAnimationFrame(animate); moveCamera(); controls.upda
 
 async function init() {
   await loadData();
-  await loadStats();
+  await loadConstants();
   await loadManifest();
   resize();
   buildPalette();

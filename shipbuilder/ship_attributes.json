@@ -1,0 +1,882 @@
+{
+  "Default": {
+    "name": "Default",
+    "unit": null
+  },
+  "Meters": {
+    "name": "Distance",
+    "unit": "m"
+  },
+  "StorageUnits": {
+    "name": "Storage Units",
+    "unit": "su"
+  },
+  "Price": {
+    "name": "Price",
+    "unit": "€"
+  },
+  "PriceFromCraftOutput": {
+    "name": "Price craft rate",
+    "unit": "%"
+  },
+  "MaxSpeed": {
+    "name": "Max Speed",
+    "unit": "np/s"
+  },
+  "MaxBoostSpeed": {
+    "name": "Max Boost Speed",
+    "unit": "np/s"
+  },
+  "PowerStorage": {
+    "name": "Power Storage",
+    "unit": "MAs"
+  },
+  "MaxPowerStorage": {
+    "name": "Max Power Storage",
+    "unit": "MAs"
+  },
+  "CurrentPower_Display": {
+    "name": "Current Power",
+    "unit": "MAs"
+  },
+  "SolidStorage": {
+    "name": "Solid Storage",
+    "unit": "su"
+  },
+  "CurrentSolidStorage_Display": {
+    "name": "Current Solid Storage",
+    "unit": "su"
+  },
+  "OutputStorage": {
+    "name": "Output Storage",
+    "unit": "su"
+  },
+  "InputStorage": {
+    "name": "Input Storage",
+    "unit": "su"
+  },
+  "ConstructionTime": {
+    "name": "Construction Time",
+    "unit": "s"
+  },
+  "CraftTime": {
+    "name": "Craft Time",
+    "unit": "s"
+  },
+  "CraftTax": {
+    "name": "Craft Tax",
+    "unit": "€"
+  },
+  "Duration": {
+    "name": "Duration",
+    "unit": "s"
+  },
+  "PersonaEquipCost": {
+    "name": "Equip Cost",
+    "unit": "pts"
+  },
+  "ItemDurability": {
+    "name": "Durability",
+    "unit": null
+  },
+  "Temperature": {
+    "name": "Temperature",
+    "unit": "°C"
+  },
+  "HeatProtection": {
+    "name": "Heat Protection",
+    "unit": null
+  },
+  "ColdProtection": {
+    "name": "Cold Protection",
+    "unit": null
+  },
+  "Radioactivity": {
+    "name": "Radioactivity",
+    "unit": "MBq"
+  },
+  "RadioactivityProtection": {
+    "name": "Radioactivity Protection",
+    "unit": "MBq"
+  },
+  "BeaconRange": {
+    "name": "Range",
+    "unit": "m"
+  },
+  "MaxTechXP": {
+    "name": "Experience Capacity",
+    "unit": null
+  },
+  "PatchSlots": {
+    "name": "Patch Slots",
+    "unit": null
+  },
+  "ShuttleSlots": {
+    "name": "Shuttle Slots",
+    "unit": null
+  },
+  "ShuttleRange": {
+    "name": "Shuttle Range",
+    "unit": "np"
+  },
+  "Frame": {
+    "name": "Frame",
+    "unit": null
+  },
+  "ShipWeight": {
+    "name": "Weight",
+    "unit": "t"
+  },
+  "Hull": {
+    "name": "Hull",
+    "unit": null
+  },
+  "CurrentHull_Display": {
+    "name": "Current Hull",
+    "unit": null
+  },
+  "HeatCapacity": {
+    "name": "Heat Capacity",
+    "unit": "MJ/K"
+  },
+  "HeatInterfaceMaterial": {
+    "name": "Material Heat Conductivity",
+    "unit": "W/aK"
+  },
+  "HeatInterfaceParts": {
+    "name": "Parts Heat Interface",
+    "unit": "(kW/K)^(3/2)"
+  },
+  "HeatInterfaceShip": {
+    "name": "Heat Interface",
+    "unit": "MW/K"
+  },
+  "SystemSupport": {
+    "name": "System Support",
+    "unit": "SP"
+  },
+  "SystemRequirement": {
+    "name": "System Requirements",
+    "unit": "SP"
+  },
+  "SystemMalusForShipPoints": {
+    "name": "System Penalty",
+    "unit": "SP"
+  },
+  "SystemEfficiency": {
+    "name": "System Efficiency",
+    "unit": null
+  },
+  "EngineForce": {
+    "name": "Force",
+    "unit": "t"
+  },
+  "EngineThrust": {
+    "name": "Thrust",
+    "unit": "np/s"
+  },
+  "EngineThrustBonusUpwards": {
+    "name": "Liftoff Speed Bonus",
+    "unit": null
+  },
+  "FTOilStorage": {
+    "name": "Mag-Plasma Storage",
+    "unit": "L"
+  },
+  "FTLEngineJumpCost": {
+    "name": "FTL Jump Cost",
+    "unit": "L/np"
+  },
+  "FTLEngineWeightCapacity": {
+    "name": "FTL Weight Capacity",
+    "unit": "t"
+  },
+  "FakeFTLEngineClass": {
+    "name": "FTL Engine Class",
+    "unit": null
+  },
+  "FakeFTLOptimalMaxWeight": {
+    "name": "Optimal up to",
+    "unit": "t"
+  },
+  "FTOilConsumptionFactor": {
+    "name": "Mag-Plasma Consumption",
+    "unit": null
+  },
+  "FTOilConsumptionFactorOnVisitedPath": {
+    "name": "Mag-Plasma Cost On Known Paths",
+    "unit": null
+  },
+  "Integrity": {
+    "name": "Integrity",
+    "unit": "%"
+  },
+  "SpotLightAngle": {
+    "name": "Light Angle",
+    "unit": "°"
+  },
+  "SpotLightRange": {
+    "name": "Light Range",
+    "unit": "np"
+  },
+  "SpotLightPower": {
+    "name": "Luminous Power",
+    "unit": "lm"
+  },
+  "EnableNavigator": {
+    "name": "Unlock path planning",
+    "unit": null
+  },
+  "SteeringStrength": {
+    "name": "Steering Strength",
+    "unit": null
+  },
+  "Maneuvrability": {
+    "name": "Maneuverability",
+    "unit": null
+  },
+  "AccelerationTime": {
+    "name": "Acceleration Time",
+    "unit": "s"
+  },
+  "ShipDecoSupport": {
+    "name": "Decoration Capacity",
+    "unit": "DP"
+  },
+  "MaximumBases": {
+    "name": "Bases",
+    "unit": null
+  },
+  "CorpoPermitAccess": {
+    "name": "“Corpo Permits” Tab",
+    "unit": null
+  },
+  "MaximumShips": {
+    "name": "Ships",
+    "unit": null
+  },
+  "MaximumMembers": {
+    "name": "Members",
+    "unit": null
+  },
+  "CorpoUnlockAttribute": {
+    "name": "“Invite” Right",
+    "unit": null
+  },
+  "CorpoUnlockAttribute1": {
+    "name": "“Fire” Right",
+    "unit": null
+  },
+  "CorpoUnlockGroupConfig": {
+    "name": "Group Settings",
+    "unit": null
+  },
+  "CorpoUnlockAttribute2": {
+    "name": "“Permit Management” Right",
+    "unit": null
+  },
+  "CorpoUnlockCredits": {
+    "name": "Credit Pooling",
+    "unit": null
+  },
+  "CorpoUnlockAttribute3": {
+    "name": "“Credit Gift” Right",
+    "unit": null
+  },
+  "CorpoUnlockAttribute4": {
+    "name": "“Base Management” Right",
+    "unit": null
+  },
+  "CorpoLicenseToReput": {
+    "name": "Reputation from License Points",
+    "unit": null
+  },
+  "CorpoBaseFootprint": {
+    "name": "Footprint Capacity",
+    "unit": null
+  },
+  "CorpoStorageBonus": {
+    "name": "Storage Bonus",
+    "unit": null
+  },
+  "CorpoManageStorage": {
+    "name": "“Station Storage Management” Right",
+    "unit": null
+  },
+  "CorpoUnlockStorage": {
+    "name": "Station Storage",
+    "unit": null
+  },
+  "CorpoUseStorage": {
+    "name": "“Station Storage Use” Right",
+    "unit": null
+  },
+  "MaximumContracts": {
+    "name": "Maximum Requests",
+    "unit": null
+  },
+  "CorpoContractReputationBonus": {
+    "name": "Reputation",
+    "unit": null
+  },
+  "CorpoContractLPBonus": {
+    "name": "License Points",
+    "unit": null
+  },
+  "CorpoContractCreditsBonus": {
+    "name": "Credits",
+    "unit": null
+  },
+  "CorpoUpkeep": {
+    "name": "Upkeep",
+    "unit": "<img src=\"item/CorpoCredits\"/>/d"
+  },
+  "CorpoCanInvite": {
+    "name": "Can invite new members",
+    "unit": null
+  },
+  "CorpoCanRemoveUser": {
+    "name": "Can fire members",
+    "unit": null
+  },
+  "CorpoCanPromoteUser": {
+    "name": "Can promote members",
+    "unit": null
+  },
+  "CorpoCanDemoteUser": {
+    "name": "Can demote members",
+    "unit": null
+  },
+  "CorpoCanEditInternalInfos": {
+    "name": "Can edit internal info",
+    "unit": null
+  },
+  "CorpoCanAcceptContract": {
+    "name": "Can accept requests",
+    "unit": null
+  },
+  "CorpoCanTransferCredits": {
+    "name": "Can transfer credits",
+    "unit": null
+  },
+  "CorpoCanTransferAssets": {
+    "name": "Can transfer assets",
+    "unit": null
+  },
+  "CorpoCanManageBases": {
+    "name": "Can manage bases",
+    "unit": null
+  },
+  "CorpoCanSpendLP": {
+    "name": "Can spend license points",
+    "unit": null
+  },
+  "CorpoCanManagePermits": {
+    "name": "Can unlock and cancel corpo permits",
+    "unit": null
+  },
+  "CorpoCanManageStorage": {
+    "name": "Can buy and upgrade station storage",
+    "unit": null
+  },
+  "CorpoCanUseStorage": {
+    "name": "Can use station storage",
+    "unit": null
+  },
+  "CorpoDefaultGroup": {
+    "name": "Default Group",
+    "unit": null
+  },
+  "MiningPower": {
+    "name": "Mining Power",
+    "unit": "MJ"
+  },
+  "MiningTier": {
+    "name": "Mining Tier",
+    "unit": null
+  },
+  "MiningLastYield": {
+    "name": "Last Yield",
+    "unit": null
+  },
+  "MiningOutputIncrease": {
+    "name": "Increased Output",
+    "unit": "%"
+  },
+  "MiningSecondaryChanceIncrease": {
+    "name": "Rare Find Probability",
+    "unit": "%"
+  },
+  "ResourceScanningPower": {
+    "name": "Scanning Power",
+    "unit": "MJ"
+  },
+  "MaxScanningTier": {
+    "name": "Scanning Tier",
+    "unit": null
+  },
+  "FluidStorage": {
+    "name": "Reservoir Size",
+    "unit": "L"
+  },
+  "FluidPumpingSpeed": {
+    "name": "Flow Rate",
+    "unit": "L/s"
+  },
+  "ActiveHeatGeneration": {
+    "name": "Heat Generation",
+    "unit": "MW"
+  },
+  "EngineHeatGeneration": {
+    "name": "Engine Heat Generation",
+    "unit": "MW"
+  },
+  "BoosterHeatGeneration": {
+    "name": "Boost Heat Generation",
+    "unit": "MW"
+  },
+  "FakeAllActiveHeatGeneration": {
+    "name": "Heat Generation",
+    "unit": "MW"
+  },
+  "HeatGeneration": {
+    "name": "Heat Generation",
+    "unit": "MW"
+  },
+  "HeatDissipation": {
+    "name": "Heat Dissipation",
+    "unit": "MW"
+  },
+  "EngineHeatDissipation": {
+    "name": "Engine Heat Dissipation",
+    "unit": "Ws/p"
+  },
+  "BatteryChargeSpeed": {
+    "name": "Max Charge Speed",
+    "unit": "MA"
+  },
+  "BatteryEfficiency": {
+    "name": "Theoretical Efficiency",
+    "unit": "%"
+  },
+  "BatteryWastage": {
+    "name": "Self-Discharge",
+    "unit": "%/s"
+  },
+  "BoostThrust": {
+    "name": "Boost Thrust",
+    "unit": null
+  },
+  "PowerProduction": {
+    "name": "Power Generation",
+    "unit": "MA"
+  },
+  "PowerUsage": {
+    "name": "Power Usage",
+    "unit": "MA"
+  },
+  "FakeAllPowerConsumption": {
+    "name": "Power Consumption",
+    "unit": "MA"
+  },
+  "EngineConsumption": {
+    "name": "Power Consumption",
+    "unit": "MA"
+  },
+  "EngineConsumptionReductionInDark": {
+    "name": "Night Power Consumption",
+    "unit": null
+  },
+  "BoostConsumption": {
+    "name": "Boost Power Consumption",
+    "unit": "MA"
+  },
+  "FTLMaxCritProbaReduction": {
+    "name": "FTL Crit Chance",
+    "unit": null
+  },
+  "FTLDamageAbsorption": {
+    "name": "FTL Damage Reduction",
+    "unit": null
+  },
+  "HullImpactDamageReduction": {
+    "name": "Hull Impact Damage",
+    "unit": null
+  },
+  "RadarRange": {
+    "name": "Max Range",
+    "unit": "np"
+  },
+  "RadarRevealFromAfar": {
+    "name": "Reveal known resources from afar",
+    "unit": null
+  },
+  "WreckFinder": {
+    "name": "Wreck Finder",
+    "unit": null
+  },
+  "ShieldMaxCharge": {
+    "name": "Shield Max Charge",
+    "unit": null
+  },
+  "DamageNegation": {
+    "name": "Damage Negation",
+    "unit": null
+  },
+  "RegenPowerConsumption": {
+    "name": "Regen Power Consumption",
+    "unit": "MA"
+  },
+  "RegenDelay": {
+    "name": "Regen Delay",
+    "unit": "s"
+  },
+  "RegenSpeed": {
+    "name": "Regen Speed",
+    "unit": null
+  },
+  "RegenSpeedDeactivated": {
+    "name": "Regen Speed Deactivated",
+    "unit": null
+  },
+  "Cooldown": {
+    "name": "Cooldown",
+    "unit": "s"
+  },
+  "ChargeDuration": {
+    "name": "Charge",
+    "unit": "s"
+  },
+  "SkillDurabilityCostInstant": {
+    "name": "Durability cost per use",
+    "unit": null
+  },
+  "SkillDurabilityCostPerSecond": {
+    "name": "Durability cost per second",
+    "unit": null
+  },
+  "Sustain": {
+    "name": "Sustain",
+    "unit": "s"
+  },
+  "Damage": {
+    "name": "Structural Damage",
+    "unit": "hp"
+  },
+  "BurstShotCount": {
+    "name": "Burst Shot Count",
+    "unit": null
+  },
+  "BurstShotDuration": {
+    "name": "Burst Shot Duration",
+    "unit": null
+  },
+  "AmmoConsumption": {
+    "name": "Ammo Consumption",
+    "unit": null
+  },
+  "ProjectileSpeed": {
+    "name": "Projectile Speed",
+    "unit": "np/s"
+  },
+  "Accuracy": {
+    "name": "Accuracy",
+    "unit": null
+  },
+  "CurrentAgility_Display": {
+    "name": "Agility",
+    "unit": null
+  },
+  "AgilityIgnoreWeightThroughEngineForce": {
+    "name": "Ignored weight",
+    "unit": null
+  },
+  "Reliability": {
+    "name": "Reliability",
+    "unit": null
+  },
+  "AllowDismantleShipWrecks": {
+    "name": "Wreck Dismantling",
+    "unit": null
+  },
+  "MaxConnectorAmount": {
+    "name": "Max Connection",
+    "unit": null
+  },
+  "ControlBaseRadius": {
+    "name": "Control Base Radius",
+    "unit": "np"
+  },
+  "EnergyDemand": {
+    "name": "Energy Demand",
+    "unit": "MA"
+  },
+  "EnergyOffer": {
+    "name": "Energy Generation",
+    "unit": "MA"
+  },
+  "EnergyStockCapacity": {
+    "name": "Energy Capacity",
+    "unit": "MAs"
+  },
+  "EnergyTransferCapacity": {
+    "name": "Transfer Capacity",
+    "unit": "MA"
+  },
+  "FuelConversion": {
+    "name": "Fuel Power",
+    "unit": null
+  },
+  "FuelConsumption": {
+    "name": "Fuel Consumption",
+    "unit": "Hz"
+  },
+  "ProduceTimeFactor": {
+    "name": "Produce Time Factor",
+    "unit": null
+  },
+  "UseManualCraftingTime": {
+    "name": "Use Manual Crafting Time",
+    "unit": null
+  },
+  "BuildPointsCost": {
+    "name": "Footprint",
+    "unit": "FP"
+  },
+  "DecoPointsCost": {
+    "name": "Deco Points",
+    "unit": "DP"
+  },
+  "MaxBuildPoints": {
+    "name": "Footprint Capacity",
+    "unit": "FP"
+  },
+  "MaxDecoPoints": {
+    "name": "Decoration Capacity",
+    "unit": "DP"
+  },
+  "DroneRouteCount": {
+    "name": "Drone Route Count",
+    "unit": null
+  },
+  "FakeGiveTechXP": {
+    "name": "Generate Technology XP",
+    "unit": null
+  },
+  "FarmPlantGrowthSpeed": {
+    "name": "Productive Metabolic Speed",
+    "unit": null
+  },
+  "FarmPlantGrowthSpeedMult": {
+    "name": "Productive Metabolic Speed",
+    "unit": null
+  },
+  "FarmPlantFruitProductionSpeed": {
+    "name": "Germ Quantity",
+    "unit": null
+  },
+  "FarmPlantFruitProductionSpeedMult": {
+    "name": "Germ Quantity",
+    "unit": null
+  },
+  "FarmPlantExtraProductionSpeed": {
+    "name": "Byproduct Quantity",
+    "unit": null
+  },
+  "FarmPlantExtraProductionSpeedMult": {
+    "name": "Byproduct Quantity",
+    "unit": null
+  },
+  "FarmPlantAllSpeed": {
+    "name": "Growth and Production Speed",
+    "unit": null
+  },
+  "FarmPlantDeathSpeed": {
+    "name": "Decay Speed",
+    "unit": null
+  },
+  "FarmPlantDissolveDead": {
+    "name": "Dissolve Dead Plants",
+    "unit": null
+  },
+  "FarmPlantSeedGerminateSpeed": {
+    "name": "Seed Growth Speed",
+    "unit": null
+  },
+  "FarmPlantSeedDeathSpeed": {
+    "name": "Seed Death Speed",
+    "unit": null
+  },
+  "FarmPlantLiquidConsumption": {
+    "name": "Liquid Consumption",
+    "unit": null
+  },
+  "FarmPlantLiquidConsumptionMult": {
+    "name": "Liquid Consumption",
+    "unit": null
+  },
+  "FarmPlantSupplementConsumption": {
+    "name": "Supplement Consumption",
+    "unit": null
+  },
+  "FarmPlantSupplementConsumptionMult": {
+    "name": "Supplement Consumption",
+    "unit": null
+  },
+  "FarmPlantIgnoreMinRequirement": {
+    "name": "Ignore One Requirement",
+    "unit": null
+  },
+  "FarmPlantSetLightToUV": {
+    "name": "Set Light to UV",
+    "unit": null
+  },
+  "PlayerStructureAccess": {
+    "name": "Structure access",
+    "unit": null
+  },
+  "PlayerShipDecoAccess": {
+    "name": "Decoration access",
+    "unit": null
+  },
+  "PlayerShipDecalAccess": {
+    "name": "Advanced Decoration access",
+    "unit": null
+  },
+  "PlayerJetpackLevel": {
+    "name": "Jetpack Level",
+    "unit": null
+  },
+  "PlayerFightSkillsAccess": {
+    "name": "Configure combat skills",
+    "unit": null
+  },
+  "SoldCapBonus": {
+    "name": "Increase Company Reputation",
+    "unit": null
+  },
+  "Exploration": {
+    "name": "Exploration",
+    "unit": null
+  },
+  "Technology": {
+    "name": "Technology",
+    "unit": null
+  },
+  "Science": {
+    "name": "Science",
+    "unit": null
+  },
+  "Social": {
+    "name": "Social",
+    "unit": null
+  },
+  "Combat": {
+    "name": "Combat",
+    "unit": null
+  },
+  "RequiredExploration": {
+    "name": "Required Exploration Level",
+    "unit": null
+  },
+  "RequiredTechnology": {
+    "name": "Required Technology Level",
+    "unit": null
+  },
+  "RequiredCombat": {
+    "name": "Required Combat Level",
+    "unit": null
+  },
+  "RequiredScience": {
+    "name": "Required Science Level",
+    "unit": null
+  },
+  "RequiredSocial": {
+    "name": "Required Social Level",
+    "unit": null
+  },
+  "ExplorationLevelReduction": {
+    "name": "Sector Exploration Level",
+    "unit": null
+  },
+  "PlanetWater": {
+    "name": "Water presence",
+    "unit": null
+  },
+  "PlanetWaterLow": {
+    "name": "Low water levels",
+    "unit": null
+  },
+  "PlanetWaterHigh": {
+    "name": "High water levels",
+    "unit": null
+  },
+  "PlanetTemperate": {
+    "name": "Temperate",
+    "unit": "°C"
+  },
+  "PlanetHot1": {
+    "name": "Hot",
+    "unit": "°C"
+  },
+  "PlanetHot2": {
+    "name": "Very Hot",
+    "unit": "°C"
+  },
+  "PlanetHot3": {
+    "name": "Inferno",
+    "unit": "°C"
+  },
+  "PlanetCold1": {
+    "name": "Cold",
+    "unit": "°C"
+  },
+  "PlanetCold2": {
+    "name": "Frozen",
+    "unit": "°C"
+  },
+  "PlanetCold3": {
+    "name": "Dead Frozen",
+    "unit": "°C"
+  },
+  "PlanetLowGravity": {
+    "name": "Low Gravity",
+    "unit": null
+  },
+  "PlanetRadioactive": {
+    "name": "Radioactive",
+    "unit": "MBq"
+  },
+  "PlanetCorrosive": {
+    "name": "Corrosive",
+    "unit": null
+  },
+  "PlanetElectromagnetic": {
+    "name": "Electromagnetic",
+    "unit": null
+  },
+  "PlanetFoggy": {
+    "name": "Foggy",
+    "unit": null
+  },
+  "AsteroidDensity": {
+    "name": "Density",
+    "unit": null
+  },
+  "SystemHot": {
+    "name": "Hot",
+    "unit": null
+  },
+  "SystemDebris": {
+    "name": "Debris",
+    "unit": null
+  },
+  "SystemSecret": {
+    "name": "Secret",
+    "unit": null
+  },
+  "LinkMagneticAnomaly": {
+    "name": "Magnetic Anomaly",
+    "unit": null
+  }
+}

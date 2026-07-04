@@ -14,15 +14,15 @@
       ],
       "price": 800,
       "stats": {
-        "Frame": 40,
         "SystemSupport": 96,
-        "Hull": 10,
+        "Frame": 40,
         "ShipWeight": 20,
+        "Hull": 10,
         "HeatCapacity": 20,
-        "StorageUnits": 20,
-        "ShipDecoSupport": 4,
+        "HeatInterfaceParts": 12,
         "HeatInterfaceMaterial": 60,
-        "HeatInterfaceParts": 12
+        "StorageUnits": 20,
+        "ShipDecoSupport": 4
       },
       "cost": "Small Steel Part Casingx2, Support Hardwarex2",
       "grad": {
@@ -123,15 +123,15 @@
       ],
       "price": 870,
       "stats": {
-        "Frame": 36,
         "SystemSupport": 240,
-        "Hull": 15,
+        "Frame": 36,
         "ShipWeight": 30,
+        "Hull": 15,
         "HeatCapacity": 30,
-        "StorageUnits": 20,
-        "ShipDecoSupport": 6,
+        "HeatInterfaceParts": 18,
         "HeatInterfaceMaterial": 60,
-        "HeatInterfaceParts": 18
+        "StorageUnits": 20,
+        "ShipDecoSupport": 6
       },
       "cost": "Small Steel Part Casingx2, Support Hardwarex4",
       "grad": {
@@ -235,15 +235,15 @@
       ],
       "price": 1210,
       "stats": {
-        "Frame": 60,
         "SystemSupport": 144,
-        "Hull": 15,
+        "Frame": 60,
         "ShipWeight": 30,
+        "Hull": 15,
         "HeatCapacity": 30,
-        "StorageUnits": 20,
-        "ShipDecoSupport": 6,
+        "HeatInterfaceParts": 18,
         "HeatInterfaceMaterial": 60,
-        "HeatInterfaceParts": 18
+        "StorageUnits": 20,
+        "ShipDecoSupport": 6
       },
       "cost": "Small Steel Part Casingx3, Support Hardwarex3",
       "grad": {
@@ -347,15 +347,15 @@
       ],
       "price": 1300,
       "stats": {
-        "Frame": 54,
         "SystemSupport": 360,
-        "Hull": 22.5,
+        "Frame": 54,
         "ShipWeight": 45,
+        "Hull": 22.5,
         "HeatCapacity": 45,
-        "StorageUnits": 20,
-        "ShipDecoSupport": 9,
+        "HeatInterfaceParts": 27,
         "HeatInterfaceMaterial": 60,
-        "HeatInterfaceParts": 27
+        "StorageUnits": 20,
+        "ShipDecoSupport": 9
       },
       "cost": "Small Steel Part Casingx3, Support Hardwarex6",
       "grad": {
@@ -459,15 +459,15 @@
       ],
       "price": 1610,
       "stats": {
-        "Frame": 80,
         "SystemSupport": 192,
-        "Hull": 20,
+        "Frame": 80,
         "ShipWeight": 40,
+        "Hull": 20,
         "HeatCapacity": 40,
-        "StorageUnits": 20,
-        "ShipDecoSupport": 8,
+        "HeatInterfaceParts": 24,
         "HeatInterfaceMaterial": 60,
-        "HeatInterfaceParts": 24
+        "StorageUnits": 20,
+        "ShipDecoSupport": 8
       },
       "cost": "Small Steel Part Casingx4, Support Hardwarex4",
       "grad": {
@@ -571,15 +571,15 @@
       ],
       "price": 1740,
       "stats": {
-        "Frame": 72,
         "SystemSupport": 480,
-        "Hull": 30,
+        "Frame": 72,
         "ShipWeight": 60,
+        "Hull": 30,
         "HeatCapacity": 60,
-        "StorageUnits": 20,
-        "ShipDecoSupport": 12,
+        "HeatInterfaceParts": 36,
         "HeatInterfaceMaterial": 60,
-        "HeatInterfaceParts": 36
+        "StorageUnits": 20,
+        "ShipDecoSupport": 12
       },
       "cost": "Small Steel Part Casingx4, Support Hardwarex8",
       "grad": {
@@ -683,15 +683,15 @@
       ],
       "price": 1810,
       "stats": {
-        "Frame": 40,
         "SystemSupport": 96,
-        "Hull": 10,
+        "Frame": 40,
         "ShipWeight": 16,
+        "Hull": 10,
         "HeatCapacity": 22,
-        "StorageUnits": 20,
-        "ShipDecoSupport": 4,
+        "HeatInterfaceParts": 12,
         "HeatInterfaceMaterial": 60,
-        "HeatInterfaceParts": 12
+        "StorageUnits": 20,
+        "ShipDecoSupport": 4
       },
       "cost": "Small Titanium Part Casingx2, Support Hardwarex2",
       "grad": {
@@ -788,15 +788,15 @@
       ],
       "price": 1870,
       "stats": {
-        "Frame": 36,
         "SystemSupport": 240,
-        "Hull": 15,
+        "Frame": 36,
         "ShipWeight": 24,
+        "Hull": 15,
         "HeatCapacity": 33,
-        "StorageUnits": 20,
-        "ShipDecoSupport": 6,
+        "HeatInterfaceParts": 18,
         "HeatInterfaceMaterial": 60,
-        "HeatInterfaceParts": 18
+        "StorageUnits": 20,
+        "ShipDecoSupport": 6
       },
       "cost": "Small Titanium Part Casingx2, Support Hardwarex4",
       "grad": {
@@ -896,15 +896,15 @@
       ],
       "price": 2720,
       "stats": {
-        "Frame": 60,
         "SystemSupport": 144,
-        "Hull": 15,
+        "Frame": 60,
         "ShipWeight": 24,
+        "Hull": 15,
         "HeatCapacity": 33,
-        "StorageUnits": 20,
-        "ShipDecoSupport": 6,
+        "HeatInterfaceParts": 18,
         "HeatInterfaceMaterial": 60,
-        "HeatInterfaceParts": 18
+        "StorageUnits": 20,
+        "ShipDecoSupport": 6
       },
       "cost": "Small Titanium Part Casingx3, Support Hardwarex3",
       "grad": {
@@ -1004,15 +1004,15 @@
       ],
       "price": 2810,
       "stats": {
-        "Frame": 54,
         "SystemSupport": 360,
-        "Hull": 22.5,
+        "Frame": 54,
         "ShipWeight": 36,
+        "Hull": 22.5,
         "HeatCapacity": 49.5,
-        "StorageUnits": 20,
-        "ShipDecoSupport": 9,
+        "HeatInterfaceParts": 27,
         "HeatInterfaceMaterial": 60,
-        "HeatInterfaceParts": 27
+        "StorageUnits": 20,
+        "ShipDecoSupport": 9
       },
       "cost": "Small Titanium Part Casingx3, Support Hardwarex6",
       "grad": {
@@ -1112,15 +1112,15 @@
       ],
       "price": 3620,
       "stats": {
-        "Frame": 80,
         "SystemSupport": 192,
-        "Hull": 20,
+        "Frame": 80,
         "ShipWeight": 32,
+        "Hull": 20,
         "HeatCapacity": 44,
-        "StorageUnits": 20,
-        "ShipDecoSupport": 8,
+        "HeatInterfaceParts": 24,
         "HeatInterfaceMaterial": 60,
-        "HeatInterfaceParts": 24
+        "StorageUnits": 20,
+        "ShipDecoSupport": 8
       },
       "cost": "Small Titanium Part Casingx4, Support Hardwarex4",
       "grad": {
@@ -1220,15 +1220,15 @@
       ],
       "price": 3750,
       "stats": {
-        "Frame": 72,
         "SystemSupport": 480,
-        "Hull": 30,
+        "Frame": 72,
         "ShipWeight": 48,
+        "Hull": 30,
         "HeatCapacity": 66,
-        "StorageUnits": 20,
-        "ShipDecoSupport": 12,
+        "HeatInterfaceParts": 36,
         "HeatInterfaceMaterial": 60,
-        "HeatInterfaceParts": 36
+        "StorageUnits": 20,
+        "ShipDecoSupport": 12
       },
       "cost": "Small Titanium Part Casingx4, Support Hardwarex8",
       "grad": {
@@ -1328,15 +1328,15 @@
       ],
       "price": 9200,
       "stats": {
-        "Frame": 256,
         "SystemSupport": 480,
-        "Hull": 20,
+        "Frame": 256,
         "ShipWeight": 64,
+        "Hull": 20,
         "HeatCapacity": 88,
-        "StorageUnits": 50,
-        "ShipDecoSupport": 16,
+        "HeatInterfaceParts": 48,
         "HeatInterfaceMaterial": 60,
-        "HeatInterfaceParts": 48
+        "StorageUnits": 50,
+        "ShipDecoSupport": 16
       },
       "cost": "Titanium Part Casingx2, Support Hardwarex8",
       "grad": {
@@ -1436,15 +1436,15 @@
       ],
       "price": 13800,
       "stats": {
-        "Frame": 384,
         "SystemSupport": 720,
-        "Hull": 30,
+        "Frame": 384,
         "ShipWeight": 96,
+        "Hull": 30,
         "HeatCapacity": 132,
-        "StorageUnits": 50,
-        "ShipDecoSupport": 24,
+        "HeatInterfaceParts": 72,
         "HeatInterfaceMaterial": 60,
-        "HeatInterfaceParts": 72
+        "StorageUnits": 50,
+        "ShipDecoSupport": 24
       },
       "cost": "Titanium Part Casingx3, Support Hardwarex12",
       "grad": {
@@ -1544,15 +1544,15 @@
       ],
       "price": 18400,
       "stats": {
-        "Frame": 512,
         "SystemSupport": 960,
-        "Hull": 40,
+        "Frame": 512,
         "ShipWeight": 128,
+        "Hull": 40,
         "HeatCapacity": 176,
-        "StorageUnits": 50,
-        "ShipDecoSupport": 32,
+        "HeatInterfaceParts": 96,
         "HeatInterfaceMaterial": 60,
-        "HeatInterfaceParts": 96
+        "StorageUnits": 50,
+        "ShipDecoSupport": 32
       },
       "cost": "Titanium Part Casingx4, Support Hardwarex16",
       "grad": {
@@ -1653,13 +1653,13 @@
       ],
       "price": 61,
       "stats": {
-        "Frame": 10,
         "SystemSupport": 60,
-        "Hull": 10,
+        "Frame": 10,
         "ShipWeight": 10,
+        "Hull": 10,
         "HeatCapacity": 20,
-        "HeatInterfaceMaterial": 36,
-        "HeatInterfaceParts": 7.2
+        "HeatInterfaceParts": 7.2,
+        "HeatInterfaceMaterial": 36
       },
       "cost": "Small Alloy X Part Casingx2, Support Hardwarex2",
       "grad": {
@@ -1766,13 +1766,13 @@
       ],
       "price": 92,
       "stats": {
-        "Frame": 15,
         "SystemSupport": 90,
-        "Hull": 15,
+        "Frame": 15,
         "ShipWeight": 15,
+        "Hull": 15,
         "HeatCapacity": 30,
-        "HeatInterfaceMaterial": 36,
-        "HeatInterfaceParts": 10.8
+        "HeatInterfaceParts": 10.8,
+        "HeatInterfaceMaterial": 36
       },
       "cost": "Small Alloy X Part Casingx3, Support Hardwarex3",
       "grad": {
@@ -1882,13 +1882,13 @@
       ],
       "price": 122,
       "stats": {
-        "Frame": 15,
         "SystemSupport": 150,
-        "Hull": 9,
+        "Frame": 15,
         "ShipWeight": 15,
+        "Hull": 9,
         "HeatCapacity": 30,
-        "HeatInterfaceMaterial": 36,
-        "HeatInterfaceParts": 10.8
+        "HeatInterfaceParts": 10.8,
+        "HeatInterfaceMaterial": 36
       },
       "cost": "Small Alloy X Part Casingx2, Support Hardwarex4",
       "grad": {
@@ -1998,13 +1998,13 @@
       ],
       "price": 122,
       "stats": {
-        "Frame": 20,
         "SystemSupport": 120,
-        "Hull": 20,
+        "Frame": 20,
         "ShipWeight": 20,
+        "Hull": 20,
         "HeatCapacity": 40,
-        "HeatInterfaceMaterial": 36,
-        "HeatInterfaceParts": 14.4
+        "HeatInterfaceParts": 14.4,
+        "HeatInterfaceMaterial": 36
       },
       "cost": "Small Alloy X Part Casingx4, Support Hardwarex4",
       "grad": {
@@ -2114,13 +2114,13 @@
       ],
       "price": 184,
       "stats": {
-        "Frame": 22.5,
         "SystemSupport": 225,
-        "Hull": 13.5,
+        "Frame": 22.5,
         "ShipWeight": 22.5,
+        "Hull": 13.5,
         "HeatCapacity": 45,
-        "HeatInterfaceMaterial": 36,
-        "HeatInterfaceParts": 16.2
+        "HeatInterfaceParts": 16.2,
+        "HeatInterfaceMaterial": 36
       },
       "cost": "Small Alloy X Part Casingx3, Support Hardwarex6",
       "grad": {
@@ -2230,13 +2230,13 @@
       ],
       "price": 245,
       "stats": {
-        "Frame": 30,
         "SystemSupport": 300,
-        "Hull": 18,
+        "Frame": 30,
         "ShipWeight": 30,
+        "Hull": 18,
         "HeatCapacity": 60,
-        "HeatInterfaceMaterial": 36,
-        "HeatInterfaceParts": 21.6
+        "HeatInterfaceParts": 21.6,
+        "HeatInterfaceMaterial": 36
       },
       "cost": "Small Alloy X Part Casingx4, Support Hardwarex8",
       "grad": {
@@ -2346,13 +2346,13 @@
       ],
       "price": 245,
       "stats": {
-        "Frame": 160,
         "SystemSupport": 200,
-        "Hull": 20,
+        "Frame": 160,
         "ShipWeight": 40,
+        "Hull": 20,
         "HeatCapacity": 80,
-        "HeatInterfaceMaterial": 36,
-        "HeatInterfaceParts": 28.8
+        "HeatInterfaceParts": 28.8,
+        "HeatInterfaceMaterial": 36
       },
       "cost": "Alloy X Part Casingx2, Support Hardwarex8",
       "grad": {
@@ -2462,13 +2462,13 @@
       ],
       "price": 368,
       "stats": {
-        "Frame": 240,
         "SystemSupport": 300,
-        "Hull": 30,
+        "Frame": 240,
         "ShipWeight": 60,
+        "Hull": 30,
         "HeatCapacity": 120,
-        "HeatInterfaceMaterial": 36,
-        "HeatInterfaceParts": 43.2
+        "HeatInterfaceParts": 43.2,
+        "HeatInterfaceMaterial": 36
       },
       "cost": "Alloy X Part Casingx3, Support Hardwarex12",
       "grad": {
@@ -2578,13 +2578,13 @@
       ],
       "price": 491,
       "stats": {
-        "Frame": 320,
         "SystemSupport": 400,
-        "Hull": 40,
+        "Frame": 320,
         "ShipWeight": 80,
+        "Hull": 40,
         "HeatCapacity": 160,
-        "HeatInterfaceMaterial": 36,
-        "HeatInterfaceParts": 57.6
+        "HeatInterfaceParts": 57.6,
+        "HeatInterfaceMaterial": 36
       },
       "cost": "Alloy X Part Casingx4, Support Hardwarex16",
       "grad": {
@@ -2694,13 +2694,13 @@
       "price": 6400,
       "stats": {
         "Frame": 160,
-        "Hull": 20,
         "ShipWeight": 20,
+        "Hull": 20,
         "HeatCapacity": 30,
-        "StorageUnits": 20,
-        "ShipDecoSupport": 4,
+        "HeatInterfaceParts": 12,
         "HeatInterfaceMaterial": 60,
-        "HeatInterfaceParts": 12
+        "StorageUnits": 20,
+        "ShipDecoSupport": 4
       },
       "cost": "Small Solid Frame Casingx4",
       "grad": {
@@ -2802,13 +2802,13 @@
       "price": 9600,
       "stats": {
         "Frame": 240,
-        "Hull": 30,
         "ShipWeight": 30,
+        "Hull": 30,
         "HeatCapacity": 45,
-        "StorageUnits": 20,
-        "ShipDecoSupport": 6,
+        "HeatInterfaceParts": 18,
         "HeatInterfaceMaterial": 60,
-        "HeatInterfaceParts": 18
+        "StorageUnits": 20,
+        "ShipDecoSupport": 6
       },
       "cost": "Small Solid Frame Casingx6",
       "grad": {
@@ -2913,13 +2913,13 @@
       "price": 12800,
       "stats": {
         "Frame": 320,
-        "Hull": 40,
         "ShipWeight": 40,
+        "Hull": 40,
         "HeatCapacity": 60,
-        "StorageUnits": 20,
-        "ShipDecoSupport": 8,
+        "HeatInterfaceParts": 24,
         "HeatInterfaceMaterial": 60,
-        "HeatInterfaceParts": 24
+        "StorageUnits": 20,
+        "ShipDecoSupport": 8
       },
       "cost": "Small Solid Frame Casingx8",
       "grad": {
@@ -3024,13 +3024,13 @@
       "price": 33200,
       "stats": {
         "Frame": 1024,
-        "Hull": 40,
         "ShipWeight": 80,
+        "Hull": 40,
         "HeatCapacity": 120,
-        "StorageUnits": 50,
-        "ShipDecoSupport": 16,
+        "HeatInterfaceParts": 48,
         "HeatInterfaceMaterial": 60,
-        "HeatInterfaceParts": 48
+        "StorageUnits": 50,
+        "ShipDecoSupport": 16
       },
       "cost": "Solid Frame Casingx4",
       "grad": {
@@ -3135,13 +3135,13 @@
       "price": 49900,
       "stats": {
         "Frame": 1536,
-        "Hull": 60,
         "ShipWeight": 120,
+        "Hull": 60,
         "HeatCapacity": 180,
-        "StorageUnits": 50,
-        "ShipDecoSupport": 24,
+        "HeatInterfaceParts": 72,
         "HeatInterfaceMaterial": 60,
-        "HeatInterfaceParts": 72
+        "StorageUnits": 50,
+        "ShipDecoSupport": 24
       },
       "cost": "Solid Frame Casingx6",
       "grad": {
@@ -3246,13 +3246,13 @@
       "price": 66000,
       "stats": {
         "Frame": 2048,
-        "Hull": 80,
         "ShipWeight": 160,
+        "Hull": 80,
         "HeatCapacity": 240,
-        "StorageUnits": 50,
-        "ShipDecoSupport": 32,
+        "HeatInterfaceParts": 96,
         "HeatInterfaceMaterial": 60,
-        "HeatInterfaceParts": 96
+        "StorageUnits": 50,
+        "ShipDecoSupport": 32
       },
       "cost": "Solid Frame Casingx8",
       "grad": {
@@ -3356,15 +3356,15 @@
       ],
       "price": 3710,
       "stats": {
-        "Frame": 2,
         "SystemSupport": 240,
-        "Hull": 3,
+        "Frame": 2,
         "ShipWeight": 12,
+        "Hull": 3,
         "HeatCapacity": 15,
-        "StorageUnits": 20,
-        "ShipDecoSupport": 6,
+        "HeatInterfaceParts": 36,
         "HeatInterfaceMaterial": 120,
-        "HeatInterfaceParts": 36
+        "StorageUnits": 20,
+        "ShipDecoSupport": 6
       },
       "cost": "Small Levinium Part Casingx2, Support Hardwarex4",
       "grad": {
@@ -3468,15 +3468,15 @@
       ],
       "price": 5500,
       "stats": {
-        "Frame": 3,
         "SystemSupport": 360,
-        "Hull": 4.5,
+        "Frame": 3,
         "ShipWeight": 18,
+        "Hull": 4.5,
         "HeatCapacity": 22.5,
-        "StorageUnits": 20,
-        "ShipDecoSupport": 9,
+        "HeatInterfaceParts": 54,
         "HeatInterfaceMaterial": 120,
-        "HeatInterfaceParts": 54
+        "StorageUnits": 20,
+        "ShipDecoSupport": 9
       },
       "cost": "Small Levinium Part Casingx3, Support Hardwarex6",
       "grad": {
@@ -3580,15 +3580,15 @@
       ],
       "price": 7400,
       "stats": {
-        "Frame": 4,
         "SystemSupport": 480,
-        "Hull": 6,
+        "Frame": 4,
         "ShipWeight": 24,
+        "Hull": 6,
         "HeatCapacity": 30,
-        "StorageUnits": 20,
-        "ShipDecoSupport": 12,
+        "HeatInterfaceParts": 72,
         "HeatInterfaceMaterial": 120,
-        "HeatInterfaceParts": 72
+        "StorageUnits": 20,
+        "ShipDecoSupport": 12
       },
       "cost": "Small Levinium Part Casingx4, Support Hardwarex8",
       "grad": {
@@ -3692,15 +3692,15 @@
       ],
       "price": 890,
       "stats": {
-        "Frame": 40,
         "SystemSupport": 96,
-        "Hull": 10,
+        "Frame": 40,
         "ShipWeight": 20,
+        "Hull": 10,
         "HeatCapacity": 20,
-        "StorageUnits": 20,
-        "ShipDecoSupport": 4,
+        "HeatInterfaceParts": 8,
         "HeatInterfaceMaterial": 40,
-        "HeatInterfaceParts": 8
+        "StorageUnits": 20,
+        "ShipDecoSupport": 4
       },
       "cost": "Steel 4x3x1x1, Thermal Sheetx4",
       "grad": {
@@ -3801,15 +3801,15 @@
       ],
       "price": 980,
       "stats": {
-        "Frame": 36,
         "SystemSupport": 240,
-        "Hull": 15,
+        "Frame": 36,
         "ShipWeight": 30,
+        "Hull": 15,
         "HeatCapacity": 30,
-        "StorageUnits": 20,
-        "ShipDecoSupport": 6,
+        "HeatInterfaceParts": 12,
         "HeatInterfaceMaterial": 40,
-        "HeatInterfaceParts": 12
+        "StorageUnits": 20,
+        "ShipDecoSupport": 6
       },
       "cost": "Steel 4x3x2x1, Thermal Sheetx6",
       "grad": {
@@ -3913,15 +3913,15 @@
       ],
       "price": 1340,
       "stats": {
-        "Frame": 60,
         "SystemSupport": 144,
-        "Hull": 15,
+        "Frame": 60,
         "ShipWeight": 30,
+        "Hull": 15,
         "HeatCapacity": 30,
-        "StorageUnits": 20,
-        "ShipDecoSupport": 6,
+        "HeatInterfaceParts": 12,
         "HeatInterfaceMaterial": 40,
-        "HeatInterfaceParts": 12
+        "StorageUnits": 20,
+        "ShipDecoSupport": 6
       },
       "cost": "Steel 6x3x1x1, Thermal Sheetx6",
       "grad": {
@@ -4025,15 +4025,15 @@
       ],
       "price": 1460,
       "stats": {
-        "Frame": 54,
         "SystemSupport": 360,
-        "Hull": 22.5,
+        "Frame": 54,
         "ShipWeight": 45,
+        "Hull": 22.5,
         "HeatCapacity": 45,
-        "StorageUnits": 20,
-        "ShipDecoSupport": 9,
+        "HeatInterfaceParts": 18,
         "HeatInterfaceMaterial": 40,
-        "HeatInterfaceParts": 18
+        "StorageUnits": 20,
+        "ShipDecoSupport": 9
       },
       "cost": "Steel 6x3x2x1, Thermal Sheetx9",
       "grad": {
@@ -4137,15 +4137,15 @@
       ],
       "price": 1790,
       "stats": {
-        "Frame": 80,
         "SystemSupport": 192,
-        "Hull": 20,
+        "Frame": 80,
         "ShipWeight": 40,
+        "Hull": 20,
         "HeatCapacity": 40,
-        "StorageUnits": 20,
-        "ShipDecoSupport": 8,
+        "HeatInterfaceParts": 16,
         "HeatInterfaceMaterial": 40,
-        "HeatInterfaceParts": 16
+        "StorageUnits": 20,
+        "ShipDecoSupport": 8
       },
       "cost": "Steel 8x3x1x1, Thermal Sheetx8",
       "grad": {
@@ -4249,15 +4249,15 @@
       ],
       "price": 1960,
       "stats": {
-        "Frame": 72,
         "SystemSupport": 480,
-        "Hull": 30,
+        "Frame": 72,
         "ShipWeight": 60,
+        "Hull": 30,
         "HeatCapacity": 60,
-        "StorageUnits": 20,
-        "ShipDecoSupport": 12,
+        "HeatInterfaceParts": 24,
         "HeatInterfaceMaterial": 40,
-        "HeatInterfaceParts": 24
+        "StorageUnits": 20,
+        "ShipDecoSupport": 12
       },
       "cost": "Steel 8x3x2x1, Thermal Sheetx12",
       "grad": {
@@ -4361,15 +4361,15 @@
       ],
       "price": 1980,
       "stats": {
-        "Frame": 40,
         "SystemSupport": 96,
-        "Hull": 10,
+        "Frame": 40,
         "ShipWeight": 16,
+        "Hull": 10,
         "HeatCapacity": 22,
-        "StorageUnits": 20,
-        "ShipDecoSupport": 4,
+        "HeatInterfaceParts": 8,
         "HeatInterfaceMaterial": 40,
-        "HeatInterfaceParts": 8
+        "StorageUnits": 20,
+        "ShipDecoSupport": 4
       },
       "cost": "Titanium 4x3x1x1, Thermal Sheetx4",
       "grad": {
@@ -4466,15 +4466,15 @@
       ],
       "price": 2060,
       "stats": {
-        "Frame": 36,
         "SystemSupport": 240,
-        "Hull": 15,
+        "Frame": 36,
         "ShipWeight": 24,
+        "Hull": 15,
         "HeatCapacity": 33,
-        "StorageUnits": 20,
-        "ShipDecoSupport": 6,
+        "HeatInterfaceParts": 12,
         "HeatInterfaceMaterial": 40,
-        "HeatInterfaceParts": 12
+        "StorageUnits": 20,
+        "ShipDecoSupport": 6
       },
       "cost": "Titanium 4x3x2x1, Thermal Sheetx6",
       "grad": {
@@ -4574,15 +4574,15 @@
       ],
       "price": 2980,
       "stats": {
-        "Frame": 60,
         "SystemSupport": 144,
-        "Hull": 15,
+        "Frame": 60,
         "ShipWeight": 24,
+        "Hull": 15,
         "HeatCapacity": 33,
-        "StorageUnits": 20,
-        "ShipDecoSupport": 6,
+        "HeatInterfaceParts": 12,
         "HeatInterfaceMaterial": 40,
-        "HeatInterfaceParts": 12
+        "StorageUnits": 20,
+        "ShipDecoSupport": 6
       },
       "cost": "Titanium 6x3x1x1, Thermal Sheetx6",
       "grad": {
@@ -4682,15 +4682,15 @@
       ],
       "price": 3090,
       "stats": {
-        "Frame": 54,
         "SystemSupport": 360,
-        "Hull": 22.5,
+        "Frame": 54,
         "ShipWeight": 36,
+        "Hull": 22.5,
         "HeatCapacity": 49.5,
-        "StorageUnits": 20,
-        "ShipDecoSupport": 9,
+        "HeatInterfaceParts": 18,
         "HeatInterfaceMaterial": 40,
-        "HeatInterfaceParts": 18
+        "StorageUnits": 20,
+        "ShipDecoSupport": 9
       },
       "cost": "Titanium 6x3x2x1, Thermal Sheetx9",
       "grad": {
@@ -4790,15 +4790,15 @@
       ],
       "price": 3960,
       "stats": {
-        "Frame": 80,
         "SystemSupport": 192,
-        "Hull": 20,
+        "Frame": 80,
         "ShipWeight": 32,
+        "Hull": 20,
         "HeatCapacity": 44,
-        "StorageUnits": 20,
-        "ShipDecoSupport": 8,
+        "HeatInterfaceParts": 16,
         "HeatInterfaceMaterial": 40,
-        "HeatInterfaceParts": 16
+        "StorageUnits": 20,
+        "ShipDecoSupport": 8
       },
       "cost": "Titanium 8x3x1x1, Thermal Sheetx8",
       "grad": {
@@ -4898,15 +4898,15 @@
       ],
       "price": 4130,
       "stats": {
-        "Frame": 72,
         "SystemSupport": 480,
-        "Hull": 30,
+        "Frame": 72,
         "ShipWeight": 48,
+        "Hull": 30,
         "HeatCapacity": 66,
-        "StorageUnits": 20,
-        "ShipDecoSupport": 12,
+        "HeatInterfaceParts": 24,
         "HeatInterfaceMaterial": 40,
-        "HeatInterfaceParts": 24
+        "StorageUnits": 20,
+        "ShipDecoSupport": 12
       },
       "cost": "Titanium 8x3x2x1, Thermal Sheetx12",
       "grad": {
@@ -5006,15 +5006,15 @@
       ],
       "price": 10000,
       "stats": {
-        "Frame": 256,
         "SystemSupport": 480,
-        "Hull": 20,
+        "Frame": 256,
         "ShipWeight": 64,
+        "Hull": 20,
         "HeatCapacity": 88,
-        "StorageUnits": 50,
-        "ShipDecoSupport": 16,
+        "HeatInterfaceParts": 32,
         "HeatInterfaceMaterial": 40,
-        "HeatInterfaceParts": 32
+        "StorageUnits": 50,
+        "ShipDecoSupport": 16
       },
       "cost": "Titanium 8x6x2x1, Thermal Sheetx16",
       "grad": {
@@ -5114,15 +5114,15 @@
       ],
       "price": 15000,
       "stats": {
-        "Frame": 384,
         "SystemSupport": 720,
-        "Hull": 30,
+        "Frame": 384,
         "ShipWeight": 96,
+        "Hull": 30,
         "HeatCapacity": 132,
-        "StorageUnits": 50,
-        "ShipDecoSupport": 24,
+        "HeatInterfaceParts": 48,
         "HeatInterfaceMaterial": 40,
-        "HeatInterfaceParts": 48
+        "StorageUnits": 50,
+        "ShipDecoSupport": 24
       },
       "cost": "Titanium 12x6x2x1, Thermal Sheetx24",
       "grad": {
@@ -5222,15 +5222,15 @@
       ],
       "price": 20100,
       "stats": {
-        "Frame": 512,
         "SystemSupport": 960,
-        "Hull": 40,
+        "Frame": 512,
         "ShipWeight": 128,
+        "Hull": 40,
         "HeatCapacity": 176,
-        "StorageUnits": 50,
-        "ShipDecoSupport": 32,
+        "HeatInterfaceParts": 64,
         "HeatInterfaceMaterial": 40,
-        "HeatInterfaceParts": 64
+        "StorageUnits": 50,
+        "ShipDecoSupport": 32
       },
       "cost": "Titanium 16x6x2x1, Thermal Sheetx32",
       "grad": {
@@ -5331,15 +5331,15 @@
       "_meshRot": -90,
       "price": 202,
       "stats": {
-        "Frame": 8,
         "SystemSupport": 19.2,
-        "Hull": 1.5,
+        "Frame": 8,
         "ShipWeight": 4,
-        "HeatCapacity": 5,
-        "StorageUnits": 5,
+        "Hull": 1.5,
         "SteeringStrength": 2,
+        "HeatCapacity": 5,
+        "HeatInterfaceParts": 3,
         "HeatInterfaceMaterial": 60,
-        "HeatInterfaceParts": 3
+        "StorageUnits": 5
       },
       "cost": "Small Steel Part Casingx1, Support Hardwarex1",
       "grad": {
@@ -5384,15 +5384,15 @@
       "_meshRot": -90,
       "price": 202,
       "stats": {
-        "Frame": 8,
         "SystemSupport": 19.2,
-        "Hull": 1.5,
+        "Frame": 8,
         "ShipWeight": 4,
-        "HeatCapacity": 5,
-        "StorageUnits": 5,
+        "Hull": 1.5,
         "SteeringStrength": 2,
+        "HeatCapacity": 5,
+        "HeatInterfaceParts": 3,
         "HeatInterfaceMaterial": 60,
-        "HeatInterfaceParts": 3
+        "StorageUnits": 5
       },
       "cost": "Small Steel Part Casingx1, Support Hardwarex1",
       "grad": {
@@ -5437,15 +5437,15 @@
       "_meshRot": -90,
       "price": 225,
       "stats": {
-        "Frame": 8,
         "SystemSupport": 19.2,
-        "Hull": 1.5,
+        "Frame": 8,
         "ShipWeight": 4,
-        "HeatCapacity": 5,
-        "StorageUnits": 5,
+        "Hull": 1.5,
         "SteeringStrength": 2,
+        "HeatCapacity": 5,
+        "HeatInterfaceParts": 2,
         "HeatInterfaceMaterial": 40,
-        "HeatInterfaceParts": 2
+        "StorageUnits": 5
       },
       "cost": "\"Catfin\" Spoilerx1, Thermal Sheetx1",
       "grad": {
@@ -5490,15 +5490,15 @@
       "_meshRot": -90,
       "price": 225,
       "stats": {
-        "Frame": 8,
         "SystemSupport": 19.2,
-        "Hull": 1.5,
+        "Frame": 8,
         "ShipWeight": 4,
-        "HeatCapacity": 5,
-        "StorageUnits": 5,
+        "Hull": 1.5,
         "SteeringStrength": 2,
+        "HeatCapacity": 5,
+        "HeatInterfaceParts": 2,
         "HeatInterfaceMaterial": 40,
-        "HeatInterfaceParts": 2
+        "StorageUnits": 5
       },
       "cost": "\"Nimbus\" Spoilerx1, Thermal Sheetx1",
       "grad": {
@@ -5543,15 +5543,15 @@
       "_meshRot": -90,
       "price": 404,
       "stats": {
-        "Frame": 16,
         "SystemSupport": 38.4,
-        "Hull": 3,
+        "Frame": 16,
         "ShipWeight": 8,
-        "HeatCapacity": 10,
-        "StorageUnits": 10,
+        "Hull": 3,
         "SteeringStrength": 4,
+        "HeatCapacity": 10,
+        "HeatInterfaceParts": 6,
         "HeatInterfaceMaterial": 60,
-        "HeatInterfaceParts": 6
+        "StorageUnits": 10
       },
       "cost": "Small Steel Part Casingx1, Support Hardwarex1",
       "grad": {
@@ -5596,15 +5596,15 @@
       "_meshRot": -90,
       "price": 450,
       "stats": {
-        "Frame": 16,
         "SystemSupport": 38.4,
-        "Hull": 3,
+        "Frame": 16,
         "ShipWeight": 8,
-        "HeatCapacity": 10,
-        "StorageUnits": 5,
+        "Hull": 3,
         "SteeringStrength": 4,
+        "HeatCapacity": 10,
+        "HeatInterfaceParts": 4,
         "HeatInterfaceMaterial": 40,
-        "HeatInterfaceParts": 4
+        "StorageUnits": 5
       },
       "cost": "\"Warden\" Wingx1, Thermal Sheetx2",
       "grad": {
@@ -5649,15 +5649,15 @@
       "_meshRot": 90,
       "price": 9200,
       "stats": {
-        "Frame": 204.8,
         "SystemSupport": 384,
-        "Hull": 12,
+        "Frame": 204.8,
         "ShipWeight": 51.2,
-        "HeatCapacity": 88,
-        "StorageUnits": 50,
+        "Hull": 12,
         "SteeringStrength": 16,
+        "HeatCapacity": 88,
+        "HeatInterfaceParts": 48,
         "HeatInterfaceMaterial": 60,
-        "HeatInterfaceParts": 48
+        "StorageUnits": 50
       },
       "cost": "Titanium Part Casingx2, Support Hardwarex8",
       "grad": {
@@ -5698,15 +5698,15 @@
       "_meshRot": 90,
       "price": 10000,
       "stats": {
-        "Frame": 204.8,
         "SystemSupport": 384,
-        "Hull": 12,
+        "Frame": 204.8,
         "ShipWeight": 51.2,
-        "HeatCapacity": 88,
-        "StorageUnits": 50,
+        "Hull": 12,
         "SteeringStrength": 16,
+        "HeatCapacity": 88,
+        "HeatInterfaceParts": 32,
         "HeatInterfaceMaterial": 40,
-        "HeatInterfaceParts": 32
+        "StorageUnits": 50
       },
       "cost": "\"Condor\" Wingx1, Thermal Sheetx16",
       "grad": {
@@ -5746,13 +5746,13 @@
       ],
       "price": 415,
       "stats": {
-        "Frame": 20,
         "SystemSupport": 200,
+        "Frame": 20,
         "ShipWeight": 40,
         "HeatCapacity": 40,
-        "StorageUnits": 20,
+        "HeatInterfaceParts": 24,
         "HeatInterfaceMaterial": 60,
-        "HeatInterfaceParts": 24
+        "StorageUnits": 20
       },
       "cost": "Stainless Platex10, Wirex50, Motorx2",
       "grad": {
@@ -5797,14 +5797,14 @@
       ],
       "price": 1300,
       "stats": {
-        "Frame": 20,
         "SystemSupport": 200,
-        "Hull": 50,
+        "Frame": 20,
         "ShipWeight": 40,
+        "Hull": 50,
         "HeatCapacity": 40,
-        "StorageUnits": 20,
+        "HeatInterfaceParts": 24,
         "HeatInterfaceMaterial": 60,
-        "HeatInterfaceParts": 24
+        "StorageUnits": 20
       },
       "cost": "Small Steel Part Casingx3, Support Hardwarex6",
       "grad": {
@@ -5849,13 +5849,15 @@
       ],
       "price": 1490,
       "stats": {
-        "Frame": 48,
         "SystemSupport": 200,
+        "Frame": 48,
         "ShipWeight": 40,
         "HeatCapacity": 40,
-        "StorageUnits": 20,
+        "HeatInterfaceParts": 16,
         "HeatInterfaceMaterial": 40,
-        "HeatInterfaceParts": 16
+        "HeatDissipation": 300,
+        "HeatGeneration": 4000,
+        "StorageUnits": 20
       },
       "cost": "Small Steel Part Casingx3, Support Hardwarex6, Thermal Sheetx20",
       "grad": {
@@ -5899,14 +5901,15 @@
       ],
       "price": 1510,
       "stats": {
-        "Frame": 48,
         "SystemSupport": 100,
+        "Frame": 48,
         "ShipWeight": 40,
         "HeatCapacity": 40,
-        "StorageUnits": 20,
-        "SolidStorage": 300,
+        "HeatInterfaceParts": 24,
         "HeatInterfaceMaterial": 60,
-        "HeatInterfaceParts": 24
+        "SolidStorage": 300,
+        "HullImpactDamageReduction": 40,
+        "StorageUnits": 20
       },
       "cost": "Small Steel Part Casingx3, Support Hardwarex6, Metal Sheetx20, Nut and Boltx40",
       "grad": {
@@ -5950,14 +5953,18 @@
       ],
       "price": 1550,
       "stats": {
-        "Frame": 48,
         "SystemSupport": 200,
+        "Frame": 48,
         "ShipWeight": 40,
         "HeatCapacity": 40,
-        "StorageUnits": 20,
-        "PowerStorage": 1000,
+        "HeatInterfaceParts": 24,
         "HeatInterfaceMaterial": 60,
-        "HeatInterfaceParts": 24
+        "PowerStorage": 1000,
+        "BatteryChargeSpeed": 100,
+        "BatteryEfficiency": 1,
+        "BatteryWastage": 0,
+        "FTLMaxCritProbaReduction": 50,
+        "StorageUnits": 20
       },
       "cost": "Small Steel Part Casingx3, Support Hardwarex6, Wirex20, Magnetic Coilx8",
       "grad": {
@@ -6002,12 +6009,12 @@
       ],
       "price": 18900,
       "stats": {
-        "Frame": 1280,
         "SystemSupport": 1000,
+        "Frame": 1280,
         "ShipWeight": 298,
         "HeatCapacity": 352,
-        "HeatInterfaceMaterial": 60,
-        "HeatInterfaceParts": 192
+        "HeatInterfaceParts": 192,
+        "HeatInterfaceMaterial": 60
       },
       "cost": "Titanium Part Casingx4, Support Hardwarex32",
       "grad": {
@@ -6053,13 +6060,13 @@
       ],
       "price": 18900,
       "stats": {
-        "Frame": 1280,
         "SystemSupport": 1000,
-        "Hull": 150,
+        "Frame": 1280,
         "ShipWeight": 298,
+        "Hull": 150,
         "HeatCapacity": 352,
-        "HeatInterfaceMaterial": 60,
-        "HeatInterfaceParts": 192
+        "HeatInterfaceParts": 192,
+        "HeatInterfaceMaterial": 60
       },
       "cost": "Titanium Part Casingx4, Support Hardwarex32",
       "grad": {
@@ -6105,13 +6112,13 @@
       ],
       "price": 18900,
       "stats": {
-        "Frame": 512,
         "SystemSupport": 1000,
+        "Frame": 512,
         "ShipWeight": 128,
         "HeatCapacity": 176,
-        "StorageUnits": 50,
+        "HeatInterfaceParts": 96,
         "HeatInterfaceMaterial": 60,
-        "HeatInterfaceParts": 96
+        "StorageUnits": 50
       },
       "cost": "Titanium Part Casingx4, Support Hardwarex32",
       "grad": {
@@ -6155,12 +6162,12 @@
       ],
       "price": 18900,
       "stats": {
-        "Frame": 1280,
         "SystemSupport": 1000,
+        "Frame": 1280,
         "ShipWeight": 298,
         "HeatCapacity": 352,
-        "HeatInterfaceMaterial": 60,
-        "HeatInterfaceParts": 192
+        "HeatInterfaceParts": 192,
+        "HeatInterfaceMaterial": 60
       },
       "cost": "Titanium Part Casingx4, Support Hardwarex32",
       "grad": {
@@ -6205,13 +6212,14 @@
       ],
       "price": 21700,
       "stats": {
-        "Frame": 512,
+        "RequiredExploration": 4,
         "SystemSupport": 400,
+        "Frame": 512,
         "ShipWeight": 128,
         "HeatCapacity": 176,
-        "StorageUnits": 50,
+        "HeatInterfaceParts": 96,
         "HeatInterfaceMaterial": 60,
-        "HeatInterfaceParts": 96
+        "StorageUnits": 50
       },
       "cost": "Titanium Part Casingx4, Support Hardwarex16, Quantum Beaconx1, Elmerium Corex20, Diffraction Gratingx50",
       "grad": {
@@ -6237,6 +6245,14 @@
         8.5938,
         3.407,
         5.85
+      ],
+      "skills": [
+        {
+          "skill": "TeleportBack",
+          "stats": {
+            "RequiredExploration": 4
+          }
+        }
       ]
     },
     {
@@ -6253,13 +6269,14 @@
       ],
       "price": 22900,
       "stats": {
-        "Frame": 512,
+        "RequiredTechnology": 4,
         "SystemSupport": 400,
+        "Frame": 512,
         "ShipWeight": 128,
         "HeatCapacity": 176,
-        "StorageUnits": 50,
+        "HeatInterfaceParts": 96,
         "HeatInterfaceMaterial": 60,
-        "HeatInterfaceParts": 96
+        "StorageUnits": 50
       },
       "cost": "Titanium Part Casingx4, Support Hardwarex16, Concretex80, Structural Beamx50, Stainless Platex50",
       "grad": {
@@ -6285,6 +6302,16 @@
         6.8266,
         3.3828,
         6.0312
+      ],
+      "skills": [
+        {
+          "skill": "OnBoardSmelter",
+          "stats": {
+            "RequiredTechnology": 4,
+            "PowerUsage": 60,
+            "ActiveHeatGeneration": 1000
+          }
+        }
       ]
     },
     {
@@ -6302,9 +6329,12 @@
       ],
       "price": 115,
       "stats": {
-        "StorageUnits": 10,
         "SystemRequirement": 450,
-        "BoostThrust": 200
+        "PatchSlots": 1,
+        "BoostThrust": 200,
+        "BoostConsumption": 80,
+        "BoosterHeatGeneration": 500,
+        "StorageUnits": 10
       },
       "cost": "Small Module Kitx1, Structural Beamx2, Wirex10",
       "grad": {
@@ -6351,7 +6381,8 @@
       "price": 0,
       "stats": {
         "ShipWeight": 0,
-        "StorageUnits": 0
+        "StorageUnits": 0,
+        "DecoPointsCost": 10
       },
       "cost": "",
       "grad": {
@@ -6397,7 +6428,8 @@
       "price": 0,
       "stats": {
         "ShipWeight": 0,
-        "StorageUnits": 0
+        "StorageUnits": 0,
+        "DecoPointsCost": 2
       },
       "cost": "",
       "grad": {
@@ -6443,7 +6475,8 @@
       "price": 0,
       "stats": {
         "ShipWeight": 0,
-        "StorageUnits": 0
+        "StorageUnits": 0,
+        "DecoPointsCost": 1
       },
       "cost": "",
       "grad": {
@@ -6487,9 +6520,9 @@
       ],
       "price": 65,
       "stats": {
-        "StorageUnits": 10,
         "SystemRequirement": 100,
-        "SolidStorage": 100
+        "SolidStorage": 100,
+        "StorageUnits": 10
       },
       "cost": "Small Module Kitx1, Metal Sheetx6, Silicone Gelx4",
       "grad": {
@@ -6525,9 +6558,9 @@
       ],
       "price": 442,
       "stats": {
-        "StorageUnits": 10,
         "SystemRequirement": 200,
-        "FluidStorage": 600
+        "FluidStorage": 600,
+        "StorageUnits": 10
       },
       "cost": "Small Module Kitx1, Watertight Pipex25, Stainless Platex15, Silicone Gelx30",
       "grad": {
@@ -6563,9 +6596,10 @@
       ],
       "price": 560,
       "stats": {
-        "StorageUnits": 25,
         "SystemRequirement": 350,
-        "SolidStorage": 500
+        "PatchSlots": 1,
+        "SolidStorage": 500,
+        "StorageUnits": 25
       },
       "cost": "Module Kitx1, Metal Sheetx30, Silicone Gelx20",
       "grad": {
@@ -6601,9 +6635,9 @@
       ],
       "price": 620,
       "stats": {
-        "StorageUnits": 10,
         "SystemRequirement": 500,
-        "FluidStorage": 500
+        "FluidStorage": 500,
+        "StorageUnits": 10
       },
       "cost": "Small Liquid Tankx1, Pressure-tight Pipex4, Steel Ingotx6",
       "grad": {
@@ -6639,9 +6673,10 @@
       ],
       "price": 1880,
       "stats": {
-        "StorageUnits": 25,
         "SystemRequirement": 500,
-        "FluidStorage": 2000
+        "PatchSlots": 1,
+        "FluidStorage": 2000,
+        "StorageUnits": 25
       },
       "cost": "Module Kitx1, Watertight Pipex100, Stainless Platex50, Silicone Gelx100",
       "grad": {
@@ -6677,9 +6712,10 @@
       ],
       "price": 15800,
       "stats": {
-        "StorageUnits": 50,
         "SystemRequirement": 3000,
-        "SolidStorage": 5000
+        "PatchSlots": 2,
+        "SolidStorage": 5000,
+        "StorageUnits": 50
       },
       "cost": "Large Module Kitx1, Metal Sheetx500, High-Grade Metal Sheetx100, Silicone Gelx400",
       "grad": {
@@ -6715,9 +6751,10 @@
       ],
       "price": 23000,
       "stats": {
-        "StorageUnits": 50,
         "SystemRequirement": 2000,
-        "FluidStorage": 10000
+        "PatchSlots": 2,
+        "FluidStorage": 10000,
+        "StorageUnits": 50
       },
       "cost": "Large Module Kitx1, Watertight Pipex500, Inert Platex200, Silicone Gelx500",
       "grad": {
@@ -6753,8 +6790,9 @@
       ],
       "price": 48.8,
       "stats": {
+        "SystemRequirement": 50,
         "StorageUnits": 10,
-        "SystemRequirement": 50
+        "EnableNavigator": 1
       },
       "cost": "Small Module Kitx1, Microchipx5",
       "grad": {
@@ -6790,9 +6828,12 @@
       ],
       "price": 90,
       "stats": {
-        "StorageUnits": 10,
+        "RequiredExploration": 1,
         "SystemRequirement": 50,
-        "FTOilStorage": 200
+        "PatchSlots": 1,
+        "FTOilStorage": 200,
+        "FakeFTLEngineClass": 1,
+        "StorageUnits": 10
       },
       "cost": "Small Module Kitx1, Crystalline Focuserx1, Wirex7, Silicone Gelx2",
       "grad": {
@@ -6812,7 +6853,17 @@
       "model": "prefabs/ships/parts/tool/FTL_Engine.prefab",
       "mount": "inside",
       "su": 10,
-      "m": "FTL_Engine"
+      "m": "FTL_Engine",
+      "skills": [
+        {
+          "skill": "Travel",
+          "stats": {
+            "RequiredExploration": 1,
+            "FTLEngineJumpCost": 0.5,
+            "FTLEngineWeightCapacity": 300
+          }
+        }
+      ]
     },
     {
       "id": "FTLTank1",
@@ -6828,9 +6879,9 @@
       ],
       "price": 269,
       "stats": {
-        "StorageUnits": 10,
         "SystemRequirement": 500,
-        "FTOilStorage": 200
+        "FTOilStorage": 200,
+        "StorageUnits": 10
       },
       "cost": "Small Module Kitx1, Confinement Chamberx1",
       "grad": {
@@ -6866,10 +6917,13 @@
       ],
       "price": 460,
       "stats": {
-        "StorageUnits": 10,
+        "RequiredExploration": 4,
         "SystemRequirement": 150,
+        "PatchSlots": 2,
         "FTOilStorage": 200,
-        "FakeFTLOptimalMaxWeight": 500
+        "FakeFTLEngineClass": 2,
+        "FakeFTLOptimalMaxWeight": 500,
+        "StorageUnits": 10
       },
       "cost": "Small Module Kitx1, Crystalline Focuserx1, Quantic Graphenoidx1, Magnetic Coilx2, Silicone Gelx3",
       "grad": {
@@ -6889,7 +6943,17 @@
       "model": "prefabs/ships/parts/tool/FTL_Engine.prefab",
       "mount": "inside",
       "su": 10,
-      "m": "FTL_Engine"
+      "m": "FTL_Engine",
+      "skills": [
+        {
+          "skill": "Travel",
+          "stats": {
+            "RequiredExploration": 4,
+            "FTLEngineJumpCost": 0.25,
+            "FTLEngineWeightCapacity": 164.6
+          }
+        }
+      ]
     },
     {
       "id": "FTLEngine2_Medium",
@@ -6905,10 +6969,13 @@
       ],
       "price": 1300,
       "stats": {
-        "StorageUnits": 25,
+        "RequiredExploration": 4,
         "SystemRequirement": 300,
+        "PatchSlots": 2,
         "FTOilStorage": 200,
-        "FakeFTLOptimalMaxWeight": 1500
+        "FakeFTLEngineClass": 2,
+        "FakeFTLOptimalMaxWeight": 1500,
+        "StorageUnits": 25
       },
       "cost": "Module Kitx1, Crystalline Focuserx1, Quantic Graphenoidx2, Magnetic Coilx5, Silicone Gelx10",
       "grad": {
@@ -6928,7 +6995,17 @@
       "model": "prefabs/ships/parts/tool/FTL_Engine_medium.prefab",
       "mount": "inside",
       "su": 25,
-      "m": "FTL_Engine_medium"
+      "m": "FTL_Engine_medium",
+      "skills": [
+        {
+          "skill": "Travel",
+          "stats": {
+            "RequiredExploration": 4,
+            "FTLEngineJumpCost": 0.5,
+            "FTLEngineWeightCapacity": 591.6
+          }
+        }
+      ]
     },
     {
       "id": "FTLTank2",
@@ -6944,9 +7021,10 @@
       ],
       "price": 1570,
       "stats": {
-        "StorageUnits": 25,
         "SystemRequirement": 2000,
-        "FTOilStorage": 1000
+        "PatchSlots": 1,
+        "FTOilStorage": 1000,
+        "StorageUnits": 25
       },
       "cost": "Module Kitx1, Confinement Chamberx5",
       "grad": {
@@ -6982,9 +7060,10 @@
       ],
       "price": 11900,
       "stats": {
-        "StorageUnits": 50,
         "SystemRequirement": 3000,
-        "FTOilStorage": 2000
+        "PatchSlots": 2,
+        "FTOilStorage": 2000,
+        "StorageUnits": 50
       },
       "cost": "Large Module Kitx1, Small Pressure Chamberx1, Confinement Chamberx1",
       "grad": {
@@ -7020,10 +7099,13 @@
       ],
       "price": 13200,
       "stats": {
-        "StorageUnits": 50,
+        "RequiredExploration": 4,
         "SystemRequirement": 600,
+        "PatchSlots": 2,
         "FTOilStorage": 200,
-        "FakeFTLOptimalMaxWeight": 5000
+        "FakeFTLEngineClass": 2,
+        "FakeFTLOptimalMaxWeight": 5000,
+        "StorageUnits": 50
       },
       "cost": "Large Module Kitx1, Crystalline Focuserx1, Quantic Graphenoidx3, Magnetic Coilx14, Silicone Gelx30",
       "grad": {
@@ -7043,7 +7125,17 @@
       "model": "prefabs/ships/parts/tool/FTL_Engine_Heavy.prefab",
       "mount": "inside",
       "su": 50,
-      "m": "FTL_Engine_Heavy"
+      "m": "FTL_Engine_Heavy",
+      "skills": [
+        {
+          "skill": "Travel",
+          "stats": {
+            "RequiredExploration": 4,
+            "FTLEngineJumpCost": 1,
+            "FTLEngineWeightCapacity": 2400
+          }
+        }
+      ]
     },
     {
       "id": "StealthModule_Group",
@@ -7123,8 +7215,9 @@
       ],
       "price": 284,
       "stats": {
-        "StorageUnits": 10,
-        "SystemRequirement": 600
+        "SystemRequirement": 600,
+        "PatchSlots": 1,
+        "StorageUnits": 10
       },
       "cost": "Small Module Kitx1, Elmerium Enginex1, h-Crystal Matrixx1",
       "grad": {
@@ -7144,7 +7237,21 @@
       "model": "prefabs/ships/parts/tool/Magnetic-Kinetic_Shield.prefab",
       "mount": "inside",
       "su": 10,
-      "m": "Magnetic-Kinetic_Shield"
+      "m": "Magnetic-Kinetic_Shield",
+      "skills": [
+        {
+          "skill": "Shield",
+          "stats": {
+            "PowerUsage": 10,
+            "RegenPowerConsumption": 50,
+            "ShieldMaxCharge": 200,
+            "DamageNegation": 0,
+            "RegenDelay": 0,
+            "RegenSpeed": 3,
+            "RegenSpeedDeactivated": 0.3
+          }
+        }
+      ]
     },
     {
       "id": "BarrierShield1",
@@ -7160,8 +7267,9 @@
       ],
       "price": 285,
       "stats": {
-        "StorageUnits": 10,
-        "SystemRequirement": 600
+        "SystemRequirement": 600,
+        "PatchSlots": 1,
+        "StorageUnits": 10
       },
       "cost": "Small Module Kitx1, Elmerium Enginex1, m-Crystal Matrixx1",
       "grad": {
@@ -7182,7 +7290,21 @@
       "mount": "inside",
       "su": 10,
       "m": "Kinetic_Shield",
-      "unreleased": true
+      "unreleased": true,
+      "skills": [
+        {
+          "skill": "Shield",
+          "stats": {
+            "PowerUsage": 10,
+            "RegenPowerConsumption": 50,
+            "ShieldMaxCharge": 500,
+            "DamageNegation": 0,
+            "RegenDelay": 20,
+            "RegenSpeed": 3,
+            "RegenSpeedDeactivated": 0.3
+          }
+        }
+      ]
     },
     {
       "id": "KineticShield_Group",
@@ -7262,8 +7384,9 @@
       ],
       "price": 1490,
       "stats": {
-        "StorageUnits": 25,
-        "SystemRequirement": 2000
+        "SystemRequirement": 2000,
+        "PatchSlots": 2,
+        "StorageUnits": 25
       },
       "cost": "Module Kitx1, Elmerium Enginex4, h-Crystal Matrixx16, c-Crystal Matrixx3",
       "grad": {
@@ -7283,7 +7406,21 @@
       "model": "prefabs/ships/parts/tool/Reactive_Shield.prefab",
       "mount": "inside",
       "su": 25,
-      "m": "Reactive_Shield"
+      "m": "Reactive_Shield",
+      "skills": [
+        {
+          "skill": "Shield",
+          "stats": {
+            "PowerUsage": 10,
+            "RegenPowerConsumption": 90,
+            "ShieldMaxCharge": 300,
+            "DamageNegation": 0,
+            "RegenDelay": 0,
+            "RegenSpeed": 5,
+            "RegenSpeedDeactivated": 0.3
+          }
+        }
+      ]
     },
     {
       "id": "BarrierShield2",
@@ -7299,8 +7436,9 @@
       ],
       "price": 1500,
       "stats": {
-        "StorageUnits": 25,
-        "SystemRequirement": 2000
+        "SystemRequirement": 2000,
+        "PatchSlots": 2,
+        "StorageUnits": 25
       },
       "cost": "Module Kitx1, Elmerium Enginex4, m-Crystal Matrixx14, h-Crystal Matrixx5",
       "grad": {
@@ -7321,7 +7459,21 @@
       "mount": "inside",
       "su": 25,
       "m": "Kinetic_Shield",
-      "unreleased": true
+      "unreleased": true,
+      "skills": [
+        {
+          "skill": "Shield",
+          "stats": {
+            "PowerUsage": 20,
+            "RegenPowerConsumption": 50,
+            "ShieldMaxCharge": 2000,
+            "DamageNegation": 0,
+            "RegenDelay": 20,
+            "RegenSpeed": 3,
+            "RegenSpeedDeactivated": 0.3
+          }
+        }
+      ]
     },
     {
       "id": "HeavyShield2",
@@ -7337,8 +7489,9 @@
       ],
       "price": 1510,
       "stats": {
-        "StorageUnits": 25,
-        "SystemRequirement": 2000
+        "SystemRequirement": 2000,
+        "PatchSlots": 2,
+        "StorageUnits": 25
       },
       "cost": "Module Kitx1, Elmerium Enginex4, c-Crystal Matrixx15, m-Crystal Matrixx4",
       "grad": {
@@ -7359,7 +7512,21 @@
       "mount": "inside",
       "su": 25,
       "m": "Kinetic_Shield",
-      "unreleased": true
+      "unreleased": true,
+      "skills": [
+        {
+          "skill": "Shield",
+          "stats": {
+            "PowerUsage": 50,
+            "RegenPowerConsumption": 50,
+            "ShieldMaxCharge": 500,
+            "DamageNegation": 30,
+            "RegenDelay": 20,
+            "RegenSpeed": 3,
+            "RegenSpeedDeactivated": 0.3
+          }
+        }
+      ]
     },
     {
       "id": "KineticShield3",
@@ -7375,8 +7542,9 @@
       ],
       "price": 17400,
       "stats": {
-        "StorageUnits": 50,
-        "SystemRequirement": 4000
+        "SystemRequirement": 4000,
+        "PatchSlots": 3,
+        "StorageUnits": 50
       },
       "cost": "Large Module Kitx1, Elmerium Enginex20, h-Crystal Matrixx160, c-Crystal Matrixx28, Emeraldx1",
       "grad": {
@@ -7397,7 +7565,21 @@
       "mount": "inside",
       "su": 50,
       "m": "BigReactive_Shield",
-      "unreleased": true
+      "unreleased": true,
+      "skills": [
+        {
+          "skill": "Shield",
+          "stats": {
+            "PowerUsage": 10,
+            "RegenPowerConsumption": 190,
+            "ShieldMaxCharge": 400,
+            "DamageNegation": 0,
+            "RegenDelay": 0,
+            "RegenSpeed": 10,
+            "RegenSpeedDeactivated": 0.3
+          }
+        }
+      ]
     },
     {
       "id": "BarrierShield3",
@@ -7413,8 +7595,9 @@
       ],
       "price": 17500,
       "stats": {
-        "StorageUnits": 50,
-        "SystemRequirement": 8000
+        "SystemRequirement": 8000,
+        "PatchSlots": 3,
+        "StorageUnits": 50
       },
       "cost": "Large Module Kitx1, Elmerium Enginex20, m-Crystal Matrixx135, h-Crystal Matrixx53, Azurite Stonex2",
       "grad": {
@@ -7435,7 +7618,21 @@
       "mount": "inside",
       "su": 50,
       "m": "Kinetic_Shield",
-      "unreleased": true
+      "unreleased": true,
+      "skills": [
+        {
+          "skill": "Shield",
+          "stats": {
+            "PowerUsage": 50,
+            "RegenPowerConsumption": 50,
+            "ShieldMaxCharge": 10000,
+            "DamageNegation": 0,
+            "RegenDelay": 20,
+            "RegenSpeed": 3,
+            "RegenSpeedDeactivated": 0.3
+          }
+        }
+      ]
     },
     {
       "id": "HeavyShield3",
@@ -7451,8 +7648,9 @@
       ],
       "price": 18000,
       "stats": {
-        "StorageUnits": 50,
-        "SystemRequirement": 8000
+        "SystemRequirement": 8000,
+        "PatchSlots": 3,
+        "StorageUnits": 50
       },
       "cost": "Large Module Kitx1, Elmerium Enginex20, c-Crystal Matrixx148, m-Crystal Matrixx40, Diamondx1",
       "grad": {
@@ -7473,7 +7671,21 @@
       "mount": "inside",
       "su": 50,
       "m": "Kinetic_Shield",
-      "unreleased": true
+      "unreleased": true,
+      "skills": [
+        {
+          "skill": "Shield",
+          "stats": {
+            "PowerUsage": 100,
+            "RegenPowerConsumption": 50,
+            "ShieldMaxCharge": 1000,
+            "DamageNegation": 50,
+            "RegenDelay": 20,
+            "RegenSpeed": 3,
+            "RegenSpeedDeactivated": 0.3
+          }
+        }
+      ]
     },
     {
       "id": "FusionGenerator",
@@ -7512,9 +7724,10 @@
       ],
       "price": 62,
       "stats": {
-        "StorageUnits": 10,
         "SystemRequirement": 100,
-        "PowerProduction": 15
+        "PatchSlots": 1,
+        "PowerProduction": 15,
+        "StorageUnits": 10
       },
       "cost": "Small Module Kitx1, Magnetic Coilx2",
       "model": "prefabs/ships/parts/tool/Batterie.prefab",
@@ -7557,8 +7770,10 @@
       ],
       "price": 880,
       "stats": {
-        "StorageUnits": 10,
-        "SystemRequirement": 400
+        "RequiredTechnology": 3,
+        "SystemRequirement": 400,
+        "PatchSlots": 2,
+        "StorageUnits": 10
       },
       "cost": "Small Module Kitx1, Motorx10, Watertight Pipex4, Structural Beamx5",
       "grad": {
@@ -7576,7 +7791,18 @@
       "model": "prefabs/ships/parts/tool/CarbonGenerator_Small.prefab",
       "mount": "inside",
       "su": 10,
-      "m": "CarbonGenerator_Small"
+      "m": "CarbonGenerator_Small",
+      "skills": [
+        {
+          "skill": "FuelGenerator",
+          "stats": {
+            "RequiredTechnology": 3,
+            "ActiveHeatGeneration": 1200,
+            "FuelConsumption": 600,
+            "PowerProduction": 180
+          }
+        }
+      ]
     },
     {
       "id": "PBattery",
@@ -7592,9 +7818,12 @@
       ],
       "price": 62,
       "stats": {
-        "StorageUnits": 10,
         "SystemRequirement": 200,
-        "PowerStorage": 2000
+        "PowerStorage": 2000,
+        "BatteryChargeSpeed": 0,
+        "BatteryEfficiency": 1,
+        "BatteryWastage": 0.002,
+        "StorageUnits": 10
       },
       "cost": "Small Module Kitx1, Magnetic Coilx2",
       "grad": {
@@ -7631,9 +7860,14 @@
       ],
       "price": 65,
       "stats": {
-        "StorageUnits": 10,
         "SystemRequirement": 200,
-        "PowerStorage": 1000
+        "SystemMalusForShipPoints": 60,
+        "PowerStorage": 1000,
+        "BatteryChargeSpeed": 100,
+        "BatteryEfficiency": 0.7,
+        "BatteryWastage": 0.008,
+        "Price": 65,
+        "StorageUnits": 10
       },
       "cost": "",
       "grad": {
@@ -7669,9 +7903,13 @@
       ],
       "price": 110,
       "stats": {
-        "StorageUnits": 10,
         "SystemRequirement": 100,
-        "PowerStorage": 500
+        "PatchSlots": 1,
+        "PowerStorage": 500,
+        "BatteryChargeSpeed": 500,
+        "BatteryEfficiency": 1,
+        "BatteryWastage": 0.008,
+        "StorageUnits": 10
       },
       "cost": "Small Module Kitx1, Motorx1, Concretex2",
       "grad": {
@@ -7707,9 +7945,13 @@
       ],
       "price": 740,
       "stats": {
-        "StorageUnits": 10,
         "SystemRequirement": 300,
-        "PowerStorage": 5000
+        "PatchSlots": 1,
+        "PowerStorage": 5000,
+        "BatteryChargeSpeed": 100,
+        "BatteryEfficiency": 0.7,
+        "BatteryWastage": 0.0001,
+        "StorageUnits": 10
       },
       "cost": "Module Kitx1, Chemical Batteryx5",
       "grad": {
@@ -7746,9 +7988,13 @@
       ],
       "price": 14400,
       "stats": {
-        "StorageUnits": 25,
         "SystemRequirement": 2000,
-        "PowerStorage": 40000
+        "PatchSlots": 3,
+        "PowerStorage": 40000,
+        "BatteryChargeSpeed": 1000,
+        "BatteryEfficiency": 0.7,
+        "BatteryWastage": 0.0001,
+        "StorageUnits": 25
       },
       "cost": "Large Module Kitx1, Chemical Batteryx40, Malachite Stonex20",
       "grad": {
@@ -7784,11 +8030,10 @@
       ],
       "price": 56,
       "stats": {
-        "StorageUnits": 10,
         "SystemRequirement": 50,
+        "HeatGeneration": 400,
         "PowerUsage": 35,
-        "HeatInterfaceMaterial": 60,
-        "HeatInterfaceParts": 96
+        "StorageUnits": 10
       },
       "cost": "Small Module Kitx1, Wirex5, Thermal Woolx1",
       "grad": {
@@ -7822,9 +8067,11 @@
       ],
       "price": 1190,
       "stats": {
-        "StorageUnits": 25,
         "SystemRequirement": 400,
-        "PowerUsage": 200
+        "PatchSlots": 2,
+        "HeatGeneration": 5000,
+        "PowerUsage": 200,
+        "StorageUnits": 25
       },
       "cost": "Module Kitx1, Electric Heaterx5, Pumpx1, Watertight Pipex10, Thermal Pastex50",
       "grad": {
@@ -7858,9 +8105,11 @@
       ],
       "price": 1390,
       "stats": {
+        "SystemRequirement": 250,
+        "PatchSlots": 2,
+        "HeatDissipation": 500,
         "HeatCapacity": 100,
-        "StorageUnits": 10,
-        "SystemRequirement": 250
+        "StorageUnits": 10
       },
       "cost": "Module Kitx1, Small Pressure Chamberx1, Confinement Chamberx1",
       "model": "prefabs/ships/parts/tool/Batterie.prefab",
@@ -7883,8 +8132,8 @@
       ],
       "price": 44.5,
       "stats": {
-        "StorageUnits": 10,
-        "SystemRequirement": 50
+        "SystemRequirement": 50,
+        "StorageUnits": 10
       },
       "cost": "Small Module Kitx1, Microchipx2",
       "grad": {
@@ -7920,8 +8169,8 @@
       ],
       "price": 98,
       "stats": {
-        "StorageUnits": 10,
-        "SystemRequirement": 50
+        "SystemRequirement": 50,
+        "StorageUnits": 10
       },
       "cost": "Small Module Kitx1, Microchipx1, Magnetic Coilx5",
       "grad": {
@@ -7957,6 +8206,9 @@
       ],
       "price": 13.2,
       "stats": {
+        "SpotLightAngle": 90,
+        "SpotLightPower": 1,
+        "SpotLightRange": 400,
         "PowerUsage": 0.08
       },
       "cost": "Metal Sheetx2, Wirex3",
@@ -7997,6 +8249,9 @@
       ],
       "price": 13.2,
       "stats": {
+        "SpotLightAngle": 45,
+        "SpotLightPower": 0.5,
+        "SpotLightRange": 200,
         "PowerUsage": 0.05
       },
       "cost": "Metal Sheetx2, Wirex3",
@@ -8037,6 +8292,9 @@
       ],
       "price": 13.2,
       "stats": {
+        "SpotLightAngle": 45,
+        "SpotLightPower": 4,
+        "SpotLightRange": 200,
         "PowerUsage": 0.05
       },
       "cost": "Metal Sheetx2, Wirex3",
@@ -8077,8 +8335,9 @@
       ],
       "price": 91,
       "stats": {
-        "StorageUnits": 10,
-        "SystemRequirement": 100
+        "SystemRequirement": 100,
+        "PatchSlots": 1,
+        "StorageUnits": 10
       },
       "cost": "Small Module Kitx1, Crystalline Focuserx2",
       "grad": {
@@ -8103,6 +8362,30 @@
         1.7153,
         1.3496,
         1.0664
+      ],
+      "skills": [
+        {
+          "skill": "Mine",
+          "stats": {
+            "PowerUsage": 90,
+            "ActiveHeatGeneration": 900,
+            "MiningTier": 2,
+            "MiningPower": 15,
+            "NoNaturalHeatDissipationOnNotColdEnvironement": 1
+          }
+        },
+        {
+          "skill": "MinerAttack",
+          "stats": {
+            "PowerUsage": 250,
+            "ActiveHeatGeneration": 1350,
+            "Damage": 100,
+            "Sustain": 1.2,
+            "BurstShotDuration": 1.2,
+            "Accuracy": -10,
+            "Reliability": 0.8
+          }
+        }
       ]
     },
     {
@@ -8119,8 +8402,10 @@
       ],
       "price": 50,
       "stats": {
-        "StorageUnits": 10,
-        "SystemRequirement": 100
+        "SystemRequirement": 100,
+        "SystemMalusForShipPoints": 30,
+        "Price": 50,
+        "StorageUnits": 10
       },
       "cost": "Unknown",
       "grad": {
@@ -8145,6 +8430,30 @@
         1.7153,
         1.3496,
         1.0664
+      ],
+      "skills": [
+        {
+          "skill": "Mine",
+          "stats": {
+            "PowerUsage": 90,
+            "ActiveHeatGeneration": 900,
+            "MiningTier": 1,
+            "MiningPower": 10,
+            "NoNaturalHeatDissipationOnNotColdEnvironement": 1
+          }
+        },
+        {
+          "skill": "MinerAttack",
+          "stats": {
+            "PowerUsage": 250,
+            "ActiveHeatGeneration": 1350,
+            "Damage": 70,
+            "Sustain": 1.2,
+            "BurstShotDuration": 1.2,
+            "Accuracy": -10,
+            "Reliability": 0.8
+          }
+        }
       ]
     },
     {
@@ -8161,8 +8470,9 @@
       ],
       "price": 162,
       "stats": {
-        "StorageUnits": 10,
-        "SystemRequirement": 500
+        "SystemRequirement": 500,
+        "PatchSlots": 2,
+        "StorageUnits": 10
       },
       "cost": "Small Module Kitx1, Crystalline Focuserx2, Aquamarinex5",
       "grad": {
@@ -8187,6 +8497,17 @@
         3.0449,
         1.4041,
         1.3574
+      ],
+      "skills": [
+        {
+          "skill": "Mine",
+          "stats": {
+            "PowerUsage": 100,
+            "ActiveHeatGeneration": -2500,
+            "MiningTier": 2,
+            "MiningPower": 20
+          }
+        }
       ]
     },
     {
@@ -8203,8 +8524,10 @@
       ],
       "price": 212,
       "stats": {
+        "SystemRequirement": 200,
+        "PatchSlots": 3,
         "StorageUnits": 10,
-        "SystemRequirement": 200
+        "ItemDurability": 1000
       },
       "cost": "Simple Mining Laserx1, Crystalline Focuserx3, Magnetic Coilx3",
       "grad": {
@@ -8229,6 +8552,18 @@
         1.9111,
         1.3498,
         1.0664
+      ],
+      "skills": [
+        {
+          "skill": "Mine",
+          "stats": {
+            "PowerUsage": 150,
+            "ActiveHeatGeneration": 2000,
+            "MiningTier": 3,
+            "MiningPower": 15,
+            "NoNaturalHeatDissipationOnNotColdEnvironement": 1
+          }
+        }
       ]
     },
     {
@@ -8245,8 +8580,9 @@
       ],
       "price": 289,
       "stats": {
-        "StorageUnits": 10,
-        "SystemRequirement": 250
+        "SystemRequirement": 250,
+        "PatchSlots": 2,
+        "StorageUnits": 10
       },
       "cost": "Small Module Kitx1, Pumpx2, Stainless Platex1",
       "grad": {
@@ -8271,6 +8607,15 @@
         4.5449,
         1.2166,
         0.881
+      ],
+      "skills": [
+        {
+          "skill": "FluidGather",
+          "stats": {
+            "PowerUsage": 55,
+            "FluidPumpingSpeed": 20
+          }
+        }
       ]
     },
     {
@@ -8287,8 +8632,9 @@
       ],
       "price": 1010,
       "stats": {
-        "StorageUnits": 25,
-        "SystemRequirement": 400
+        "SystemRequirement": 400,
+        "PatchSlots": 2,
+        "StorageUnits": 25
       },
       "cost": "Module Kitx1, Hyper Lensx3",
       "grad": {
@@ -8309,6 +8655,18 @@
         2.8008,
         1.621,
         1.6016
+      ],
+      "skills": [
+        {
+          "skill": "Mine",
+          "stats": {
+            "PowerUsage": 300,
+            "ActiveHeatGeneration": 3000,
+            "MiningTier": 3,
+            "MiningPower": 40,
+            "NoNaturalHeatDissipationOnNotColdEnvironement": 1
+          }
+        }
       ]
     },
     {
@@ -8325,8 +8683,10 @@
       ],
       "price": 2240,
       "stats": {
+        "SystemRequirement": 800,
         "StorageUnits": 25,
-        "SystemRequirement": 800
+        "PatchSlots": 4,
+        "ItemDurability": 2000
       },
       "cost": "Hi-Pi Laserx1, Hyper Lensx5, Magnetic Coilx10",
       "grad": {
@@ -8347,6 +8707,18 @@
         2.8008,
         1.621,
         1.6016
+      ],
+      "skills": [
+        {
+          "skill": "Mine",
+          "stats": {
+            "PowerUsage": 500,
+            "ActiveHeatGeneration": 7500,
+            "MiningTier": 4,
+            "MiningPower": 40,
+            "NoNaturalHeatDissipationOnNotColdEnvironement": 1
+          }
+        }
       ]
     },
     {
@@ -8364,8 +8736,9 @@
       ],
       "price": 0,
       "stats": {
-        "StorageUnits": 50,
-        "SystemRequirement": 3500
+        "SystemRequirement": 3500,
+        "PatchSlots": 3,
+        "StorageUnits": 50
       },
       "cost": "",
       "grad": {
@@ -8387,7 +8760,19 @@
         3.4484,
         2.5469
       ],
-      "unreleased": true
+      "unreleased": true,
+      "skills": [
+        {
+          "skill": "Mine",
+          "stats": {
+            "PowerUsage": 2700,
+            "ActiveHeatGeneration": 27000,
+            "MiningTier": 4,
+            "MiningPower": 150,
+            "NoNaturalHeatDissipationOnNotColdEnvironement": 1
+          }
+        }
+      ]
     },
     {
       "id": "MiningTool3_OC",
@@ -8404,8 +8789,10 @@
       ],
       "price": 0,
       "stats": {
+        "SystemRequirement": 7000,
         "StorageUnits": 50,
-        "SystemRequirement": 7000
+        "PatchSlots": 5,
+        "ItemDurability": 4000
       },
       "cost": "",
       "grad": {
@@ -8427,7 +8814,19 @@
         3.644,
         2.5469
       ],
-      "unreleased": true
+      "unreleased": true,
+      "skills": [
+        {
+          "skill": "Mine",
+          "stats": {
+            "PowerUsage": 4500,
+            "ActiveHeatGeneration": 90000,
+            "MiningTier": 5,
+            "MiningPower": 150,
+            "NoNaturalHeatDissipationOnNotColdEnvironement": 1
+          }
+        }
+      ]
     },
     {
       "id": "Radar0",
@@ -8443,8 +8842,10 @@
       ],
       "price": 50,
       "stats": {
-        "StorageUnits": 10,
-        "SystemRequirement": 100
+        "SystemRequirement": 100,
+        "SystemMalusForShipPoints": 15,
+        "Price": 50,
+        "StorageUnits": 10
       },
       "cost": "Unknown",
       "grad": {
@@ -8469,6 +8870,15 @@
         0.328,
         0.4042,
         1.7041
+      ],
+      "skills": [
+        {
+          "skill": "RadarPing",
+          "stats": {
+            "PowerUsage": 40,
+            "RadarRange": 9
+          }
+        }
       ]
     },
     {
@@ -8485,8 +8895,9 @@
       ],
       "price": 62,
       "stats": {
-        "StorageUnits": 10,
-        "SystemRequirement": 100
+        "SystemRequirement": 100,
+        "PatchSlots": 1,
+        "StorageUnits": 10
       },
       "cost": "Small Module Kitx1, Magnetic Coilx2",
       "grad": {
@@ -8511,6 +8922,15 @@
         0.5137,
         0.4111,
         2.0898
+      ],
+      "skills": [
+        {
+          "skill": "RadarPing",
+          "stats": {
+            "PowerUsage": 40,
+            "RadarRange": 12
+          }
+        }
       ]
     },
     {
@@ -8527,8 +8947,11 @@
       ],
       "price": 116,
       "stats": {
+        "RequiredExploration": 2,
+        "SystemRequirement": 300,
+        "PatchSlots": 1,
         "StorageUnits": 10,
-        "SystemRequirement": 300
+        "ItemDurability": 1000
       },
       "cost": "Simple Resource Detectorx1, Crystalline Focuserx1, Diffraction Gratingx3",
       "grad": {
@@ -8553,6 +8976,17 @@
         0.5938,
         0.4111,
         2.0898
+      ],
+      "skills": [
+        {
+          "skill": "RadarPing",
+          "stats": {
+            "RequiredExploration": 2,
+            "PowerUsage": 50,
+            "RadarRange": 12,
+            "RadarRevealFromAfar": 1
+          }
+        }
       ]
     },
     {
@@ -8569,8 +9003,11 @@
       ],
       "price": 168,
       "stats": {
+        "RequiredExploration": 4,
+        "SystemRequirement": 200,
+        "PatchSlots": 1,
         "StorageUnits": 10,
-        "SystemRequirement": 200
+        "ItemDurability": 500
       },
       "cost": "Simple Resource Detectorx2, Diffraction Gratingx2, Microchipx1, Wirex3",
       "grad": {
@@ -8595,6 +9032,15 @@
         0.7874,
         0.788,
         0.884
+      ],
+      "skills": [
+        {
+          "skill": "DetectItem",
+          "stats": {
+            "PowerUsage": 40,
+            "RadarRange": 50
+          }
+        }
       ]
     },
     {
@@ -8652,9 +9098,9 @@
       ],
       "price": 202,
       "stats": {
-        "StorageUnits": 10,
         "SystemRequirement": 120,
-        "PowerProduction": 40
+        "PowerProduction": 40,
+        "StorageUnits": 10
       },
       "cost": "Small Module Kitx1, Solar Cellx24",
       "grad": {
@@ -8721,9 +9167,10 @@
       ],
       "price": 1040,
       "stats": {
-        "StorageUnits": 25,
         "SystemRequirement": 360,
-        "PowerProduction": 150
+        "PatchSlots": 1,
+        "PowerProduction": 150,
+        "StorageUnits": 25
       },
       "cost": "Module Kitx1, Solar Cellx90",
       "grad": {
@@ -8790,9 +9237,10 @@
       ],
       "price": 15600,
       "stats": {
-        "StorageUnits": 50,
         "SystemRequirement": 2000,
-        "PowerProduction": 1000
+        "PatchSlots": 2,
+        "PowerProduction": 1000,
+        "StorageUnits": 50
       },
       "cost": "Large Module Kitx1, Solar Cellx600, Graphenex150",
       "grad": {
@@ -8833,8 +9281,8 @@
       ],
       "price": 51,
       "stats": {
-        "StorageUnits": 10,
-        "SystemRequirement": 50
+        "SystemRequirement": 50,
+        "StorageUnits": 10
       },
       "cost": "Small Module Kitx1, Nut and Boltx4, Wirex2",
       "grad": {
@@ -8859,6 +9307,16 @@
         1.0664,
         0.8185,
         1.0664
+      ],
+      "skills": [
+        {
+          "skill": "Scan",
+          "stats": {
+            "PowerUsage": 30,
+            "ResourceScanningPower": 20,
+            "MaxScanningTier": 3
+          }
+        }
       ]
     },
     {
@@ -8875,8 +9333,9 @@
       ],
       "price": 95,
       "stats": {
-        "StorageUnits": 10,
-        "SystemRequirement": 200
+        "RequiredExploration": 2,
+        "SystemRequirement": 200,
+        "StorageUnits": 10
       },
       "cost": "Scanalyzer Alphax1, Diffraction Gratingx5, c-Crystal Matrixx1",
       "grad": {
@@ -8901,6 +9360,17 @@
         1.0664,
         0.8185,
         1.0664
+      ],
+      "skills": [
+        {
+          "skill": "Scan",
+          "stats": {
+            "RequiredExploration": 2,
+            "PowerUsage": 50,
+            "ResourceScanningPower": 30,
+            "MaxScanningTier": 7
+          }
+        }
       ]
     },
     {
@@ -8917,8 +9387,9 @@
       ],
       "price": 1860,
       "stats": {
-        "StorageUnits": 10,
-        "SystemRequirement": 100
+        "RequiredExploration": 5,
+        "SystemRequirement": 100,
+        "StorageUnits": 10
       },
       "cost": "Module Kitx1, Quantic Graphenoidx3, Hyper Lensx1, Diffraction Gratingx20",
       "grad": {
@@ -8943,6 +9414,15 @@
         4.9313,
         2.7269,
         3.5384
+      ],
+      "skills": [
+        {
+          "skill": "DeployPathwayExit",
+          "stats": {
+            "RequiredExploration": 5,
+            "AmmoConsumption": 1
+          }
+        }
       ]
     },
     {
@@ -8959,15 +9439,17 @@
       ],
       "price": 315,
       "stats": {
-        "StorageUnits": 20,
         "SystemRequirement": 300,
-        "EngineThrust": 50,
-        "EngineForce": 300,
-        "EngineConsumption": 35,
-        "BoostThrust": 100,
-        "SteeringStrength": 8,
+        "HeatInterfaceParts": 12,
         "HeatInterfaceMaterial": 60,
-        "HeatInterfaceParts": 12
+        "EngineForce": 300,
+        "EngineThrust": 50,
+        "EngineConsumption": 35,
+        "SteeringStrength": 8,
+        "BoostThrust": 100,
+        "BoostConsumption": 100,
+        "BoosterHeatGeneration": 1000,
+        "StorageUnits": 20
       },
       "cost": "Stainless Platex10, Wirex40, Hall Alternatorx1",
       "grad": {
@@ -9011,15 +9493,18 @@
       ],
       "price": 1230,
       "stats": {
-        "StorageUnits": 20,
         "SystemRequirement": 450,
-        "EngineThrust": 50,
-        "EngineForce": 600,
-        "EngineConsumption": 70,
-        "BoostThrust": 80,
-        "SteeringStrength": 20,
+        "HeatInterfaceParts": 12,
         "HeatInterfaceMaterial": 40,
-        "HeatInterfaceParts": 12
+        "EngineForce": 600,
+        "EngineThrust": 50,
+        "EngineConsumption": 70,
+        "SteeringStrength": 20,
+        "BoostThrust": 80,
+        "BoostConsumption": 80,
+        "BoosterHeatGeneration": 800,
+        "EngineThrustBonusUpwards": 1.2,
+        "StorageUnits": 20
       },
       "cost": "Small Steel Part Casingx2, Support Hardwarex4, Hall Alternatorx3, Thermal Sheetx6, Hematitex3",
       "grad": {
@@ -9063,14 +9548,15 @@
       ],
       "price": 1250,
       "stats": {
-        "StorageUnits": 20,
         "SystemRequirement": 1000,
-        "EngineThrust": 60,
+        "HeatInterfaceParts": 18,
+        "HeatInterfaceMaterial": 60,
         "EngineForce": 700,
+        "EngineThrust": 60,
         "EngineConsumption": 15,
         "SteeringStrength": 15,
-        "HeatInterfaceMaterial": 60,
-        "HeatInterfaceParts": 18
+        "EngineConsumptionReductionInDark": 0.6,
+        "StorageUnits": 20
       },
       "cost": "Small Steel Part Casingx2, Support Hardwarex4, Hall Alternatorx3, Motorx2",
       "grad": {
@@ -9114,15 +9600,17 @@
       ],
       "price": 1270,
       "stats": {
-        "StorageUnits": 20,
         "SystemRequirement": 600,
-        "EngineThrust": 100,
-        "EngineForce": 600,
-        "EngineConsumption": 80,
-        "BoostThrust": 150,
-        "SteeringStrength": 15,
+        "HeatInterfaceParts": 36,
         "HeatInterfaceMaterial": 120,
-        "HeatInterfaceParts": 36
+        "EngineForce": 600,
+        "EngineThrust": 100,
+        "EngineConsumption": 80,
+        "SteeringStrength": 15,
+        "BoostThrust": 150,
+        "BoostConsumption": 150,
+        "EngineHeatDissipation": 50,
+        "StorageUnits": 20
       },
       "cost": "Small Steel Part Casingx2, Support Hardwarex4, Hall Alternatorx3, Wirex15, Watertight Pipex15",
       "grad": {
@@ -9168,11 +9656,13 @@
       "price": 9600,
       "stats": {
         "SystemRequirement": 1100,
-        "EngineThrust": 150,
         "EngineForce": 1250,
+        "EngineThrust": 150,
+        "SteeringStrength": 30,
         "EngineConsumption": 50,
         "BoostThrust": 200,
-        "SteeringStrength": 30
+        "BoostConsumption": 150,
+        "BoosterHeatGeneration": 500
       },
       "cost": "Titanium Part Casingx2, Support Hardwarex8, Copper Ingotx3",
       "grad": {
@@ -9219,11 +9709,13 @@
       "price": 14400,
       "stats": {
         "SystemRequirement": 1200,
-        "EngineThrust": 150,
         "EngineForce": 1400,
+        "EngineThrust": 150,
+        "SteeringStrength": 30,
         "EngineConsumption": 60,
         "BoostThrust": 600,
-        "SteeringStrength": 30
+        "BoostConsumption": 190,
+        "BoosterHeatGeneration": 1400
       },
       "cost": "Titanium Part Casingx3, Support Hardwarex12, Copper Ingotx5",
       "grad": {
@@ -9269,8 +9761,8 @@
       "price": 61,
       "stats": {
         "SystemRequirement": 150,
-        "StorageUnits": 10,
-        "PatchSlots": 1
+        "PatchSlots": 1,
+        "StorageUnits": 10
       },
       "cost": "Unknown",
       "grad": {
@@ -9294,6 +9786,25 @@
         2.9258,
         1.4846,
         0.9524
+      ],
+      "skills": [
+        {
+          "skill": "MiningMissile",
+          "stats": {
+            "AmmoConsumption": 1,
+            "PowerUsage": 100,
+            "ProjectileSpeed": 0.15
+          }
+        },
+        {
+          "skill": "MissileAttack",
+          "stats": {
+            "AmmoConsumption": 1,
+            "PowerUsage": 100,
+            "ProjectileSpeed": 0.5,
+            "Accuracy": 30
+          }
+        }
       ]
     }
   ],
