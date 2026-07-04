@@ -49,6 +49,23 @@ body {
 .pal-tab:hover { color: #c8d8e8; border-color: #484f58; }
 .pal-tab.active { background: rgba(0,212,255,.08); border-color: rgba(0,212,255,.4); color: #00d4ff; }
 
+.stats-tabs { display: flex; gap: 2px; margin: 6px 0; }
+.stats-tab {
+  flex: 1;
+  padding: 3px 0;
+  background: none;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  color: #5a7a99;
+  font: 600 10px 'Rajdhani', sans-serif;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color .15s, border-color .15s, background .15s;
+}
+.stats-tab:hover { color: #c8d8e8; border-color: #484f58; }
+.stats-tab.active { background: rgba(0,212,255,.08); border-color: rgba(0,212,255,.4); color: #00d4ff; }
+
 #search {
   width: 100%;
   padding: 5px 8px;

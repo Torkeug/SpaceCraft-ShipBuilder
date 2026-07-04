@@ -154,6 +154,7 @@ const state = {
   eraseMode: false,
   ghostGx: null, ghostGy: null, ghostGz: null,
   envId: 'Space',
+  statsTab: 'overview',
 };
 
 let partFlip = {};
@@ -1469,6 +1470,14 @@ document.getElementById('show-unreleased').addEventListener('change', e => {
   buildPalette(document.getElementById('search').value);
 });
 
+document.getElementById('stats-tabs').addEventListener('click', e => {
+  const btn = e.target.closest('.stats-tab');
+  if (!btn) return;
+  document.querySelectorAll('.stats-tab').forEach(b => b.classList.toggle('active', b === btn));
+  state.statsTab = btn.dataset.tab;
+  updateShipStats();
+});
+
 document.getElementById('palette-tabs').addEventListener('click', e => {
   const btn = e.target.closest('.pal-tab');
   if (!btn) return;
@@ -1609,8 +1618,13 @@ function renderPartStats(part) {
 function fmt(n) { return Math.round(n).toLocaleString(); }
 
 function updateShipStats() {
+  const verdictEl = document.getElementById('stats-verdict');
   const el = document.getElementById('ship-stats');
-  if (!state.placed.length) { el.innerHTML = '<div class="ship-empty">Place parts to see stats</div>'; return; }
+  if (!state.placed.length) {
+    verdictEl.innerHTML = '';
+    el.innerHTML = '<div class="ship-empty">Place parts to see stats</div>';
+    return;
+  }
 
   const sum  = k => state.placed.reduce((a, e) => a + ((e.part.stats?.[k]) || 0), 0);
   const anyM = k => state.placed.some(e => e.part.kind === 'module' && e.part.stats?.[k]);
@@ -1763,88 +1777,64 @@ function updateShipStats() {
     ['Mod. slots',    slotsUsed <= slotsTotal, `${slotsUsed} / ${slotsTotal}`],
   ];
 
-  let h = `<div class="ship-verdict ${flyable ? 'ok' : 'no'}">${flyable ? '✓ Flight-ready' : '✗ Not ready'}</div>`;
+  let vh = `<div class="ship-verdict ${flyable ? 'ok' : 'no'}">${flyable ? '✓ Flight-ready' : '✗ Not ready'}</div>`;
   checks.forEach(([n, ok, v]) => {
-    h += `<div class="ship-check ${ok ? 'pass' : 'fail'}">
+    vh += `<div class="ship-check ${ok ? 'pass' : 'fail'}">
       <span class="chk-icon">${ok ? '◆' : '!'}</span>
       <span class="chk-name">${n}</span>
       <span class="chk-val">${v}</span>
     </div>`;
   });
+  verdictEl.innerHTML = vh;
 
-  // ── Summary ── (Ship Points is a bespoke game value, not part of any stat category)
+  // ── Overview tab: Summary, System Support, Current Status, Power, Engine, Module Slots ──
+  let overviewH = '';
+
+  // Ship Points is a bespoke game value, not part of any stat category
   if (shipPoints !== null) {
-    h += `<div class="stat-section"><div class="stat-section-label">Summary</div><div class="stat-grid">`;
-    h += statBlock('Ship Points', fmt(shipPoints), 'neutral');
-    h += statBlock('Parts', `${new Set(state.placed.map(e => e.part.id)).size} / ${state.placed.length}`, 'neutral');
-    h += `</div></div>`;
+    overviewH += `<div class="stat-section"><div class="stat-section-label">Summary</div><div class="stat-grid">`;
+    overviewH += statBlock('Ship Points', fmt(shipPoints), 'neutral');
+    overviewH += statBlock('Parts', `${new Set(state.placed.map(e => e.part.id)).size} / ${state.placed.length}`, 'neutral');
+    overviewH += `</div></div>`;
   }
 
-  // ── Current Status ── (System Support + Hull/Integrity bars, System Efficiency)
   const spOver = req > support && support > 0;
-  h += `<div class="stat-section">
+  overviewH += `<div class="stat-section">
     <div class="stat-section-label">System Support</div>
     <div class="sp-bar-wrap"><div class="sp-bar-fill ${spOver ? 'over' : spPct >= 80 ? 'warn' : ''}" style="width:${spPct}%"></div></div>
     <div class="sp-bar-foot${spOver ? ' over' : ''}"><span>${fmt(req)} used</span><span>${fmt(support)} cap</span></div>
   </div>`;
 
-  h += `<div class="stat-section"><div class="stat-section-label">Current Status</div><div class="stat-grid">`;
-  h += statBlock('Weight', `${weight % 1 ? weight.toFixed(1) : fmt(weight)} t`, 'neutral');
-  h += statBlock('Frames', fmt(frames), 'neutral');
+  overviewH += `<div class="stat-section"><div class="stat-section-label">Current Status</div><div class="stat-grid">`;
+  overviewH += statBlock('Weight', `${weight % 1 ? weight.toFixed(1) : fmt(weight)} t`, 'neutral');
+  overviewH += statBlock('Frames', fmt(frames), 'neutral');
   const intCls = integrityPct === null ? 'neutral' : integrityPct < CONST.ShipStatMinIntegrity * 100 ? 'bad' : integrityPct < 60 ? 'warn' : 'neutral';
-  h += statBlock('Integrity', integrityPct !== null ? `${integrityPct.toFixed(1)}%` : '—', intCls);
-  h += statBlock('Hull', hull !== null ? `${fmt(hull)} / ${fmt(rawHull)}` : '—', 'neutral');
-  h += statBlock('Sys. Efficiency', efficiencyPct !== null ? `${efficiencyPct.toFixed(0)}%` : '—', 'neutral');
-  h += `</div></div>`;
+  overviewH += statBlock('Integrity', integrityPct !== null ? `${integrityPct.toFixed(1)}%` : '—', intCls);
+  overviewH += statBlock('Hull', hull !== null ? `${fmt(hull)} / ${fmt(rawHull)}` : '—', 'neutral');
+  overviewH += statBlock('Sys. Efficiency', efficiencyPct !== null ? `${efficiencyPct.toFixed(0)}%` : '—', 'neutral');
+  overviewH += `</div></div>`;
 
-  // ── Heat Management ──
-  h += `<div class="stat-section"><div class="stat-section-label">Heat Management</div><div class="stat-grid">`;
-  h += statBlock('Heat Cap.', fmt(heatCap), 'neutral');
-  h += statBlock('Heat Interface', heatInterface.toFixed(1), 'neutral', true);
-  h += `</div>`;
-  h += `<div class="stat-row"><span class="stat-label">Heat Produced/sec</span><span class="stat-val">${fmt(heatGen)}</span></div>`;
-  h += `<div class="stat-row"><span class="stat-label">Cooling/sec</span><span class="stat-val">${fmt(heatDissip)}</span></div>`;
-  h += `<div class="stat-row${netHeat > 0 ? ' bad' : ' good'}"><span class="stat-label">Net Heat</span><span class="stat-val">${(netHeat >= 0 ? '+' : '') + fmt(netHeat)}</span></div>`;
-  if (boosterHeatGen) h += `<div class="stat-row"><span class="stat-label">Boost Heat/sec</span><span class="stat-val">${fmt(boosterHeatGen)}</span></div>`;
-  if (engineCooling)  h += `<div class="stat-row"><span class="stat-label">Engine Cooling/sec</span><span class="stat-val">${fmt(engineCooling)}</span></div>`;
-  const overheatTxt = t => t !== null ? fmt(t) + 's' : 'Never';
-  h += `<div class="stat-row"><span class="stat-label">Time to Overheat, idle (~${fmt(overheatC)}°C)</span><span class="stat-val">${overheatTxt(timeToOverheat)}</span></div>`;
-  h += `<div class="stat-row${timeToOverheatBoost !== null ? ' bad' : ''}"><span class="stat-label">Time to Overheat, boosting</span><span class="stat-val">${overheatTxt(timeToOverheatBoost)}</span></div>`;
-  h += `<div class="stat-row" style="margin-top:3px"><span class="stat-label">Environment</span>
-    <select id="env-select" class="env-select">
-      ${ENVIRONMENTS.map(e => `<option value="${e.id}"${e.id === state.envId ? ' selected' : ''}>${e.name}</option>`).join('')}
-    </select>
-  </div>`;
-  if (env) {
-    const rangeTxt = env.min === env.max ? `${fmt(envMinC)}°C` : `${fmt(envMinC)} to ${fmt(envMaxC)}°C`;
-    h += `<div class="stat-row"><span class="stat-label">Ambient Temperature</span><span class="stat-val">${rangeTxt}</span></div>`;
-  }
-  h += `</div>`;
-
-  // ── Power ──
-  h += `<div class="stat-section"><div class="stat-section-label">Power</div><div class="stat-grid">`;
-  h += statBlock('Gen',   fmt(powProd));
-  h += statBlock('Usage', fmt(powUse), 'neutral');
-  h += statBlock('Net', (powNet >= 0 ? '+' : '') + fmt(powNet), powNet < 0 ? 'bad' : 'good', true);
-  h += `</div>`;
-  if (powStorage) h += `<div class="stat-row" style="margin-top:3px"><span class="stat-label">Power Storage</span><span class="stat-val">${fmt(powStorage)}</span></div>`;
+  overviewH += `<div class="stat-section"><div class="stat-section-label">Power</div><div class="stat-grid">`;
+  overviewH += statBlock('Gen',   fmt(powProd));
+  overviewH += statBlock('Usage', fmt(powUse), 'neutral');
+  overviewH += statBlock('Net', (powNet >= 0 ? '+' : '') + fmt(powNet), powNet < 0 ? 'bad' : 'good', true);
+  overviewH += `</div>`;
+  if (powStorage) overviewH += `<div class="stat-row" style="margin-top:3px"><span class="stat-label">Power Storage</span><span class="stat-val">${fmt(powStorage)}</span></div>`;
   if (batteries.length) {
-    h += `<div class="stat-row"><span class="stat-label">Max Charge Speed</span><span class="stat-val">${fmt(battery.chargeSpeed)}</span></div>`;
-    h += `<div class="stat-row"><span class="stat-label">Theoretical Efficiency</span><span class="stat-val">${(battery.efficiency * 100).toFixed(0)}%</span></div>`;
-    h += `<div class="stat-row"><span class="stat-label">Self-Discharge</span><span class="stat-val">${(battery.wastage * 100).toFixed(2)}%/s</span></div>`;
+    overviewH += `<div class="stat-row"><span class="stat-label">Max Charge Speed</span><span class="stat-val">${fmt(battery.chargeSpeed)}</span></div>`;
+    overviewH += `<div class="stat-row"><span class="stat-label">Theoretical Efficiency</span><span class="stat-val">${(battery.efficiency * 100).toFixed(0)}%</span></div>`;
+    overviewH += `<div class="stat-row"><span class="stat-label">Self-Discharge</span><span class="stat-val">${(battery.wastage * 100).toFixed(2)}%/s</span></div>`;
   }
-  h += `</div>`;
+  overviewH += `</div>`;
 
-  // ── Engine ──
-  h += `<div class="stat-section"><div class="stat-section-label">Engine</div><div class="stat-grid">`;
-  h += statBlock('Weight / Force', `${fmt(weight)} / ${fmt(force)}`, force < weight ? 'bad' : 'neutral');
-  h += statBlock('Thrust (Boosted)', `${fmt(thrust)} (${fmt(thrust + boostThrust)})`, 'neutral');
-  h += statBlock('Speed (Boosted)', speed !== null ? `${speed.toFixed(2)} (${boostSpeed.toFixed(2)})` : '—', 'neutral');
-  h += statBlock('Maneuverability', maneuver !== null ? maneuver.toFixed(2) : '—', 'neutral');
-  h += statBlock('Power Usage (Boosted)', `${fmt(powUse)} (${fmt(powUse + boostPowUse)})`, 'neutral', true);
-  h += `</div></div>`;
+  overviewH += `<div class="stat-section"><div class="stat-section-label">Engine</div><div class="stat-grid">`;
+  overviewH += statBlock('Weight / Force', `${fmt(weight)} / ${fmt(force)}`, force < weight ? 'bad' : 'neutral');
+  overviewH += statBlock('Thrust (Boosted)', `${fmt(thrust)} (${fmt(thrust + boostThrust)})`, 'neutral');
+  overviewH += statBlock('Speed (Boosted)', speed !== null ? `${speed.toFixed(2)} (${boostSpeed.toFixed(2)})` : '—', 'neutral');
+  overviewH += statBlock('Maneuverability', maneuver !== null ? maneuver.toFixed(2) : '—', 'neutral');
+  overviewH += statBlock('Power Usage (Boosted)', `${fmt(powUse)} (${fmt(powUse + boostPowUse)})`, 'neutral', true);
+  overviewH += `</div></div>`;
 
-  // ── Module slots ──
   if (slotsTotal > 0) {
     const slotOver = slotsUsed > slotsTotal;
     const hullEntries = state.placed.filter(e => e.part.kind === 'build');
@@ -1852,71 +1842,95 @@ function updateShipStats() {
       const mod = state.placed.find(m => m.slotOwner === e);
       return `<div class="slot-dot${mod ? ' used' : ''}"${mod ? ` title="${mod.part.name}"` : ''}></div>`;
     }).join('');
-    h += `<div class="stat-section">
+    overviewH += `<div class="stat-section">
       <div class="stat-section-label">Module Slots</div>
       <div class="slot-grid">${dots}</div>
       <div class="slot-grid-foot${slotOver ? ' over' : ''}">${slotsUsed} of ${slotsTotal} slots used</div>
     </div>`;
   }
 
-  // ── Storage ──
+  // ── Heat tab ──
+  let heatH = '';
+  heatH += `<div class="stat-section"><div class="stat-section-label">Heat Management</div><div class="stat-grid">`;
+  heatH += statBlock('Heat Cap.', fmt(heatCap), 'neutral');
+  heatH += statBlock('Heat Interface', heatInterface.toFixed(1), 'neutral', true);
+  heatH += `</div>`;
+  heatH += `<div class="stat-row"><span class="stat-label">Heat Produced/sec</span><span class="stat-val">${fmt(heatGen)}</span></div>`;
+  heatH += `<div class="stat-row"><span class="stat-label">Cooling/sec</span><span class="stat-val">${fmt(heatDissip)}</span></div>`;
+  heatH += `<div class="stat-row${netHeat > 0 ? ' bad' : ' good'}"><span class="stat-label">Net Heat</span><span class="stat-val">${(netHeat >= 0 ? '+' : '') + fmt(netHeat)}</span></div>`;
+  if (boosterHeatGen) heatH += `<div class="stat-row"><span class="stat-label">Boost Heat/sec</span><span class="stat-val">${fmt(boosterHeatGen)}</span></div>`;
+  if (engineCooling)  heatH += `<div class="stat-row"><span class="stat-label">Engine Cooling/sec</span><span class="stat-val">${fmt(engineCooling)}</span></div>`;
+  const overheatTxt = t => t !== null ? fmt(t) + 's' : 'Never';
+  heatH += `<div class="stat-row"><span class="stat-label">Time to Overheat, idle (~${fmt(overheatC)}°C)</span><span class="stat-val">${overheatTxt(timeToOverheat)}</span></div>`;
+  heatH += `<div class="stat-row${timeToOverheatBoost !== null ? ' bad' : ''}"><span class="stat-label">Time to Overheat, boosting</span><span class="stat-val">${overheatTxt(timeToOverheatBoost)}</span></div>`;
+  heatH += `<div class="stat-row" style="margin-top:3px"><span class="stat-label">Environment</span>
+    <select id="env-select" class="env-select">
+      ${ENVIRONMENTS.map(e => `<option value="${e.id}"${e.id === state.envId ? ' selected' : ''}>${e.name}</option>`).join('')}
+    </select>
+  </div>`;
+  if (env) {
+    const rangeTxt = env.min === env.max ? `${fmt(envMinC)}°C` : `${fmt(envMinC)} to ${fmt(envMaxC)}°C`;
+    heatH += `<div class="stat-row"><span class="stat-label">Ambient Temperature</span><span class="stat-val">${rangeTxt}</span></div>`;
+  }
+  heatH += `</div>`;
+
+  // ── Systems tab: Storage, FTL, Lights, Mining & Scanning, Combat & Defense ──
+  let systemsH = '';
+
   const hasCargo = solid || fluid;
   if (hasCargo) {
-    h += `<div class="stat-section"><div class="stat-section-label">Storage</div>`;
-    if (solid) h += `<div class="stat-row"><span class="stat-label">Solid Storage</span><span class="stat-val">${fmt(solid)}</span></div>`;
-    if (fluid) h += `<div class="stat-row"><span class="stat-label">Fluid Storage</span><span class="stat-val">${fmt(fluid)}</span></div>`;
-    h += `</div>`;
+    systemsH += `<div class="stat-section"><div class="stat-section-label">Storage</div>`;
+    if (solid) systemsH += `<div class="stat-row"><span class="stat-label">Solid Storage</span><span class="stat-val">${fmt(solid)}</span></div>`;
+    if (fluid) systemsH += `<div class="stat-row"><span class="stat-label">Fluid Storage</span><span class="stat-val">${fmt(fluid)}</span></div>`;
+    systemsH += `</div>`;
   }
 
-  // ── FTL ──
   if (hasFTL) {
-    h += `<div class="stat-section"><div class="stat-section-label">FTL</div>`;
-    if (ftlOil)     h += `<div class="stat-row"><span class="stat-label">Mag-Plasma Storage</span><span class="stat-val">${fmt(ftlOil)} L</span></div>`;
-    if (ftlCap)     h += `<div class="stat-row${ftlCap < weight ? ' bad' : ''}"><span class="stat-label">Optimal up to</span><span class="stat-val">${fmt(ftlCap)} t</span></div>`;
-    if (ftlRealCap) h += `<div class="stat-row"><span class="stat-label">Weight Capacity</span><span class="stat-val">${fmt(ftlRealCap)} t</span></div>`;
-    if (ftlJumpCost) h += `<div class="stat-row"><span class="stat-label">FTL Jump Cost</span><span class="stat-val">${ftlJumpCost} L/np</span></div>`;
-    if (ftlClass)   h += `<div class="stat-row"><span class="stat-label">Engine Class</span><span class="stat-val">${ftlClass}</span></div>`;
-    if (ftlCrit)    h += `<div class="stat-row"><span class="stat-label">FTL Crit Chance Reduction</span><span class="stat-val">${fmt(ftlCrit)}%</span></div>`;
-    h += `</div>`;
+    systemsH += `<div class="stat-section"><div class="stat-section-label">FTL</div>`;
+    if (ftlOil)     systemsH += `<div class="stat-row"><span class="stat-label">Mag-Plasma Storage</span><span class="stat-val">${fmt(ftlOil)} L</span></div>`;
+    if (ftlCap)     systemsH += `<div class="stat-row${ftlCap < weight ? ' bad' : ''}"><span class="stat-label">Optimal up to</span><span class="stat-val">${fmt(ftlCap)} t</span></div>`;
+    if (ftlRealCap) systemsH += `<div class="stat-row"><span class="stat-label">Weight Capacity</span><span class="stat-val">${fmt(ftlRealCap)} t</span></div>`;
+    if (ftlJumpCost) systemsH += `<div class="stat-row"><span class="stat-label">FTL Jump Cost</span><span class="stat-val">${ftlJumpCost} L/np</span></div>`;
+    if (ftlClass)   systemsH += `<div class="stat-row"><span class="stat-label">Engine Class</span><span class="stat-val">${ftlClass}</span></div>`;
+    if (ftlCrit)    systemsH += `<div class="stat-row"><span class="stat-label">FTL Crit Chance Reduction</span><span class="stat-val">${fmt(ftlCrit)}%</span></div>`;
+    systemsH += `</div>`;
   }
 
-  // ── Lights ──
   if (lights.length) {
-    h += `<div class="stat-section"><div class="stat-section-label">Lights</div>`;
-    h += `<div class="stat-row"><span class="stat-label">Fixtures Installed</span><span class="stat-val">${lights.length}</span></div>`;
-    h += `<div class="stat-row"><span class="stat-label">Max Range</span><span class="stat-val">${fmt(lightMaxRange)} np</span></div>`;
-    h += `<div class="stat-row"><span class="stat-label">Max Luminous Power</span><span class="stat-val">${fmt(lightMaxPower)} lm</span></div>`;
-    h += `</div>`;
+    systemsH += `<div class="stat-section"><div class="stat-section-label">Lights</div>`;
+    systemsH += `<div class="stat-row"><span class="stat-label">Fixtures Installed</span><span class="stat-val">${lights.length}</span></div>`;
+    systemsH += `<div class="stat-row"><span class="stat-label">Max Range</span><span class="stat-val">${fmt(lightMaxRange)} np</span></div>`;
+    systemsH += `<div class="stat-row"><span class="stat-label">Max Luminous Power</span><span class="stat-val">${fmt(lightMaxPower)} lm</span></div>`;
+    systemsH += `</div>`;
   }
 
-  // ── Mining & Scanning ── (real per-skill attributes: Mine/RadarPing/Scan)
   if (hasMining) {
-    h += `<div class="stat-section"><div class="stat-section-label">Mining & Scanning</div>`;
-    if (miningPower)    h += `<div class="stat-row"><span class="stat-label">Mining Power</span><span class="stat-val">${fmt(miningPower)} MJ</span></div>`;
-    if (miningTier)     h += `<div class="stat-row"><span class="stat-label">Max Mining Tier</span><span class="stat-val">${fmt(miningTier)}</span></div>`;
-    if (scanningPower)  h += `<div class="stat-row"><span class="stat-label">Scanning Power</span><span class="stat-val">${fmt(scanningPower)} MJ</span></div>`;
-    if (scanningTier)   h += `<div class="stat-row"><span class="stat-label">Max Scanning Tier</span><span class="stat-val">${fmt(scanningTier)}</span></div>`;
-    if (radarRange)     h += `<div class="stat-row"><span class="stat-label">Max Radar Range</span><span class="stat-val">${fmt(radarRange)} np</span></div>`;
-    if (miningPowerUse) h += `<div class="stat-row"><span class="stat-label">Power Usage (active)</span><span class="stat-val">${fmt(miningPowerUse)} MA</span></div>`;
-    if (miningHeatGen)  h += `<div class="stat-row"><span class="stat-label">Heat Generation (active)</span><span class="stat-val">${fmt(miningHeatGen)} MW</span></div>`;
-    h += `</div>`;
+    systemsH += `<div class="stat-section"><div class="stat-section-label">Mining & Scanning</div>`;
+    if (miningPower)    systemsH += `<div class="stat-row"><span class="stat-label">Mining Power</span><span class="stat-val">${fmt(miningPower)} MJ</span></div>`;
+    if (miningTier)     systemsH += `<div class="stat-row"><span class="stat-label">Max Mining Tier</span><span class="stat-val">${fmt(miningTier)}</span></div>`;
+    if (scanningPower)  systemsH += `<div class="stat-row"><span class="stat-label">Scanning Power</span><span class="stat-val">${fmt(scanningPower)} MJ</span></div>`;
+    if (scanningTier)   systemsH += `<div class="stat-row"><span class="stat-label">Max Scanning Tier</span><span class="stat-val">${fmt(scanningTier)}</span></div>`;
+    if (radarRange)     systemsH += `<div class="stat-row"><span class="stat-label">Max Radar Range</span><span class="stat-val">${fmt(radarRange)} np</span></div>`;
+    if (miningPowerUse) systemsH += `<div class="stat-row"><span class="stat-label">Power Usage (active)</span><span class="stat-val">${fmt(miningPowerUse)} MA</span></div>`;
+    if (miningHeatGen)  systemsH += `<div class="stat-row"><span class="stat-label">Heat Generation (active)</span><span class="stat-val">${fmt(miningHeatGen)} MW</span></div>`;
+    systemsH += `</div>`;
   }
 
-  // ── Combat & Defense ── (real per-skill attributes: GunFire/MissileAttack/MinerAttack/Shield)
   if (hasCombat) {
-    h += `<div class="stat-section"><div class="stat-section-label">Combat & Defense</div>`;
-    if (shipDamage)     h += `<div class="stat-row"><span class="stat-label">Structural Damage</span><span class="stat-val">${fmt(shipDamage)} hp</span></div>`;
-    if (ammoUse)        h += `<div class="stat-row"><span class="stat-label">Ammo Consumption</span><span class="stat-val">${fmt(ammoUse)}</span></div>`;
-    if (shieldCharge)   h += `<div class="stat-row"><span class="stat-label">Shield Max Charge</span><span class="stat-val">${fmt(shieldCharge)}</span></div>`;
-    if (dmgNegation)    h += `<div class="stat-row"><span class="stat-label">Damage Negation</span><span class="stat-val">${fmt(dmgNegation)}</span></div>`;
-    if (shieldRegen)    h += `<div class="stat-row"><span class="stat-label">Shield Regen Speed</span><span class="stat-val">${fmt(shieldRegen)}</span></div>`;
-    if (shieldPowerUse) h += `<div class="stat-row"><span class="stat-label">Power Usage (active)</span><span class="stat-val">${fmt(shieldPowerUse)} MA</span></div>`;
-    if (combatHeatGen)  h += `<div class="stat-row"><span class="stat-label">Heat Generation (active)</span><span class="stat-val">${fmt(combatHeatGen)} MW</span></div>`;
-    if (hullDmgReduct)  h += `<div class="stat-row"><span class="stat-label">Hull Impact Damage Reduction</span><span class="stat-val">${fmt(hullDmgReduct)}%</span></div>`;
-    h += `</div>`;
+    systemsH += `<div class="stat-section"><div class="stat-section-label">Combat & Defense</div>`;
+    if (shipDamage)     systemsH += `<div class="stat-row"><span class="stat-label">Structural Damage</span><span class="stat-val">${fmt(shipDamage)} hp</span></div>`;
+    if (ammoUse)        systemsH += `<div class="stat-row"><span class="stat-label">Ammo Consumption</span><span class="stat-val">${fmt(ammoUse)}</span></div>`;
+    if (shieldCharge)   systemsH += `<div class="stat-row"><span class="stat-label">Shield Max Charge</span><span class="stat-val">${fmt(shieldCharge)}</span></div>`;
+    if (dmgNegation)    systemsH += `<div class="stat-row"><span class="stat-label">Damage Negation</span><span class="stat-val">${fmt(dmgNegation)}</span></div>`;
+    if (shieldRegen)    systemsH += `<div class="stat-row"><span class="stat-label">Shield Regen Speed</span><span class="stat-val">${fmt(shieldRegen)}</span></div>`;
+    if (shieldPowerUse) systemsH += `<div class="stat-row"><span class="stat-label">Power Usage (active)</span><span class="stat-val">${fmt(shieldPowerUse)} MA</span></div>`;
+    if (combatHeatGen)  systemsH += `<div class="stat-row"><span class="stat-label">Heat Generation (active)</span><span class="stat-val">${fmt(combatHeatGen)} MW</span></div>`;
+    if (hullDmgReduct)  systemsH += `<div class="stat-row"><span class="stat-label">Hull Impact Damage Reduction</span><span class="stat-val">${fmt(hullDmgReduct)}%</span></div>`;
+    systemsH += `</div>`;
   }
+  if (!systemsH) systemsH = '<div class="ship-empty">No auxiliary systems installed</div>';
 
-  el.innerHTML = h;
+  el.innerHTML = { overview: overviewH, heat: heatH, systems: systemsH }[state.statsTab] || overviewH;
   document.getElementById('env-select')?.addEventListener('change', e => {
     state.envId = e.target.value;
     updateShipStats();
