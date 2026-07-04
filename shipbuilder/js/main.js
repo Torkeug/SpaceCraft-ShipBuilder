@@ -424,13 +424,22 @@ function placePiece(gx, gy, gz) {
   refreshSlotSprites();
 }
 
-// Shift-click on a placed part: stamp a copy at the same spot, ready to drag off.
-function duplicateEntry(entry) {
-  const copy = placePieceDirect(entry.part, entry.gx, entry.gy, entry.gz, entry.shapeIdx, entry.mx, entry.my, entry.mz, entry.rz);
+// Shift-click on a placed part: enter placement mode with a ghost matching
+// its exact shape/flip/orientation, same as selecting it fresh from the
+// palette -- reuses placePiece's own collision check, so it's never possible
+// to stamp an invalid overlapping copy.
+function startDuplicatePlacement(entry) {
+  state.selected = entry.part;
+  state.inspected = null;
+  document.body.style.userSelect = 'none';
+  state.shapeIdx = entry.shapeIdx;
+  state.mx = entry.mx; state.my = entry.my; state.mz = entry.mz;
+  state.rz = entry.rz;
+  if (_hoveredSlot) setSlotHighlight(_hoveredSlot, false);
   buildPalette(document.getElementById('search').value);
-  updateShipStats();
-  refreshSlotSprites();
-  return copy;
+  clearGhost();
+  refreshGhostGeo();
+  updateInspector();
 }
 
 // Used by load/undo — place without consuming state.selected.
@@ -706,6 +715,9 @@ const groupDrag = { pending: null, active: false, anchorEntry: null, startPos: n
 const marquee = { active: false, x0: 0, y0: 0 };
 const slotDrag = { pending: null, active: false, entry: null, origOwner: null, _prevSelected: null };
 let _pDown = null;
+// True right after a shift-click enters duplicate-placement mode, so that
+// same click's own release doesn't also count as the placement click.
+let _suppressNextPlaceClick = false;
 
 // Marquee selection rectangle (DOM overlay)
 const marqueeEl = document.createElement('div');
@@ -825,13 +837,13 @@ renderer.domElement.addEventListener('pointerdown', e => {
   }
   const entry = hits[0].object._entry ?? state.placed.find(p => p.mesh === hits[0].object);
   if (!entry || entry.slotOwner) return;
+  if (e.shiftKey) { startDuplicatePlacement(entry); _suppressNextPlaceClick = true; return; }
   if (state.groupSel.size > 1 && state.groupSel.has(entry)) {
     // Initiate group drag
     groupDrag.pending = { entry, x: e.clientX, y: e.clientY, hitPoint: hits[0].point.clone() };
   } else {
-    if (!e.shiftKey) clearGroupSel();
-    const target = e.shiftKey ? duplicateEntry(entry) : entry;
-    drag.pending = { entry: target, x: e.clientX, y: e.clientY, hitPoint: hits[0].point.clone() };
+    clearGroupSel();
+    drag.pending = { entry, x: e.clientX, y: e.clientY, hitPoint: hits[0].point.clone() };
   }
 });
 
@@ -1102,6 +1114,7 @@ renderer.domElement.addEventListener('pointerup', e => {
   }
   const moved = Math.hypot(e.clientX - _pDown.x, e.clientY - _pDown.y) > 5;
   const btn = _pDown.btn; _pDown = null;
+  const suppressPlace = _suppressNextPlaceClick; _suppressNextPlaceClick = false;
   if (moved) return;
   // Short click on an occupied slot sprite → inspect the module.
   if (_sdPending && btn === 0 && !state.eraseMode) {
@@ -1132,7 +1145,7 @@ renderer.domElement.addEventListener('pointerup', e => {
         const hullEntry = hits[0].object._hullEntry;
         if (hullEntry) placeInSlot(state.selected, hullEntry);
       }
-    } else {
+    } else if (!suppressPlace) {
       const pos = getGridPos();
       if (pos) placePiece(pos.gx, pos.gy, pos.gz);
     }
