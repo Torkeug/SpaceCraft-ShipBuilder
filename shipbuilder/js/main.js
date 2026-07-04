@@ -904,6 +904,12 @@ renderer.domElement.addEventListener('pointermove', e => {
       ghost.position.set(gx, gy, gz);
       ghost.visible = true;
       updateGroupGhostPositions(dgx, dgy, dgz, mat);
+      // Keep the single-select outline following along if the inspected
+      // entry happens to be part of this group drag.
+      if (state.inspected && groupDrag.startPos.has(state.inspected)) {
+        const si = groupDrag.startPos.get(state.inspected);
+        selOutline.position.set(si.gx + dgx, si.gy + dgy, si.gz + dgz);
+      }
     }
     return;
   }
@@ -1030,6 +1036,7 @@ renderer.domElement.addEventListener('pointerup', e => {
     groupDrag.gx = null; groupDrag.gy = null; groupDrag.gz = null;
     groupDrag.startPos.clear();
     updateGroupOutlines();
+    updateSelOutline();
     refreshSlotSprites();
     return;
   }
@@ -1208,7 +1215,7 @@ window.addEventListener('pointerup', () => {
     }
     groupDrag.startPos.clear(); groupDrag.anchorEntry = null;
     groupDrag.gx = null; groupDrag.gy = null; groupDrag.gz = null;
-    updateGroupOutlines(); refreshSlotSprites();
+    updateGroupOutlines(); updateSelOutline(); refreshSlotSprites();
   }
   if (slotDrag.active) {
     slotDrag.active = false; slotDrag.pending = null;
