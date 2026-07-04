@@ -228,20 +228,6 @@ body {
   font-size: 11px;
   color: #8b949e;
 }
-#piece-rot { color: #e8a71d; }
-.rot-btn {
-  display: none;
-  padding: 1px 6px;
-  background: #21262d;
-  border: 1px solid #30363d;
-  border-radius: 4px;
-  color: #c9d1d9;
-  font-size: 11px;
-  cursor: pointer;
-  line-height: 1.4;
-}
-.rot-btn:hover { background: #30363d; }
-
 .inspector-section-label {
   font-size: 10px;
   font-weight: 700;

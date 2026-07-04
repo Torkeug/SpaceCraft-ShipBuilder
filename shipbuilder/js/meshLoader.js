@@ -87,9 +87,9 @@ function reverseWinding(g) {
   idx.needsUpdate = true;
 }
 
-// Fit a raw geometry into a cell [0..w, 0..h, 0..d] with rotation + flip applied.
+// Fit a raw geometry into a cell [0..w, 0..h, 0..d] with flip applied.
 // Dimensioned parts (frames) fill the cell exactly; others scale uniformly.
-export function fitGeom(base, dims, rotDeg, part, flip, rz, shapeIdx) {
+export function fitGeom(base, dims, part, flip, rz, shapeIdx) {
   const [w, h, d] = dims;
   const g = base.clone();
   // Game meshes stored in Z-up; rotate to Y-up for all parts except cockpits.
@@ -119,9 +119,6 @@ export function fitGeom(base, dims, rotDeg, part, flip, rz, shapeIdx) {
     g.scale(fx ? -1 : 1, fy ? -1 : 1, fz ? -1 : 1);
     if (((fx ? 1 : 0) + (fy ? 1 : 0) + (fz ? 1 : 0)) % 2 === 1) reverseWinding(g);
   }
-  let deg = rotDeg || 0;
-  if (part && part._dimd) deg = Math.round(deg / 90) * 90;
-  if (deg) g.rotateY(deg * Math.PI / 180);
   if (rz) {
     // Sign is mesh-orientation-dependent: thrusters need +90 (confirmed
     // visually correct), but wings' anchor/mount side ends up facing up
