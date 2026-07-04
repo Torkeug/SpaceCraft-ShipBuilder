@@ -85,6 +85,12 @@ MODULE_SOURCES = {
     # previously assumed for all TestPE files. Path is relative to PAK_OUT
     # (Vehicules/Buildings_Parts), escaping up to assets/Buildings/Props/TestPE.
     'PathwayPuncher':         '../../Buildings/Props/TestPE/Pathway_Puncher.fbx',
+    # Confirmed via data.cdb's visual.model: Radiator -> Radiator_Panel.prefab,
+    # Radiator1 -> Radiator_Panel_Big.prefab. Both real production HMD files,
+    # never previously converted or added to the catalogue at all (only a
+    # community-sourced stats row existed in ship_stats_data.json).
+    'Radiator':               'Tools/Radiator_Panel.fbx',
+    'Radiator1':              'Tools/Radiator_Panel_Big.fbx',
 }
 
 
