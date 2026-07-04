@@ -36,6 +36,28 @@ SHIPBUILDER_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..',
 EDITOR_DATA_PATH = os.path.join(SHIPBUILDER_DIR, 'ship_editor_data.json')
 CONSTANTS_OUT_PATH = os.path.join(SHIPBUILDER_DIR, 'ship_constants.json')
 ATTRIBUTES_OUT_PATH = os.path.join(SHIPBUILDER_DIR, 'ship_attributes.json')
+ENVIRONMENTS_OUT_PATH = os.path.join(SHIPBUILDER_DIR, 'ship_environments.json')
+
+# Real planet "base temperature" ranges (data.cdb attribute.props.tempRange),
+# confirmed as the actual source ent.Planet.calcBaseTemperature() reads (via
+# getTemperatureAttribute() picking the first attribute on the planet with a
+# tempRange). These are in the same internal heat-ratio domain as ship heat
+# (NOT already real degC despite the attribute's own unit field saying degC --
+# verified by running them through convertTemperature(), e.g. PlanetHot2
+# (Very Hot)'s 55..75 internal range converts to a real 224..388 degC).
+# PlanetCold1 excluded: data.cdb marks it "Please don't use. Does not really
+# work mechanically." PlanetHot3 (Inferno) and PlanetCold3 (Dead Frozen)
+# excluded too -- confirmed (user, a player of the game) not actually reachable
+# in the current game yet; in data.cdb they only appear on placeholder/test
+# hazard sectors (Sec_Obst_Riddle, Sec_Obst_Blank, Sec_Chimera, Sec_Zenith --
+# all sharing one identical generic weight template), unlike PlanetHot2/Cold2
+# which appear across many normal, real sector definitions.
+ENVIRONMENT_ATTRIBUTES = [
+    ('Frozen', 'PlanetCold2'),
+    ('Temperate', 'PlanetTemperate'),
+    ('Hot', 'PlanetHot1'),
+    ('VeryHot', 'PlanetHot2'),
+]
 
 # Every $Const.* referenced by logic.ShipStats.calcStats()/getPointsValue(),
 # per the hlbc decompile + raw opcode disassembly (see the plan/session notes
@@ -59,6 +81,14 @@ SHIP_STAT_CONSTANTS = [
     'ShipStatDefaultLiquidSpeed', 'ShipStatLiquidBoostSpeedPower', 'ShipStatDefaultLiquidBoostSpeed',
     'ShipStatCombatSpeedFactor', 'ShipStatCombatSpeedPower',
     'ShipStatDefaultCombatSpeed', 'ShipStatCombatBoostSpeedPower', 'ShipStatDefaultCombatBoostSpeed',
+    # Heat/temperature simulation constants, from st.ShipSystems.updateHeat()/
+    # get_temperature()/getOverheatProgress() and the shared convertTemperature()
+    # helper (all decompiled via hlbc). Verified: convertTemperature(OverheatTemperature)
+    # = 190.48 degC, matching this game's own in-editor "~190degC" overheat readout exactly.
+    'HeatToTemperatureRatio', 'NaturalHeatSpaceAdjustScale', 'NaturalHeatPlanetAdjustScale',
+    'OverheatTemperature', 'CriticalHeatTemperature', 'OuterSpaceTemperature',
+    'VisibleTempAtTrueTemp0', 'VisibleTempAtTrueTempNeg100', 'VisibleTempAtTrueTempPos100',
+    'VisibleTempSlopeAt0',
 ]
 
 # Extra computed/display attribute ids that aren't real data.cdb attribute
@@ -69,6 +99,7 @@ SHIP_FORMULA_ATTRIBUTE_IDS = [
     'Frame', 'ShipWeight', 'Hull', 'CurrentHull_Display', 'Integrity',
     'SystemSupport', 'SystemRequirement', 'SystemMalusForShipPoints', 'SystemEfficiency',
     'HeatCapacity', 'HeatInterfaceMaterial', 'HeatInterfaceParts', 'HeatInterfaceShip',
+    'HeatGeneration', 'HeatDissipation', 'EngineHeatGeneration', 'EngineHeatDissipation', 'BoosterHeatGeneration',
     'PowerProduction', 'PowerStorage', 'PowerUsage', 'EngineConsumption', 'BoostConsumption',
     'BatteryChargeSpeed', 'BatteryEfficiency', 'BatteryWastage',
     'MaxSpeed', 'MaxBoostSpeed', 'Maneuvrability', 'AccelerationTime',
@@ -109,6 +140,19 @@ def build_constants(cdb):
         out[cid] = next(iter(val.values()))
     if missing:
         print(f'  WARN: {len(missing)} constants not found in data.cdb: {missing}')
+    return out
+
+
+def build_environments(cdb):
+    attrs = {a['id']: a for a in sheet(cdb, 'attribute')}
+    out = []
+    for env_id, attr_id in ENVIRONMENT_ATTRIBUTES:
+        a = attrs.get(attr_id)
+        rng = (a or {}).get('props', {}).get('tempRange')
+        if not rng:
+            print(f'  WARN: {attr_id} has no tempRange in data.cdb, skipping {env_id}')
+            continue
+        out.append({'id': env_id, 'name': a['name'], 'min': rng['min'], 'max': rng['max']})
     return out
 
 
@@ -221,6 +265,13 @@ def main():
         json.dump(attributes, f, indent=2, ensure_ascii=False)
         f.write('\n')
     print(f'  Wrote {ATTRIBUTES_OUT_PATH} ({len(attributes)} attributes)')
+
+    print('Building ship_environments.json...')
+    environments = build_environments(cdb)
+    with open(ENVIRONMENTS_OUT_PATH, 'w', encoding='utf-8') as f:
+        json.dump(environments, f, indent=2, ensure_ascii=False)
+        f.write('\n')
+    print(f'  Wrote {ENVIRONMENTS_OUT_PATH} ({len(environments)} environments)')
 
 
 if __name__ == '__main__':

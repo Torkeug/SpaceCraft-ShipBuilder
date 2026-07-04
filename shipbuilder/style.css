@@ -395,6 +395,16 @@ body {
 .stat-row.bad  .stat-val { color: #ff3b5c; }
 .stat-row.good .stat-val { color: #39ff14; }
 
+.env-select {
+  background: #0d1b2a;
+  color: #c8d8e8;
+  border: 1px solid #2a445e;
+  border-radius: 3px;
+  font-size: 10px;
+  font-family: inherit;
+  padding: 1px 4px;
+}
+
 /* Module slot grid (inspector) */
 .slot-grid { display: flex; flex-wrap: wrap; gap: 3px; margin: 4px 0 3px; }
 .slot-dot {

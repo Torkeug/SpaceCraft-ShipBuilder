@@ -1,9 +1,10 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import {
-  PARTS, BYID, GROUPS, CONST, loadData, loadConstants, attrLabel, attrUnit, isDisplayable,
+  PARTS, BYID, GROUPS, CONST, ENVIRONMENTS, loadData, loadConstants, attrLabel, attrUnit, isDisplayable,
   calcIntegrity, calcHullDisplay, calcSystemSupport, calcSystemEfficiency,
   calcHeatInterface, calcShipPoints, calcManeuverability, calcSpeed, calcBatteryAggregate,
+  calcVisibleTemperature, calcTimeToOverheat, calcEngineCooling,
 } from './data.js';
 import { loadManifest, getMeshKey, loadGeom, fitGeom, boxGeom, roleMaterial, getCached } from './meshLoader.js';
 
@@ -152,6 +153,7 @@ const state = {
   mx: false, my: false, mz: false, rz: false,
   eraseMode: false,
   ghostGx: null, ghostGy: null, ghostGz: null,
+  envId: 'Space',
 };
 
 let partFlip = {};
@@ -1658,6 +1660,17 @@ function updateShipStats() {
   const powStorage = sum('PowerStorage');
   const heatCap   = sum('HeatCapacity');
   const heatInterfaceParts = sum('HeatInterfaceParts');
+  const heatGen    = sum('HeatGeneration');       // baseline/always-on (e.g. heaters)
+  const heatDissip = sum('HeatDissipation');      // baseline/always-on (e.g. radiators)
+  const boosterHeatGen = sum('BoosterHeatGeneration'); // only while boosting
+  const thrusters = state.placed
+    .filter(e => e.part.stats?.EngineThrust)
+    .map(e => ({
+      engineHeatDissipation: e.part.stats.EngineHeatDissipation || 0,
+      boostThrust: e.part.stats.BoostThrust || 0,
+      engineThrust: e.part.stats.EngineThrust,
+    }));
+  const engineCooling = calcEngineCooling(thrusters, thrust); // only while thrusting
   const steering  = sum('SteeringStrength');
   const solid     = sum('SolidStorage');
   const fluid     = sum('FluidStorage');
@@ -1719,6 +1732,16 @@ function updateShipStats() {
   const efficiency   = calcSystemEfficiency(req, support);  // ratio, 1.0 = 100%
   const efficiencyPct = efficiency !== null ? efficiency * 100 : null;
   const heatInterface = calcHeatInterface(heatInterfaceParts);
+  const netHeat        = heatGen - heatDissip; // baseline only (heaters/radiators)
+  const netHeatBoost    = netHeat + boosterHeatGen - engineCooling; // while boosting/thrusting too
+  const overheatC      = calcVisibleTemperature(CONST.OverheatTemperature);
+  const env            = ENVIRONMENTS.find(e => e.id === state.envId) || ENVIRONMENTS[0];
+  const envMinC        = env ? calcVisibleTemperature(env.min) : null;
+  const envMaxC        = env ? calcVisibleTemperature(env.max) : null;
+  const envTempInternal = env ? (env.min + env.max) / 2 : 0;
+  const isPlanetEnv     = env && env.id !== 'Space';
+  const timeToOverheat      = calcTimeToOverheat(netHeat, heatCap, heatInterface, envTempInternal, isPlanetEnv);
+  const timeToOverheatBoost = calcTimeToOverheat(netHeatBoost, heatCap, heatInterface, envTempInternal, isPlanetEnv);
   const shipPoints    = hull !== null ? calcShipPoints(hull, req, sysMalus, support) : null;
   const maneuver      = calcManeuverability(steering, weight);
   const { speed, boostSpeed } = calcSpeed(thrust, force, weight, efficiency, boostThrust);
@@ -1778,7 +1801,25 @@ function updateShipStats() {
   h += `<div class="stat-section"><div class="stat-section-label">Heat Management</div><div class="stat-grid">`;
   h += statBlock('Heat Cap.', fmt(heatCap), 'neutral');
   h += statBlock('Heat Interface', heatInterface.toFixed(1), 'neutral', true);
-  h += `</div></div>`;
+  h += `</div>`;
+  h += `<div class="stat-row"><span class="stat-label">Heat Produced/sec</span><span class="stat-val">${fmt(heatGen)}</span></div>`;
+  h += `<div class="stat-row"><span class="stat-label">Cooling/sec</span><span class="stat-val">${fmt(heatDissip)}</span></div>`;
+  h += `<div class="stat-row${netHeat > 0 ? ' bad' : ' good'}"><span class="stat-label">Net Heat</span><span class="stat-val">${(netHeat >= 0 ? '+' : '') + fmt(netHeat)}</span></div>`;
+  if (boosterHeatGen) h += `<div class="stat-row"><span class="stat-label">Boost Heat/sec</span><span class="stat-val">${fmt(boosterHeatGen)}</span></div>`;
+  if (engineCooling)  h += `<div class="stat-row"><span class="stat-label">Engine Cooling/sec</span><span class="stat-val">${fmt(engineCooling)}</span></div>`;
+  const overheatTxt = t => t !== null ? fmt(t) + 's' : 'Never';
+  h += `<div class="stat-row"><span class="stat-label">Time to Overheat, idle (~${fmt(overheatC)}°C)</span><span class="stat-val">${overheatTxt(timeToOverheat)}</span></div>`;
+  h += `<div class="stat-row${timeToOverheatBoost !== null ? ' bad' : ''}"><span class="stat-label">Time to Overheat, boosting</span><span class="stat-val">${overheatTxt(timeToOverheatBoost)}</span></div>`;
+  h += `<div class="stat-row" style="margin-top:3px"><span class="stat-label">Environment</span>
+    <select id="env-select" class="env-select">
+      ${ENVIRONMENTS.map(e => `<option value="${e.id}"${e.id === state.envId ? ' selected' : ''}>${e.name}</option>`).join('')}
+    </select>
+  </div>`;
+  if (env) {
+    const rangeTxt = env.min === env.max ? `${fmt(envMinC)}°C` : `${fmt(envMinC)} to ${fmt(envMaxC)}°C`;
+    h += `<div class="stat-row"><span class="stat-label">Ambient Temperature</span><span class="stat-val">${rangeTxt}</span></div>`;
+  }
+  h += `</div>`;
 
   // ── Power ──
   h += `<div class="stat-section"><div class="stat-section-label">Power</div><div class="stat-grid">`;
@@ -1876,6 +1917,10 @@ function updateShipStats() {
   }
 
   el.innerHTML = h;
+  document.getElementById('env-select')?.addEventListener('change', e => {
+    state.envId = e.target.value;
+    updateShipStats();
+  });
 }
 
 function statBlock(label, value, cls = '', wide = false) {

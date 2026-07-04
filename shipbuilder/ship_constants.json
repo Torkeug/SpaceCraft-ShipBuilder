@@ -40,5 +40,15 @@
   "ShipStatCombatSpeedPower": 0.6,
   "ShipStatDefaultCombatSpeed": 0.5,
   "ShipStatCombatBoostSpeedPower": 0.5,
-  "ShipStatDefaultCombatBoostSpeed": 0.5
+  "ShipStatDefaultCombatBoostSpeed": 0.5,
+  "HeatToTemperatureRatio": 1,
+  "NaturalHeatSpaceAdjustScale": 7e-05,
+  "NaturalHeatPlanetAdjustScale": 3.5e-05,
+  "OverheatTemperature": 50,
+  "CriticalHeatTemperature": 100,
+  "OuterSpaceTemperature": -164,
+  "VisibleTempAtTrueTemp0": 17.3,
+  "VisibleTempAtTrueTempNeg100": -110,
+  "VisibleTempAtTrueTempPos100": 660,
+  "VisibleTempSlopeAt0": 0.5
 }

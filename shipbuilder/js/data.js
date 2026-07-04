@@ -4,15 +4,24 @@ export let PARTS = [], BYID = {}, GROUPS = [], PALETTE = [];
 // data.cdb content, dumped by tools/extract_ship_stats.py. See that script's
 // docstring and the plan notes for how each formula below was verified
 // against the game's own compiled code (logic.ShipStats.hx).
-export let CONST = {}, ATTRS = {};
+export let CONST = {}, ATTRS = {}, ENVIRONMENTS = [];
 
 export async function loadConstants() {
-  const [consts, attrs] = await Promise.all([
+  const [consts, attrs, environments] = await Promise.all([
     fetch('ship_constants.json').then(r => r.json()),
     fetch('ship_attributes.json').then(r => r.json()),
+    fetch('ship_environments.json').then(r => r.json()),
   ]);
   CONST = consts;
   ATTRS = attrs;
+  // Real planet temperature bands (data.cdb attribute.props.tempRange, verified
+  // against ent.Planet.calcBaseTemperature) plus deep space (a fixed point, not
+  // a range, from the OuterSpaceTemperature constant). All in the internal
+  // heat-ratio domain -- use calcVisibleTemperature() to get real degC.
+  ENVIRONMENTS = [
+    { id: 'Space', name: 'Space', min: CONST.OuterSpaceTemperature, max: CONST.OuterSpaceTemperature },
+    ...environments,
+  ];
 }
 
 /** Real in-game display name for an attribute id, falling back to the id itself. */
@@ -126,6 +135,97 @@ export function calcBatteryAggregate(batteries, totalPowerStorage) {
     efficiency: effFactor !== 0 ? efficiency / effFactor : 0,
     wastage: totalPowerStorage !== 0 ? wastage / totalPowerStorage : 0,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Heat / temperature — ported from st.ShipSystems (get_temperature,
+// getOverheatProgress) and the shared convertTemperature() helper (decompiled
+// via hlbc). Verified: calcVisibleTemperature(CONST.OverheatTemperature) =
+// 190.48, matching the game's own in-editor "~190°C" overheat readout exactly,
+// and the real planet environment tempRanges (e.g. Very Hot's 55..75 internal)
+// convert to plausible real degC (224..388) once run through this same curve.
+// ---------------------------------------------------------------------------
+
+/**
+ * Convert an internal heat-ratio value (heat/heatCapacity, or a raw
+ * data.cdb tempRange endpoint — both live in this same domain) to the real
+ * degC shown to players. Piecewise quadratic through three known points
+ * ((-100,-110), (0,17.3), (100,660)) with a fixed slope at 0.
+ */
+export function calcVisibleTemperature(t) {
+  const slope = CONST.VisibleTempSlopeAt0, t0 = CONST.VisibleTempAtTrueTemp0;
+  const coeff = t < 0
+    ? (CONST.VisibleTempAtTrueTempNeg100 + slope * 100 - t0) / 10000
+    : (CONST.VisibleTempAtTrueTempPos100 - slope * 100 - t0) / 10000;
+  return coeff * t * t + slope * t + t0;
+}
+
+/** Ship's current internal temperature ratio (get_temperature). */
+export function calcInternalTemperature(heat, heatCapacity) {
+  return heatCapacity > 0 ? CONST.HeatToTemperatureRatio * heat / heatCapacity : 0;
+}
+
+// The real engine's frame-rate default (hxd/Timer.hx in the actual Heaps.io
+// source, cloned locally at tools/heaps_ref/heaps: `public static var
+// wantedFPS = 60.`). st.ShipSystems.updateHeat's natural-heat-exchange term
+// is expressed per-frame at this rate, so it's needed to get a real per-
+// second rate constant, not a guess.
+const WANTED_FPS = 60;
+
+/**
+ * Real time-to-overheat, from a cold start (heat=0, a freshly-assembled/idle
+ * ship), solving the actual heat ODE from st.ShipSystems.updateHeat:
+ *   dHeat/dt = rate×(targetHeat − heat) + activeNetHeat
+ * where targetHeat is the heat level in equilibrium with the external
+ * environment, and rate = 1 − (1 − k)^wantedFPS is the real per-second
+ * natural-exchange rate (k = adjustScale × HeatToTemperatureRatio ×
+ * heatInterface / heatCapacity). This is a linear ODE with equilibrium
+ * heq = targetHeat + activeNetHeat/rate; solved in closed form below — this
+ * is the actual mechanic (a poorly-insulated/cooled ship can overheat from
+ * ambient environment heat alone, thrusters off entirely, if heq exceeds the
+ * overheat threshold), not an approximation of it.
+ *
+ * `activeNetHeat`: constant situational heat sources (HeatGeneration −
+ * HeatDissipation, optionally + BoosterHeatGeneration − engine cooling while
+ * boosting) — NOT the natural exchange, which this function computes itself.
+ * `envTempInternal`: external temperature in the same internal heat-ratio
+ * domain as OverheatTemperature (an ENVIRONMENTS entry's min/max midpoint,
+ * NOT calcVisibleTemperature's real-degC output). `isPlanet`: false for deep
+ * space (NaturalHeatSpaceAdjustScale), true for a planet environment
+ * (NaturalHeatPlanetAdjustScale) — matches the real branch in updateHeat.
+ */
+export function calcTimeToOverheat(activeNetHeat, heatCapacity, heatInterface, envTempInternal, isPlanet) {
+  if (heatCapacity <= 0) return null;
+  const overheatHeat = heatCapacity * CONST.OverheatTemperature / CONST.HeatToTemperatureRatio;
+  const adjustScale = isPlanet ? CONST.NaturalHeatPlanetAdjustScale : CONST.NaturalHeatSpaceAdjustScale;
+  const k = adjustScale * CONST.HeatToTemperatureRatio * heatInterface / heatCapacity;
+  const rate = 1 - Math.pow(1 - k, WANTED_FPS);
+
+  if (rate <= 0) {
+    // No natural exchange with the environment at all (e.g. heatInterface=0) —
+    // heat grows purely linearly from the active sources.
+    return activeNetHeat > 0 ? overheatHeat / activeNetHeat : null;
+  }
+  const targetHeat = heatCapacity * envTempInternal / CONST.HeatToTemperatureRatio;
+  const heq = targetHeat + activeNetHeat / rate;
+  if (heq <= overheatHeat) return null; // settles at/below the threshold — never gets there
+  return -Math.log(1 - overheatHeat / heq) / rate;
+}
+
+/**
+ * Real engine-cooling-while-thrusting formula (st.ShipSystems.updateHeat):
+ * Σ(EngineHeatDissipation × BoostThrust/EngineThrust) × ship.totalThrust.
+ * Lower confidence than most formulas here — this segment of the decompile
+ * had control-flow reconstruction issues (see calcBatteryAggregate's similar
+ * caveat), so the expression itself is faithfully ported but not opcode-
+ * verified. `thrusters`: [{engineHeatDissipation, boostThrust, engineThrust}].
+ */
+export function calcEngineCooling(thrusters, totalThrust) {
+  const totDissip = thrusters.reduce((a, t) => {
+    if (!t.engineThrust || !t.engineHeatDissipation) return a;
+    return a + t.engineHeatDissipation * (t.boostThrust || 0) / t.engineThrust;
+  }, 0);
+  return totDissip * totalThrust;
 }
 
 export async function loadData() {

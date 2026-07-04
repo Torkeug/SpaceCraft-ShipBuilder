@@ -7971,8 +7971,7 @@
       "model": "prefabs/ships/parts/tool/VanadiumBattery.prefab",
       "mount": "inside",
       "su": 10,
-      "m": "VanadiumBattery",
-      "unreleased": true
+      "m": "VanadiumBattery"
     },
     {
       "id": "Battery2",
