@@ -424,6 +424,15 @@ function placePiece(gx, gy, gz) {
   refreshSlotSprites();
 }
 
+// Shift-click on a placed part: stamp a copy at the same spot, ready to drag off.
+function duplicateEntry(entry) {
+  const copy = placePieceDirect(entry.part, entry.gx, entry.gy, entry.gz, entry.shapeIdx, entry.mx, entry.my, entry.mz, entry.rz);
+  buildPalette(document.getElementById('search').value);
+  updateShipStats();
+  refreshSlotSprites();
+  return copy;
+}
+
 // Used by load/undo — place without consuming state.selected.
 function placePieceDirect(part, gx, gy, gz, shapeIdx, mx, my, mz, rz) {
   const dims = effDims(partDims(part), rz);
@@ -821,7 +830,8 @@ renderer.domElement.addEventListener('pointerdown', e => {
     groupDrag.pending = { entry, x: e.clientX, y: e.clientY, hitPoint: hits[0].point.clone() };
   } else {
     if (!e.shiftKey) clearGroupSel();
-    drag.pending = { entry, x: e.clientX, y: e.clientY, hitPoint: hits[0].point.clone() };
+    const target = e.shiftKey ? duplicateEntry(entry) : entry;
+    drag.pending = { entry: target, x: e.clientX, y: e.clientY, hitPoint: hits[0].point.clone() };
   }
 });
 
