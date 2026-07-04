@@ -4,7 +4,7 @@ import {
   PARTS, BYID, GROUPS, CONST, ENVIRONMENTS, loadData, loadConstants, attrLabel, attrUnit, isDisplayable,
   calcIntegrity, calcHullDisplay, calcSystemSupport, calcSystemEfficiency,
   calcHeatInterface, calcShipPoints, calcManeuverability, calcSpeed, calcBatteryAggregate,
-  calcVisibleTemperature, calcTimeToOverheat, calcEngineCooling,
+  calcVisibleTemperature, calcTimeToOverheat, calcEngineCooling, calcActiveHeatWithEfficiency,
 } from './data.js';
 import { loadManifest, getMeshKey, loadGeom, fitGeom, boxGeom, roleMaterial, getCached } from './meshLoader.js';
 
@@ -1619,9 +1619,11 @@ function fmt(n) { return Math.round(n).toLocaleString(); }
 
 function updateShipStats() {
   const verdictEl = document.getElementById('stats-verdict');
+  const contextEl = document.getElementById('stats-context');
   const el = document.getElementById('ship-stats');
   if (!state.placed.length) {
     verdictEl.innerHTML = '';
+    contextEl.innerHTML = '';
     el.innerHTML = '<div class="ship-empty">Place parts to see stats</div>';
     return;
   }
@@ -1746,16 +1748,45 @@ function updateShipStats() {
   const efficiency   = calcSystemEfficiency(req, support);  // ratio, 1.0 = 100%
   const efficiencyPct = efficiency !== null ? efficiency * 100 : null;
   const heatInterface = calcHeatInterface(heatInterfaceParts);
-  const netHeat        = heatGen - heatDissip; // baseline only (heaters/radiators)
-  const netHeatBoost    = netHeat + boosterHeatGen - engineCooling; // while boosting/thrusting too
   const overheatC      = calcVisibleTemperature(CONST.OverheatTemperature);
   const env            = ENVIRONMENTS.find(e => e.id === state.envId) || ENVIRONMENTS[0];
   const envMinC        = env ? calcVisibleTemperature(env.min) : null;
   const envMaxC        = env ? calcVisibleTemperature(env.max) : null;
   const envTempInternal = env ? (env.min + env.max) / 2 : 0;
-  const isPlanetEnv     = env && env.id !== 'Space';
+  const isPlanetEnv     = env && env.kind !== 'space';
+  // BoosterHeatGeneration and tool ActiveHeatGeneration (mining/combat) are
+  // both "while active" sources tracked the same way in the real game
+  // (heatContributorGroups) and scaled by system efficiency + environment
+  // per the real byproductHeatProd formula (an inefficient ship runs hotter
+  // while active, except on a cold planet where it's the reverse). Kept
+  // separate per-source here rather than merged into one blended number --
+  // baseline heater/radiator heat is NOT scaled this way in the real game
+  // (a different, cold-only "toolEfficiency" mechanism applies there
+  // instead, and it's a stateful multi-tick accumulator irrelevant to
+  // overheating specifically, so it's intentionally not modeled here), so
+  // heatGen/heatDissip stay untouched.
+  const boosterHeatGenEff = calcActiveHeatWithEfficiency(boosterHeatGen, efficiency ?? 1, env?.kind);
+  const miningHeatGenEff  = calcActiveHeatWithEfficiency(miningHeatGen, efficiency ?? 1, env?.kind);
+  const combatHeatGenEff  = calcActiveHeatWithEfficiency(combatHeatGen, efficiency ?? 1, env?.kind);
+  // HeatGeneration (heaters) is a cold-only thermostat: per data.cdb's own
+  // description ("automatically activate to heat up the ship when it is
+  // getting too cold") and confirmed via raw opcodes (its contribution is
+  // gated behind this.heat < 0), a heater contributes exactly zero once the
+  // ship isn't cold anymore -- it structurally cannot cause overheating, the
+  // same category of mechanism as the cold-only toolEfficiency penalty
+  // already excluded above. So it's deliberately left out of the overheat
+  // math entirely (still shown as its own informational "Heat Produced/sec"
+  // row). HeatDissipation (radiators) really is unconditional here: heat
+  // stays >=0 for the entire climb toward the overheat threshold in every
+  // scenario below, which is exactly the regime radiators are always-on in.
+  const netHeat        = -heatDissip;
+  const netHeatBoost    = netHeat + boosterHeatGenEff - engineCooling; // while boosting/thrusting too
+  const netHeatMining   = netHeat + miningHeatGenEff; // while actively mining/scanning
+  const netHeatCombat   = netHeat + combatHeatGenEff; // while actively attacking/shielding
   const timeToOverheat      = calcTimeToOverheat(netHeat, heatCap, heatInterface, envTempInternal, isPlanetEnv);
   const timeToOverheatBoost = calcTimeToOverheat(netHeatBoost, heatCap, heatInterface, envTempInternal, isPlanetEnv);
+  const timeToOverheatMining = calcTimeToOverheat(netHeatMining, heatCap, heatInterface, envTempInternal, isPlanetEnv);
+  const timeToOverheatCombat = calcTimeToOverheat(netHeatCombat, heatCap, heatInterface, envTempInternal, isPlanetEnv);
   const shipPoints    = hull !== null ? calcShipPoints(hull, req, sysMalus, support) : null;
   const maneuver      = calcManeuverability(steering, weight);
   const { speed, boostSpeed } = calcSpeed(thrust, force, weight, efficiency, boostThrust);
@@ -1786,6 +1817,22 @@ function updateShipStats() {
     </div>`;
   });
   verdictEl.innerHTML = vh;
+
+  // ── Environment context (always visible — affects Heat's calcs regardless of active tab) ──
+  let ch = `<div class="stat-row"><span class="stat-label">Environment</span>
+    <select id="env-select" class="env-select">
+      ${ENVIRONMENTS.map(e => `<option value="${e.id}"${e.id === state.envId ? ' selected' : ''}>${e.name}</option>`).join('')}
+    </select>
+  </div>`;
+  if (env) {
+    const rangeTxt = env.min === env.max ? `${fmt(envMinC)}°C` : `${fmt(envMinC)} to ${fmt(envMaxC)}°C`;
+    ch += `<div class="stat-row"><span class="stat-label">Ambient Temperature</span><span class="stat-val">${rangeTxt}</span></div>`;
+  }
+  contextEl.innerHTML = ch;
+  document.getElementById('env-select')?.addEventListener('change', e => {
+    state.envId = e.target.value;
+    updateShipStats();
+  });
 
   // ── Overview tab: Summary, System Support, Current Status, Power, Engine, Module Slots ──
   let overviewH = '';
@@ -1855,23 +1902,13 @@ function updateShipStats() {
   heatH += statBlock('Heat Cap.', fmt(heatCap), 'neutral');
   heatH += statBlock('Heat Interface', heatInterface.toFixed(1), 'neutral', true);
   heatH += `</div>`;
-  heatH += `<div class="stat-row"><span class="stat-label">Heat Produced/sec</span><span class="stat-val">${fmt(heatGen)}</span></div>`;
+  if (heatGen) heatH += `<div class="stat-row"><span class="stat-label">Heat Produced/sec (while cold)</span><span class="stat-val">${fmt(heatGen)}</span></div>`;
   heatH += `<div class="stat-row"><span class="stat-label">Cooling/sec</span><span class="stat-val">${fmt(heatDissip)}</span></div>`;
-  heatH += `<div class="stat-row${netHeat > 0 ? ' bad' : ' good'}"><span class="stat-label">Net Heat</span><span class="stat-val">${(netHeat >= 0 ? '+' : '') + fmt(netHeat)}</span></div>`;
-  if (boosterHeatGen) heatH += `<div class="stat-row"><span class="stat-label">Boost Heat/sec</span><span class="stat-val">${fmt(boosterHeatGen)}</span></div>`;
+  if (boosterHeatGen) heatH += `<div class="stat-row"><span class="stat-label">Boost Heat/sec</span><span class="stat-val">${fmt(boosterHeatGenEff)}</span></div>`;
   if (engineCooling)  heatH += `<div class="stat-row"><span class="stat-label">Engine Cooling/sec</span><span class="stat-val">${fmt(engineCooling)}</span></div>`;
   const overheatTxt = t => t !== null ? fmt(t) + 's' : 'Never';
   heatH += `<div class="stat-row"><span class="stat-label">Time to Overheat, idle (~${fmt(overheatC)}°C)</span><span class="stat-val">${overheatTxt(timeToOverheat)}</span></div>`;
   heatH += `<div class="stat-row${timeToOverheatBoost !== null ? ' bad' : ''}"><span class="stat-label">Time to Overheat, boosting</span><span class="stat-val">${overheatTxt(timeToOverheatBoost)}</span></div>`;
-  heatH += `<div class="stat-row" style="margin-top:3px"><span class="stat-label">Environment</span>
-    <select id="env-select" class="env-select">
-      ${ENVIRONMENTS.map(e => `<option value="${e.id}"${e.id === state.envId ? ' selected' : ''}>${e.name}</option>`).join('')}
-    </select>
-  </div>`;
-  if (env) {
-    const rangeTxt = env.min === env.max ? `${fmt(envMinC)}°C` : `${fmt(envMinC)} to ${fmt(envMaxC)}°C`;
-    heatH += `<div class="stat-row"><span class="stat-label">Ambient Temperature</span><span class="stat-val">${rangeTxt}</span></div>`;
-  }
   heatH += `</div>`;
 
   // ── Systems tab: Storage, FTL, Lights, Mining & Scanning, Combat & Defense ──
@@ -1912,7 +1949,8 @@ function updateShipStats() {
     if (scanningTier)   systemsH += `<div class="stat-row"><span class="stat-label">Max Scanning Tier</span><span class="stat-val">${fmt(scanningTier)}</span></div>`;
     if (radarRange)     systemsH += `<div class="stat-row"><span class="stat-label">Max Radar Range</span><span class="stat-val">${fmt(radarRange)} np</span></div>`;
     if (miningPowerUse) systemsH += `<div class="stat-row"><span class="stat-label">Power Usage (active)</span><span class="stat-val">${fmt(miningPowerUse)} MA</span></div>`;
-    if (miningHeatGen)  systemsH += `<div class="stat-row"><span class="stat-label">Heat Generation (active)</span><span class="stat-val">${fmt(miningHeatGen)} MW</span></div>`;
+    if (miningHeatGen)  systemsH += `<div class="stat-row"><span class="stat-label">Heat Generation (active)</span><span class="stat-val">${fmt(miningHeatGenEff)} MW</span></div>`;
+    if (miningHeatGen)  systemsH += `<div class="stat-row${timeToOverheatMining !== null ? ' bad' : ''}"><span class="stat-label">Time to Overheat, mining</span><span class="stat-val">${overheatTxt(timeToOverheatMining)}</span></div>`;
     systemsH += `</div>`;
   }
 
@@ -1924,17 +1962,14 @@ function updateShipStats() {
     if (dmgNegation)    systemsH += `<div class="stat-row"><span class="stat-label">Damage Negation</span><span class="stat-val">${fmt(dmgNegation)}</span></div>`;
     if (shieldRegen)    systemsH += `<div class="stat-row"><span class="stat-label">Shield Regen Speed</span><span class="stat-val">${fmt(shieldRegen)}</span></div>`;
     if (shieldPowerUse) systemsH += `<div class="stat-row"><span class="stat-label">Power Usage (active)</span><span class="stat-val">${fmt(shieldPowerUse)} MA</span></div>`;
-    if (combatHeatGen)  systemsH += `<div class="stat-row"><span class="stat-label">Heat Generation (active)</span><span class="stat-val">${fmt(combatHeatGen)} MW</span></div>`;
+    if (combatHeatGen)  systemsH += `<div class="stat-row"><span class="stat-label">Heat Generation (active)</span><span class="stat-val">${fmt(combatHeatGenEff)} MW</span></div>`;
+    if (combatHeatGen)  systemsH += `<div class="stat-row${timeToOverheatCombat !== null ? ' bad' : ''}"><span class="stat-label">Time to Overheat, combat</span><span class="stat-val">${overheatTxt(timeToOverheatCombat)}</span></div>`;
     if (hullDmgReduct)  systemsH += `<div class="stat-row"><span class="stat-label">Hull Impact Damage Reduction</span><span class="stat-val">${fmt(hullDmgReduct)}%</span></div>`;
     systemsH += `</div>`;
   }
   if (!systemsH) systemsH = '<div class="ship-empty">No auxiliary systems installed</div>';
 
   el.innerHTML = { overview: overviewH, heat: heatH, systems: systemsH }[state.statsTab] || overviewH;
-  document.getElementById('env-select')?.addEventListener('change', e => {
-    state.envId = e.target.value;
-    updateShipStats();
-  });
 }
 
 function statBlock(label, value, cls = '', wide = false) {

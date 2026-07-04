@@ -50,5 +50,11 @@
   "VisibleTempAtTrueTemp0": 17.3,
   "VisibleTempAtTrueTempNeg100": -110,
   "VisibleTempAtTrueTempPos100": 660,
-  "VisibleTempSlopeAt0": 0.5
+  "VisibleTempSlopeAt0": 0.5,
+  "SystemHotTemperature": {
+    "min": 55,
+    "max": 75
+  },
+  "ByproductHeatDiffHotPlanetScale": 0.4,
+  "ByproductHeatProdColdPlanetScale": 0.4
 }

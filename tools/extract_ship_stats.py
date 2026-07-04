@@ -89,6 +89,22 @@ SHIP_STAT_CONSTANTS = [
     'OverheatTemperature', 'CriticalHeatTemperature', 'OuterSpaceTemperature',
     'VisibleTempAtTrueTemp0', 'VisibleTempAtTrueTempNeg100', 'VisibleTempAtTrueTempPos100',
     'VisibleTempSlopeAt0',
+    # Real in-system ambient temperature (st.ShipSystems.getSystemTemperature,
+    # ent.System.calcTemperature): a normal system's temperature is 0 (internal)
+    # unless flagged "SystemHot", in which case it's a per-system-seeded random
+    # value in this range -- confirmed via raw opcodes/decompile that this is
+    # what a ship actually experiences flying around in space (NOT
+    # OuterSpaceTemperature, which is only for interstellar transit between
+    # systems). Explains why real ships don't freeze in normal space but can
+    # overheat in a hot system.
+    'SystemHotTemperature',
+    # Ship-efficiency-scaled "active heat" terms (booster/tool heat while in
+    # use), from the same updateHeat() -- verified via raw opcodes (not just
+    # decompiled pseudocode, which had this branch's control flow garbled):
+    # cold planet MULTIPLIES active heat by efficiency, any other planet
+    # DIVIDES by efficiency (with this scale constant), deep space DIVIDES by
+    # efficiency with no scale constant at all.
+    'ByproductHeatDiffHotPlanetScale', 'ByproductHeatProdColdPlanetScale',
 ]
 
 # Extra computed/display attribute ids that aren't real data.cdb attribute
@@ -152,7 +168,11 @@ def build_environments(cdb):
         if not rng:
             print(f'  WARN: {attr_id} has no tempRange in data.cdb, skipping {env_id}')
             continue
-        out.append({'id': env_id, 'name': a['name'], 'min': rng['min'], 'max': rng['max']})
+        # 'cold' vs 'planet' matches the real branch in st.ShipSystems.updateHeat
+        # (hasAttribute checks for PlanetCold1/2/3 select the cold-planet byproduct-
+        # heat formula; any other planet attribute uses the hot-planet one).
+        kind = 'cold' if attr_id.startswith('PlanetCold') else 'planet'
+        out.append({'id': env_id, 'name': a['name'], 'min': rng['min'], 'max': rng['max'], 'kind': kind})
     return out
 
 

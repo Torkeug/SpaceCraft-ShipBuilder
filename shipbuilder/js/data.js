@@ -15,11 +15,22 @@ export async function loadConstants() {
   CONST = consts;
   ATTRS = attrs;
   // Real planet temperature bands (data.cdb attribute.props.tempRange, verified
-  // against ent.Planet.calcBaseTemperature) plus deep space (a fixed point, not
-  // a range, from the OuterSpaceTemperature constant). All in the internal
+  // against ent.Planet.calcBaseTemperature), plus the real in-system space
+  // baseline (st.ShipSystems.getSystemTemperature / ent.System.calcTemperature):
+  // a normal system sits at 0 (internal) -- this is what ships actually
+  // experience flying around in space day-to-day, confirmed via raw
+  // opcodes/decompile. The game also defines a "SystemHot" system flag
+  // (randomized within SystemHotTemperature, 55..75 internal) and a much
+  // colder OuterSpaceTemperature (-164) for interstellar transit between
+  // systems, but neither is used here: no system in the current game data
+  // actually carries the "SystemHot" attribute (confirmed by checking every
+  // system), and interstellar transit is a rare edge case, not normal
+  // flight -- a flat -164 "Space" would make every ship look like it's
+  // freezing, which doesn't match real behavior (ships don't freeze in
+  // normal space, only in Frozen planet environments). All in the internal
   // heat-ratio domain -- use calcVisibleTemperature() to get real degC.
   ENVIRONMENTS = [
-    { id: 'Space', name: 'Space', min: CONST.OuterSpaceTemperature, max: CONST.OuterSpaceTemperature },
+    { id: 'Space', name: 'Space', min: 0, max: 0, kind: 'space' },
     ...environments,
   ];
 }
@@ -171,6 +182,27 @@ export function calcInternalTemperature(heat, heatCapacity) {
 // is expressed per-frame at this rate, so it's needed to get a real per-
 // second rate constant, not a guess.
 const WANTED_FPS = 60;
+
+/**
+ * Scale a "while active" heat source (BoosterHeatGeneration, tool
+ * ActiveHeatGeneration, ...) by system efficiency and environment, per the
+ * real byproductHeatProd formula in st.ShipSystems.updateHeat — verified via
+ * raw opcodes (this branch's decompiled pseudocode had garbled control
+ * flow, so the raw bytecode was checked directly rather than trusted as-is).
+ * A cold-planet environment MULTIPLIES by efficiency (so an inefficient
+ * ship produces LESS heat there); any other planet DIVIDES by efficiency
+ * (with ByproductHeatDiffHotPlanetScale applied); deep space DIVIDES by
+ * efficiency with no scale constant. Baseline heater/radiator heat
+ * (HeatGeneration/HeatDissipation) is NOT scaled this way in the real game —
+ * it goes through a separate power-availability path instead, so don't pass
+ * those through this function.
+ */
+export function calcActiveHeatWithEfficiency(rawActiveHeat, efficiency, envKind) {
+  const eff = efficiency > 0 ? efficiency : 0.01; // matches SystemEfficiency's own real clamp floor
+  if (envKind === 'cold') return CONST.ByproductHeatProdColdPlanetScale * rawActiveHeat * eff;
+  if (envKind === 'planet') return CONST.ByproductHeatDiffHotPlanetScale * rawActiveHeat / eff;
+  return rawActiveHeat / eff; // deep space
+}
 
 /**
  * Real time-to-overheat, from a cold start (heat=0, a freshly-assembled/idle

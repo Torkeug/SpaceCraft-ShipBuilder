@@ -3,24 +3,28 @@
     "id": "Frozen",
     "name": "Frozen",
     "min": -75,
-    "max": -55
+    "max": -55,
+    "kind": "cold"
   },
   {
     "id": "Temperate",
     "name": "Temperate",
     "min": -10,
-    "max": 10
+    "max": 10,
+    "kind": "planet"
   },
   {
     "id": "Hot",
     "name": "Hot",
     "min": 30,
-    "max": 40
+    "max": 40,
+    "kind": "planet"
   },
   {
     "id": "VeryHot",
     "name": "Very Hot",
     "min": 55,
-    "max": 75
+    "max": 75,
+    "kind": "planet"
   }
 ]
