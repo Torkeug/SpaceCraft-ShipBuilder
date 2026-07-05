@@ -1579,6 +1579,15 @@ function updateFlipButtons() {}
 // sheet (ship_attributes.json, id -> {name, unit}) via attrLabel/attrUnit,
 // so every real attribute a part carries shows up here — not just a
 // hand-picked subset.
+// Some real game units carry a caret exponent, e.g. "(kW/K)^(3/2)" for
+// HeatInterfaceParts -- render that as an actual superscript instead of the
+// literal caret/parens.
+function formatUnit(unit) {
+  return unit
+    .replace(/\^\(([^)]+)\)/g, '<sup>$1</sup>')
+    .replace(/\^(-?\d+(?:\.\d+)?)/g, '<sup>$1</sup>');
+}
+
 function appendStatRows(el, stats) {
   Object.entries(stats || {}).forEach(([k, v]) => {
     if (!v || !isDisplayable(k)) return;
@@ -1586,7 +1595,7 @@ function appendStatRows(el, stats) {
     const val = typeof v === 'number' ? v.toLocaleString() : v;
     const row = document.createElement('div');
     row.className = 'spec-row';
-    row.innerHTML = `<span>${attrLabel(k)}</span><span>${val}${unit ? ' ' + unit : ''}</span>`;
+    row.innerHTML = `<span>${attrLabel(k)}</span><span>${val}${unit ? ' ' + formatUnit(unit) : ''}</span>`;
     el.appendChild(row);
   });
 }
