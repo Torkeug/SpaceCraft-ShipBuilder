@@ -72,9 +72,42 @@ def main():
         json.dumps(craft_values, indent=2, ensure_ascii=False), encoding="utf-8"
     )
 
+    # Resource nodes (asteroid clusters, planetary deposits, geysers,
+    # crackable shells, shipwrecks, etc) and which items they yield when
+    # gathered/mined/drilled/cracked open - the "resource" sheet backs
+    # resGen/asteroidResGen/wreckResGen generation, so it covers every kind
+    # of gatherable node, not just asteroids. A node encodes its yield one
+    # of four ways depending on its `type`:
+    #   - Node/ShipWreckPart/BiologicalRoot: `items` list, each with a
+    #     "kind" (0 = primary, 1 = rarer "rare find" bonus roll) and a
+    #     `proba` weight versus its same-kind siblings.
+    #   - Deposit/Pool: `props.depositItem` - a single guaranteed item
+    #     (auto-drilled by the Extractor building, no randomness).
+    #   - Geyser: `props.geyser.fluid` - same idea, passively collected.
+    #   - Shell/ShipWreck: `props.loot` - a list of `{proba, items:
+    #     [{item, qtyMin, qtyMax}, ...]}` bundles; cracking the shell picks
+    #     ONE bundle (weighted by that bundle's own proba) and every item in
+    #     it drops together (e.g. Basalt Shell has a Sandstone+IronNugget
+    #     bundle and a separate Sandstone+TitaniumOre bundle, etc).
+    # Exploration-only markers (Gravite/Default) and other resource types
+    # with no material yield encoded here (Biological) are excluded - only
+    # nodes that actually yield a concrete item are worth keeping.
+    resource_nodes = [
+        line
+        for line in sheets["resource"]["lines"]
+        if line.get("items")
+        or line.get("props", {}).get("depositItem")
+        or line.get("props", {}).get("geyser", {}).get("fluid")
+        or line.get("props", {}).get("loot")
+    ]
+    (OUT_DIR / "resource_nodes.json").write_text(
+        json.dumps(resource_nodes, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
+
     print(f"Wrote {len(craft_lines)} recipes, {len(items)} items, "
           f"{len(item_types)} item types, {len(item_tags)} item tags, "
-          f"{len(craft_values)} craft-value entries to {OUT_DIR}")
+          f"{len(craft_values)} craft-value entries, "
+          f"{len(resource_nodes)} resource nodes to {OUT_DIR}")
 
 
 if __name__ == "__main__":
