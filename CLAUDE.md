@@ -10,6 +10,17 @@ game's own files. See [NOTICE.md](NOTICE.md) for licensing — this repo mixes
 original code (MIT) with reference content extracted from the game itself
 (not covered by that license).
 
+## Game installation
+
+The actual game (SpaceCraft) is installed at
+`D:\SteamLibrary\steamapps\common\SpaceCraft`. `res.pak` there is the source
+that `pak_out`/`pak_out_full` were extracted from. `hlboot.dat` in that same
+directory is the compiled **HashLink bytecode** for the game's own Haxe
+logic (not just data) — use it (via `hlbc`, see
+[`tools/game_logic_notes.md`](tools/game_logic_notes.md)) whenever a question
+is about actual game *logic/formulas* (damage, combat, movement math) rather
+than static balance data, since `data.cdb` alone only has the latter.
+
 ## Ship Builder
 
 Launch with `start.bat` (double-click) or `python -m http.server 8765` then open `http://localhost:8765`.
