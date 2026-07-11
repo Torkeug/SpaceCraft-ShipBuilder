@@ -252,3 +252,150 @@ carries it — `Cockpit_MK1` ("Beaver" Cockpit) = `40` → `0.40` (40% reduction
 once equipped. Since aggregation here is plain sum (not diminishing-returns),
 multiple sources would stack additively (two 40s → 80 → 0.80 → 80%
 reduction), not multiplicatively — relevant if more sources get added later.
+
+## Finding 5: Shipwreck spawn/despawn cycle
+
+Source: `st.PlanetResourceManager` (`src/st/PlanetResourceManager.hx`,
+findices 8098-8103) — `checkPerformShipWreckCycle`, `performShipWreckCycle`,
+`getShipWreckCounts`, `generateShipwreck`, `getResGenConstant`,
+`generateResGens`. Verified against raw opcodes (the removal-probability and
+spawn-probability math both got mangled/reordered by `decomp`).
+
+**Trigger** — not a background timer. `checkPerformShipWreckCycle` is only
+called from `ent.Ship.serverRegularUpdate` (findex 9086), specifically the
+branch that fires when a ship enters a new planet's orbit range
+(`rawDistanceSq(planet, ship) < getOrbitSize(planet)²`), and only after
+`planet.res.generate()` returns `false` (i.e. the planet's resources were
+already generated — a freshly-generated planet skips the cycle check that
+tick). So in practice: **any ship arriving in orbit of an already-generated
+planet triggers a cycle check**, gated to run at most once per
+`PlanetResGenWreckCyclePeriodDays` (in-game days, real value `0.5`) via
+`lastShipWreckCycleTimeS`.
+
+**Removal pass** (`performShipWreckCycle`) — for every existing
+`ShipWreck_Core` root resource on the planet (`getShipWreckCounts` walks
+`resources`, counting children per root whose `resourceInfs[...].id ==
+"ShipWreck_Core"`):
+
+```
+timeSinceLastMinedS = now - wreck.lastMining
+maxCount = wreck._maxCountLow | ((wreck._countExtra << 4) & 3840)   # packed bitfield
+if maxCount <= 0:
+    logError(...); proba = 1   # defensive fallback, shouldn't normally happen
+else:
+    proba = clamp(
+        PlanetResGenWreckCycleRemovalFactor
+            * (timeSinceLastMinedS - PlanetResGenWreckMinTimeToRemoveDays)
+            * (1 - childCount / maxCount),
+        0, 1)
+if random() < proba:
+    mark this wreck root for removal
+```
+
+So a wreck can only be removed once `timeSinceLastMinedS >
+PlanetResGenWreckMinTimeToRemoveDays` (else the multiplier is negative →
+proba clamps to 0), and the `(1 - childCount/maxCount)` term means a wreck
+that's been fully mined out (`childCount` near `maxCount`... actually inverted:
+low remaining child count relative to max → higher removal chance) decays
+faster than one still full of loot. All marked wrecks are then actually
+removed via `_remove`.
+
+**Spawn pass** — after removal, using `currentCount = remaining wreck roots`:
+
+```
+planetWreckProba = getResGenConstant("PlanetResGenWreckProba")   # sector override, else $Const (0.6)
+timeSinceLastSpawnD = (now - lastSpawnedShipWreckTimeS) / 86400   # seconds -> days
+proba = 1 - pow(1 - planetWreckProba, timeSinceLastSpawnD - currentCount)
+if random() < proba:
+    generateShipwreck()
+    lastSpawnedShipWreckTimeS = now
+```
+
+Note the exponent is `daysSinceLastSpawn - currentCount`, not just
+`daysSinceLastSpawn` — every existing wreck on the planet directly reduces
+the spawn exponent (and thus `proba`), so more wrecks present → lower chance
+of another one appearing this cycle. If `currentCount` exceeds
+`daysSinceLastSpawn`, the exponent goes negative, `pow(...)` exceeds 1, and
+`proba` goes negative (never satisfies `random() < proba`) — an implicit soft
+cap, though `MaxWreckPerPlanet` (`10`) is **not** referenced anywhere in this runtime
+cycle (`checkPerformShipWreckCycle`/`performShipWreckCycle`/
+`generateShipwreck`) — it's only used in the separate *initial* system/planet
+content generation path (`logic.gen.SystemContent.generatePlanet`, findex
+37394, `src/logic/gen/SystemContent.hx:371`, as a loop cap via
+`Const.getInt("MaxWreckPerPlanet")` while counting/placing initial wreck
+resources). So the ongoing per-cycle spawn/despawn logic documented above has
+no hard cap of its own — only the negative-exponent soft cap — while the
+one-time initial seeding of a new planet is separately capped at 10.
+
+**Initial generation is fully deterministic and reproducible offline** —
+`logic.gen.SystemContent.__constructor__`/`generate` (findex 37383,
+`src/logic/gen/SystemContent.hx:42`) seeds its `hxd.Rand` (a seeded
+multiply-with-carry PRNG, not `Math.random()`) from
+`this.system.inf.genProps.seed` — a **fixed value stored per-system in
+`data.cdb`** (sheet `system`, field `genProps.seed`; e.g. `Sys_Start` →
+`55577`). Every downstream initial-placement call (`randRange`,
+`randomResource`, `generatePlanet`, `generateAsteroid`, initial resource/wreck
+seeding via `PlanetResGenMaxInitialWrecks`) draws from that same seeded RNG,
+so a system's *initial* content is 100% reproducible from `data.cdb` alone,
+with no live server access required — this is presumably how third-party
+"sector/planet data" sites/tools work. `logic.gen.WorldLoader.syncSector`
+(findex 12710) separately seeds its own `hxd.Rand` via a real CRC-32 over the
+save's own `Server.__uid` (plus a few map sizes) for placing dynamic
+mission/instance content per-save — that part is NOT reproducible from
+`data.cdb` alone since it depends on the specific server/save's private uid.
+Contrast this with the **ongoing** shipwreck spawn/despawn cycle above, which
+uses real `random()` and wall-clock timestamps, not this seeded generator —
+so initial layout is knowable offline, but current live wreck state on a
+running server is not.
+
+`getResGenConstant(k)` checks the current sector's
+`sector.generation.constants` list for an override of `k` first, falling back
+to the global `$Const` value — so `PlanetResGenWreckProba` can vary per
+sector even though the fallback constant is fixed.
+
+**Which wreck gets spawned** — `generateShipwreck` reads
+`planet.system.sector.inf.generation.wreckResGen` (a per-sector array of
+`{resGen: <id>}` rows, `data.cdb` sheet `sector@generation@wreckResGen`,
+nested under the `sector` sheet), picks one **uniformly at random by index**
+(`wrg[Std.random(wrg.length)]`), and generates it via the generic procedural
+resource placer (`logic.gen.PlanetRes.run`, with exclusion zones from already
+-placed resources). Since sectors list the same `resGen` id multiple times to
+weight outcomes (e.g. `Sec_Terminus`: `ShipWreck_Small_0` ×4,
+`ShipWreck_Big_0` ×1 → 80%/20%), tier/size odds are entirely a function of
+how many times each id repeats in that sector's list, not a separate weight
+field.
+
+Constants (`data.cdb` `constant` sheet):
+
+| Constant | Value | Note |
+|---|---|---|
+| `PlanetResGenWreckProba` | 0.6 | fallback; sector `generation.constants` can override |
+| `PlanetResGenWreckCyclePeriodDays` | 0.5 | min real-time-equivalent gap between cycle checks on a planet, per its own doc comment: "checked on a planet when visited by a player" |
+| `PlanetResGenWreckCycleRemovalFactor` | 5 | |
+| `PlanetResGenWreckMinTimeToRemoveDays` | 0.05 | min days since last mine/collect before a wreck is even eligible for removal |
+| `PlanetResGenMaxInitialWrecks` | 1 | caps wrecks placed during a planet's *initial* generation (separate from this cycle; not traced further) |
+| `MaxWreckPerPlanet` | 10 | only enforced during *initial* planet generation (`SystemContent.generatePlanet`), not in the runtime cycle above |
+| `RadarWreckFinderDistanceFactor` | 4 | multiplies detection range for radars with the `WreckFinder` attribute |
+
+## Finding 6: Loot-level candidate search is a 2-level window, not an exact match
+
+Correction to an assumption made while analyzing Finding 5's `ShipWreck_LootChestRare_lvl{0,1,2}` primary-item rolls (Patch/Blueprint category, per the `loot` sheet's `primaryItemTypes`/`secondaryItemTypes` flag columns — `10:Tool,Module,Patch,Blueprint,ShipDecorative` / `10:Gathering,Material,Manufactured,LuxuryArticle,Scrap`, a bitmask over that column's own local enum, **not** an index into the `itemType` sheet). Verified via raw opcodes, `src/logic/Loot.hx:461-478`:
+
+```
+generatePrimaryItemCandidateBasic(level, maxLevel, itemPool, rng, typeKind, itlKind):
+    target = min(level, maxLevel)
+    startLevelMin = target - 1
+    startLevelMax = target
+    return generateAttemptDownUp(startLevelMin, startLevelMax, getMaxLootLevel(...), candidateFn)
+
+generateAttemptDownUp(startLevelMin, startLevelMax, levelMax, genFunc):
+    res = genFunc(startLevelMin, startLevelMax)   # tries BOTH levels pooled together, one draw
+    if res != null: return res
+    for level from startLevelMin-1 down to 1: try genFunc(level, level), return on first hit
+    for level from startLevelMax+1 up to levelMax: try genFunc(level, level), return on first hit
+    return null
+```
+
+So a crate targeting (capped) level `L` pools together **every** eligible Patch/Blueprint candidate at `lootLevel ∈ {L-1, L}` and draws one uniformly-weighted pick from that combined set — it does not require an exact match to `L`, and only widens further (level by level, first down then up) if that 2-level window is completely empty (never happens in practice for crate-relevant levels 4-9, since both pools have entries at every level 3-9).
+
+Practical consequence: an item's own `lootLevel` doesn't gate it to only the identically-numbered crate roll — a `lootLevel: 3` recipe (e.g. `BP_IronWire`/`BP_AluminiumWire`, both "Blueprint: Wire") is reachable from any crate whose *capped* target level is 4 (window `[3,4]`), not just from a hypothetical level-3 crate (which doesn't exist — the lowest crate tier only rolls levels 4-7). Confirmed by direct play report. Only `lootLevel: 2` and `lootLevel: 10` items are truly unreachable from any shipwreck crate, since no crate ever has a capped target of 2/3 (window would need to reach down to level 2) or 10/11 (window would need to reach up to level 10) — every level 3-9 item is reachable from *some* sector.
