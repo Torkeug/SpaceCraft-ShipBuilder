@@ -21,6 +21,22 @@ logic (not just data) — use it (via `hlbc`, see
 is about actual game *logic/formulas* (damage, combat, movement math) rather
 than static balance data, since `data.cdb` alone only has the latter.
 
+**Use `tools/heaps_ref/hlbc_src/target/release/hlbc.exe`, not
+`tools/heaps_ref/hlbc/hlbc.exe`.** The game updated past what the prebuilt
+binary's bytecode parser supports — it fails with `Error: Malformed
+bytecode (Invalid type kind '23')` against the current `hlboot.dat`. The
+`hlbc_src` checkout (its own separate git repo, cloned from upstream
+`Gui-Yom/hlbc`) has a local patch (committed there, not pushable — no fork
+to push to) adding support for that new type kind (`Guid`) plus a newer
+`Catch` opcode, and its `target/release/hlbc.exe` is already built from
+that patch. `tools/heaps_ref/` is entirely gitignored in this repo, so
+this fix isn't reproduced by a fresh clone — if `hlbc.exe` starts failing
+on type kind 23 again after a fresh checkout, this is why; the local
+`hlbc_src` clone with its patch commit needs to exist and be rebuilt
+(`cargo build --release`) before `hlbc` works again. See
+[`tools/game_logic_notes.md`](tools/game_logic_notes.md)'s note on this
+for the full patch diff summary.
+
 ## Ship Builder
 
 Launch with `start.bat` (double-click) or `python -m http.server 8765` then open `http://localhost:8765`.
