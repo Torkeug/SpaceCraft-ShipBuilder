@@ -399,3 +399,125 @@ generateAttemptDownUp(startLevelMin, startLevelMax, levelMax, genFunc):
 So a crate targeting (capped) level `L` pools together **every** eligible Patch/Blueprint candidate at `lootLevel ∈ {L-1, L}` and draws one uniformly-weighted pick from that combined set — it does not require an exact match to `L`, and only widens further (level by level, first down then up) if that 2-level window is completely empty (never happens in practice for crate-relevant levels 4-9, since both pools have entries at every level 3-9).
 
 Practical consequence: an item's own `lootLevel` doesn't gate it to only the identically-numbered crate roll — a `lootLevel: 3` recipe (e.g. `BP_IronWire`/`BP_AluminiumWire`, both "Blueprint: Wire") is reachable from any crate whose *capped* target level is 4 (window `[3,4]`), not just from a hypothetical level-3 crate (which doesn't exist — the lowest crate tier only rolls levels 4-7). Confirmed by direct play report. Only `lootLevel: 2` and `lootLevel: 10` items are truly unreachable from any shipwreck crate, since no crate ever has a capped target of 2/3 (window would need to reach down to level 2) or 10/11 (window would need to reach up to level 10) — every level 3-9 item is reachable from *some* sector.
+
+## Finding 7: "Nexus Market" (player-to-player trading) is not accessible offline or via any HTTP API
+
+The in-game player-to-player marketplace UI is labelled `market_title: "::station:: Trade Nexus"`
+(`data.cdb` `uiText` sheet) — i.e. "Nexus Market" is a colloquial name for the
+`st.Marketplace`/`st.MarketItem`/`st.MarketOrder` system (`src/st/Marketplace.hx`,
+findices 9559-9610, see the class dump above).
+
+**Only two stations have it.** Confirmed directly in `data.cdb`'s `station`
+sheet (not a guess/heuristic): every station lists a `floors[].instance` array,
+and only two entries anywhere in that sheet include a `Marketplace*` floor:
+
+| Station `id` | Display `name` | Marketplace floor instance |
+|---|---|---|
+| `Station_Terminus` | **Helicon** | `MarketplaceTerminus` |
+| `Station_Horizon` | **Ur** | `MarketplaceHorizon` |
+
+(Internal ids `Terminus`/`Horizon` don't match the in-game display names
+`Helicon`/`Ur` — don't assume id and display name correspond by string
+similarity elsewhere in this sheet either.)
+
+**No external/offline access is possible**, unlike the seeded initial
+world-gen content covered in Finding 5. `MarketOrder`/`MarketItem` are
+`hxbit`-networked objects (`hxbit/NetworkHost.hx`) — live player-submitted buy/sell
+orders only exist as in-memory state on a running `Server` instance
+(`src/Server.hx`), streamed to clients that are already inside an
+authenticated Steam multiplayer session (`steam/GameServer.hx`:
+`logonAnonymous`, `requestInternetServerList`). There is no REST/HTTP
+endpoint for it — the only real HTTP domains in the bytecode
+(`data.shirogames.com`, `monitoring.shirogames.com`, `mongo.shirogames.com`)
+are unrelated telemetry/patch endpoints. Reading live Nexus Market listings
+would require writing an actual `hxbit`-speaking game client and joining a
+session, not a data-extraction task like the rest of this repo.
+
+## Note: use `tools/heaps_ref/hlbc_src/target/release/hlbc.exe`, not `tools/heaps_ref/hlbc/hlbc.exe`
+
+The game updated at some point after 2026-07-11 and the prebuilt
+`tools/heaps_ref/hlbc/hlbc.exe` now fails on the current `hlboot.dat` with
+`Error: Malformed bytecode (Invalid type kind '23')` — a new HL type kind
+(`Guid`, used by `cdb._Types.$Guid_Impl_`-related code) that binary's parser
+predates. `tools/heaps_ref/hlbc_src/crates/hlbc/src/read.rs` and `types.rs`
+already have local (uncommitted) patches adding `23 => Ok(Guid)` support, and
+`tools/heaps_ref/hlbc_src/target/release/hlbc.exe` is the binary already
+built from those patches — that's the one that actually works against the
+current game version. Use that path for all `hlbc` invocations going
+forward; don't rediscover this by re-hitting the type-kind-23 error.
+
+## Finding 8: Rare loot crate *spawn* odds per wreck (distinct from crate *level* odds, Finding 5)
+
+Finding 5 established which wreck resGen a sector rolls and Finding 6/the
+`CHEST_LEVELS`/`CHEST_WEIGHTS` constants in `tools/extract_shipwreck_loot.py`
+established, *given* a rare crate (`ShipWreck_LootChestRare_lvl{0,1,2}`)
+exists, what level it targets. Neither answers: what's the chance a wreck
+actually contains a crate at all, as opposed to only ordinary scrap? Traced
+directly via `data.cdb`'s `resGroup` sheet plus a decompile of the actual
+placement algorithm (`logic.gen.PlanetRes.generateGroup`/`getResGroupCount`,
+`src/logic/gen/PlanetRes.hx`, findices 11222/11224 — the same generic
+resource placer Finding 5 already named as `generateShipwreck`'s target).
+
+**The generation-tree semantics, confirmed from decompiled bytecode**:
+- A resGroup's `generation.groups` list is an **AND**: every listed entry
+  independently contributes `count = uniform_int(min, max)` placed
+  instances (confirmed matching the already-documented `depositGroupSizes`
+  behavior in the sibling `spacecraft-memory-research` repo). If the
+  *enclosing* group has its own `props.explodingChance` set (e.g.
+  `ShipWreck_JunkGroup_lvl0`'s `0.1`), that count is instead drawn from a
+  wider `uniform_int(2*min, 3*max)` range with that probability — the exact
+  bit-level trigger check was mangled by the decompiler (same class of
+  issue as Finding 6's opcode soup), so this is modeled as a literal
+  probability roll, the obvious reading of a field named `explodingChance`.
+- A resGroup's `generation.overrides` list is an **OR**: exactly one entry
+  is chosen, weighted by its own `weight` — this is the mechanic Finding
+  5/`CHEST_LEVELS` already relies on for the crate's own level roll.
+- A `{group: X}` reference recurses into `X`'s own full generation tree —
+  for a `groups`-list entry this happens once per rolled `count` (i.e.
+  counts compound through nesting); for an `overrides` entry, once total
+  (whichever branch was picked).
+
+**Where the crate actually sits in the tree**: every
+`ShipWreck_{Small,Big}_lvl{0,1,2}` resGroup places a `JunkGroup_lvl{N}`
+(`min:1,max:2` for Small, `min:5,max:10` for Big) plus one
+`JunkGroup_lvl{N}_BlackBox` (always exactly 1). Both junk groups place a
+`RareLoot_lvl{N}` sub-count (`min:0,max:2` inside the regular junk group,
+`min:0,max:1` inside the blackbox one) — and `RareLoot_lvl{N}` is an
+`overrides` pick between `ShipWreck_BasicLoot_lvl{N}` (weight 40, more
+scrap) and `ShipWreck_LootChestRare_lvl{N}` (weight 25, the actual crate).
+**That 40:25 weighting is identical across all three tiers** — so, unlike
+crate *level*, crate *spawn odds* do not depend on wreck tier at all, only
+on whether the wreck is Small or Big (Big wrecks roll the junk-group
+generator far more times: 5-10 vs 1-2).
+
+**A single wreck can contain more than one crate** — each `JunkGroup`
+invocation independently re-rolls its own `RareLoot` slot(s) (see the tree
+above), and a Big wreck invokes `JunkGroup` 5-10 times (vs Small's 1-2), so
+"does this wreck have a crate" is really a *count* distribution, not a
+single spawn-or-not roll. `count_crates_in_wreck` in
+`tools/extract_shipwreck_loot.py` returns the actual number placed per
+simulated pass, not just a boolean.
+
+**Simulated (20k-trial Monte Carlo per wreck type, replicating the
+algorithm above exactly against live `data.cdb` values)**:
+
+| Wreck type | P(≥1 crate) | E[crate count] | Distribution |
+|---|---|---|---|
+| Small (any tier) | ~58% | ~0.89 | 0:42%, 1:36%, 2:16%, 3:5%, 4+: ~2% |
+| Big (any tier) | ~97% | ~3.6 | 0:3%, 1:11%, 2:18%, 3:20%, 4:17%, 5:13%, 6+: ~17% (tail out past 10) |
+
+Per-sector stats (weighted by how many times each `resGen` id repeats in
+that sector's own `sector.generation.wreckResGen` list — the same
+repetition-as-weight mechanic Finding 5 documents) range from **P(≥1)
+~58%, E[count] ~0.89** (`Sec_Threshold`, Small-only) up to **P(≥1) ~73%,
+E[count] ~2.0** (`Sec_Idol`/`Sec_Vestige`, the sectors with the highest
+Big-wreck share) — see `tools/extract_shipwreck_loot.py`'s `crateSpawn`
+output (`atLeastOne`/`expectedCount`/`countDistribution`, per sector) for
+the full table. Since tier doesn't move any of these numbers, sector
+variation is driven almost entirely by each sector's Small:Big wreck mix,
+not by its exploration-level/tier gating.
+
+Not independently verified against a live in-game count (unlike Finding
+5's spawn-cycle math, which didn't need it) — treat as a high-confidence
+estimate from a verified algorithm, not an exact figure the way
+`lootLevelProbability` (crate level, *given* one spawns) is.
