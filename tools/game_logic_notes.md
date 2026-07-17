@@ -521,3 +521,108 @@ Not independently verified against a live in-game count (unlike Finding
 5's spawn-cycle math, which didn't need it) — treat as a high-confidence
 estimate from a verified algorithm, not an exact figure the way
 `lootLevelProbability` (crate level, *given* one spawns) is.
+
+**Update: now independently verified live**, via the sibling
+`spacecraft-memory-research` repo (which reads a *running* game process's
+memory directly, rather than statically simulating `data.cdb` the way this
+repo does). Two results from that session, both consistent with the table
+above rather than contradicting it:
+- A live-memory dump of a real, currently-spawned wreck found exactly
+  `ShipWreck_LootChestRare_lvl1: 1` on a Small-tier wreck — one crate,
+  unremarkable against Small's own `E[count] ~0.89`.
+- The user separately reported real in-game experience at Big wreck sites
+  in Vestige/Idol-class sectors: "minimum 3, often up to 10" crates. This
+  is NOT a contradiction of `E[count] ~3.6` — it's exactly what the
+  `countDistribution` above already predicts once you look past the mean:
+  3 is the single most likely exact outcome (20%), P(≥3) ≈ 67%, and the
+  6+ bucket (17%) genuinely does tail out past 10. Citing the mean alone
+  undersold what a single memorable site looks like; the full distribution
+  didn't need correcting, just surfacing.
+- Also confirmed live: `PlanetResourceManager.summary` (the exact live
+  resource-count map used for ordinary ore/deposits) NEVER tracks wreck
+  resources at all, on any planet, generated or not — consistent with
+  wrecks being placed once via the initial/ongoing generation algorithm
+  documented in Finding 5 but bookkept through a separate path than
+  permanently-placed resources. So this static, decompiled-algorithm
+  estimate remains the only source for crate counts at all, even
+  galaxy-wide with the game running — there's no live "exact" number it's
+  an approximation of.
+
+See `tools/extract_shipwreck_loot.py`'s `wreckSiteItemOdds` output
+(added alongside this) for why this distinction (mean vs. per-site
+distribution) also matters for per-item Patch/Blueprint odds, not just
+raw crate counts — Finding continues below.
+
+## Finding 9: Composing crate *count* (Finding 8) with crate *contents* (`itemDropOdds`) into a single per-wreck-site number
+
+`itemDropOdds` (the per-item Patch/Blueprint `pct` values in
+`shipwreck_loot.json`) answers "given a rare crate is already open in my
+hands, what's the chance it's item X" — a probability *conditional on* a
+crate existing at all. It says nothing about how many crates a wreck
+actually has, which Finding 8 established varies **~4x** between Small
+(`E[count] ~0.89`) and Big (`E[count] ~3.6`) wrecks. Quoting `itemDropOdds`
+alone as "my odds of finding this blueprint at a wreck site" silently
+assumes exactly one crate-opening per visit, which is wrong for Big
+wrecks by roughly that same 4x factor.
+
+**The composition is exact, not an approximation, because of two
+properties already established**:
+- Crate *count* depends only on wreck **size** (Small/Big) — tier-
+  independent (Finding 8).
+- Crate *contents* depends only on wreck **tier** (0/1/2) via
+  `CHEST_LEVELS`/`CHEST_WEIGHTS` — size-independent (Finding 5/6).
+- A wreck resGen id (e.g. `"ShipWreck_Big_1"`) fixes size and tier
+  *simultaneously* — a sector's `wreckResGen` list is a flat list of these
+  combined ids, repetition-weighted the same way Finding 8 already
+  weights tiers alone.
+
+So for one specific (size, tier) variant, `P(item X | one crate opened)`
+(from `itemDropOdds`, but recomputed per-tier rather than sector-blended)
+and `E[crate count]`/`countDistribution` (from Finding 8, per-size) are
+independent quantities that compose by simple expectation algebra:
+
+```
+expectedPerWreck = E[crate count | size]  *  P(item X | tier)
+atLeastOnePct    = 1 - sum_k  P(count=k | size) * (1 - P(item X | tier))**k
+```
+
+`expectedPerWreck` is exact via linearity of expectation regardless of the
+AND/OR structure underneath (no simulation needed for this part — it's
+already known from Finding 8's Monte Carlo `expectedCount` and the
+existing `itemDropOdds` math, just not previously multiplied together).
+`atLeastOnePct` reuses Finding 8's actual simulated `countDistribution`
+rather than a Poisson approximation of `expectedPerWreck`, so it stays
+exact even for items with a non-negligible per-crate probability.
+
+A sector's own number is then the weighted average across whichever
+(size, tier) variants its own `wreckResGen` list actually reaches (same
+repetition-as-weight mechanic throughout this whole investigation) — not
+every sector reaches every tier (e.g. Vestige's list has no tier-0 entry
+for either size at all, so tier-0-only items are correctly absent from
+its `wreckSiteItemOdds` groups, matching `itemDropOdds`'s existing
+reachability for that sector exactly).
+
+**Implemented in `tools/extract_shipwreck_loot.py`** as
+`compute_wreck_site_item_odds`, sharing its crate-count Monte Carlo cache
+with `compute_crate_spawn_stats` (`crate_count_stats_raw`, factored out of
+what was previously a private closure) so the ~9 distinct wreck resGen ids
+across all sectors are only simulated once total, not once per consumer.
+Output written to `shipwreck_loot.json`'s new `wreckSiteItemOdds.{patches,
+blueprints}` key, parallel in shape to the existing `itemDropOdds` (same
+`{name, level, groups: [{..., sectors}]}` row shape, grouped sectors with
+identical composed odds) but with `expectedPerWreck`/`atLeastOnePct`
+instead of a single conditional `pct`.
+
+**Verified no regression in the untouched existing outputs**: `itemDropOdds`
+is byte-identical before/after (its code path wasn't touched at all); every
+sector's `crateSpawn.expectedCount` matches its pre-change value to within
+Monte Carlo noise (<0.02 difference, unseeded 20000-trial randomness, same
+as any two independent runs of the *unmodified* code would show). Spot-
+checked the composition itself: a Vestige-reachable item's `pct` of 0.83%
+(crate-conditional) composes to `expectedPerWreck` 0.0162 (1.62%,
+`atLeastOnePct` 1.60%) — a ~1.95x boost, consistent with Vestige's own
+40:60 Big:Small mix (a blend, not pure Big, so well under the ~4x pure-Big
+factor) and with `atLeastOnePct` sitting fractionally below
+`expectedPerWreck`'s implied percentage as it must (P(≥1) ≤ E[count] always,
+by Markov's inequality, with equality only when multiple drops in one
+visit are impossible).

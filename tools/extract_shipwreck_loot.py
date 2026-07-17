@@ -247,7 +247,35 @@ def count_crates_in_wreck(resgroup, group_id, depth=0):
     return 0
 
 
-def compute_crate_spawn_stats(sheets, sectors):
+def crate_count_stats_raw(resgen, resgroup, resgen_id, cache, trials=CRATE_SPAWN_TRIALS):
+    """Unrounded Monte Carlo crate-count distribution for ONE specific wreck
+    variant (a single resGen id, e.g. "ShipWreck_Big_1" - which pins down
+    BOTH size and tier at once, since a sector's wreckResGen list picks a
+    whole resGen id, not size/tier independently - see game_logic_notes.md
+    Finding 8). This is the atomic building block both
+    compute_crate_spawn_stats (sector-level rollup, rounds its own output)
+    and compute_wreck_site_item_odds (per-item composition, needs full
+    precision for the (1-p)**k sum) are built from - factored out and
+    cache-shared between them (passed in from main()) so the ~9 distinct
+    wreck resGen ids across all sectors only get simulated once each, not
+    once per consumer."""
+    if resgen_id in cache:
+        return cache[resgen_id]
+    root = resgen[resgen_id]["resources"][0]["res"]
+    counts = [count_crates_in_wreck(resgroup, root) for _ in range(trials)]
+    dist = defaultdict(int)
+    for c in counts:
+        dist[c] += 1
+    stats = {
+        "atLeastOne": sum(c > 0 for c in counts) / trials,
+        "expectedCount": sum(counts) / trials,
+        "countDistribution": {k: v / trials for k, v in dist.items()},
+    }
+    cache[resgen_id] = stats
+    return stats
+
+
+def compute_crate_spawn_stats(sheets, sectors, cache):
     """{sector_name: {atLeastOne, expectedCount, countDistribution}} for a
     randomly-rolled wreck in that sector, Monte Carlo simulated from the
     actual generation tree - see game_logic_notes.md Finding 8.
@@ -260,32 +288,12 @@ def compute_crate_spawn_stats(sheets, sectors):
     resgen = {l["id"]: l for l in sheets["resGen"]["lines"]}
     resgroup = {l["id"]: l for l in sheets["resGroup"]["lines"]}
 
-    def stats_for_resgen(resgen_id):
-        root = resgen[resgen_id]["resources"][0]["res"]
-        counts = [count_crates_in_wreck(resgroup, root) for _ in range(CRATE_SPAWN_TRIALS)]
-        dist = defaultdict(int)
-        for c in counts:
-            dist[c] += 1
-        return {
-            "atLeastOne": round(sum(c > 0 for c in counts) / CRATE_SPAWN_TRIALS, 4),
-            "expectedCount": round(sum(counts) / CRATE_SPAWN_TRIALS, 3),
-            "countDistribution": {
-                str(k): round(v / CRATE_SPAWN_TRIALS, 4) for k, v in sorted(dist.items())
-            },
-        }
-
-    stats_by_resgen = {}
     result = {}
     for l in sheets["sector"]["lines"]:
         wr = l.get("generation", {}).get("wreckResGen")
         if not wr:
             continue
-        entries = []
-        for entry in wr:
-            rid = entry["resGen"]
-            if rid not in stats_by_resgen:
-                stats_by_resgen[rid] = stats_for_resgen(rid)
-            entries.append(stats_by_resgen[rid])
+        entries = [crate_count_stats_raw(resgen, resgroup, entry["resGen"], cache) for entry in wr]
         n = len(entries)
         merged_dist = defaultdict(float)
         for e in entries:
@@ -294,9 +302,146 @@ def compute_crate_spawn_stats(sheets, sectors):
         result[sectors[l["id"]]["name"]] = {
             "atLeastOne": round(sum(e["atLeastOne"] for e in entries) / n, 4),
             "expectedCount": round(sum(e["expectedCount"] for e in entries) / n, 3),
-            "countDistribution": {k: round(v, 4) for k, v in sorted(merged_dist.items(), key=lambda kv: int(kv[0]))},
+            "countDistribution": {
+                str(k): round(v, 4) for k, v in sorted(merged_dist.items(), key=lambda kv: kv[0])
+            },
         }
     return result
+
+
+def pool_size(pool_by_level, target_level):
+    return len(pool_by_level.get(target_level - 1, [])) + len(pool_by_level.get(target_level, []))
+
+
+def level_prob_for_tier(tier, max_loot_level):
+    """The SAME per-level weighting (CHEST_LEVELS/CHEST_WEIGHTS) and
+    maxLootLevel cap build_sector_profiles applies, but for exactly ONE
+    tier rather than blended across a sector's whole wreckResGen mix -
+    needed because compute_wreck_site_item_odds conditions on a SPECIFIC
+    (size, tier) wreck variant having already been picked (it does its own
+    weighting across variants afterward), not the sector's average tier."""
+    capped = defaultdict(float)
+    for lvl, w in zip(CHEST_LEVELS[tier], CHEST_WEIGHTS):
+        capped[min(lvl, max_loot_level)] += w / 100
+    return capped
+
+
+def item_prob_given_level_dist(entry_level, pool_by_level, level_prob):
+    """P(an item with this lootLevel drops | a single crate is opened and
+    its target level is drawn from level_prob) - the same 2-level-window
+    formula compute_item_drop_odds uses inline for its own sector-blended
+    level_prob, factored out so compute_wreck_site_item_odds can reuse it
+    against an UNBLENDED, single-(size,tier)-variant level_prob instead."""
+    total = 0.0
+    for target_level in (entry_level, entry_level + 1):
+        p_level = level_prob.get(target_level)
+        if not p_level:
+            continue
+        n = pool_size(pool_by_level, target_level)
+        if n == 0:
+            continue
+        total += p_level * primary_drop_probability(target_level) * 0.5 / n
+    return total
+
+
+def size_of_resgen(resgen_id):
+    """"ShipWreck_Small_1" -> "Small", "ShipWreck_Big_2" -> "Big" - the
+    OTHER half of a wreck resGen id besides its tier (tier_of_resgen).
+    Confirmed only two size rows exist in data.cdb's resGroup sheet
+    (GShipWreck_{Small,Big}_lvl{0,1,2}, no third size)."""
+    if "Small" in resgen_id:
+        return "Small"
+    if "Big" in resgen_id:
+        return "Big"
+    return None
+
+
+def compute_wreck_site_item_odds(sheets, sectors, patch_by_level, bp_by_level, cache):
+    """Composes crateSpawn (how many crates a wreck has, driven by SIZE
+    only) with itemDropOdds (which item a crate contains, driven by TIER
+    only) into a single per-item, per-sector answer to "how many of this
+    item do I expect to find at ONE wreck site" - previously these were
+    two separate, uncomposed metrics; itemDropOdds alone answers "given a
+    crate is already open in my hands", which understates a Big wreck
+    site (avg ~3.6 crates) by roughly that same factor.
+
+    A sector's wreckResGen list is a flat list of resGen ids (e.g.
+    "ShipWreck_Small_1"), each ALREADY fixing both size and tier at once -
+    repetition in the list is the weight (same mechanic
+    build_sector_profiles uses for tier alone, generalized here to the
+    full (size, tier) pair via the id itself). For each such variant:
+
+        expectedPerWreck = E[crate count | that variant's SIZE]
+                            * P(item | that variant's TIER)
+
+    exact via linearity of expectation - no need to enumerate the count
+    distribution for this one. A sector's OWN expectedPerWreck is then the
+    weight-average across its reachable variants (valid under the "this
+    sector's next wreck is variant X with probability weight[X]" mixture
+    interpretation).
+
+        atLeastOnePct = 1 - sum_k P(count=k | variant's SIZE) * (1-p)**k
+
+    uses the full count distribution (already computed for crateSpawn) -
+    exact, not a Poisson approximation of expectedPerWreck."""
+    resgen = {l["id"]: l for l in sheets["resGen"]["lines"]}
+    resgroup = {l["id"]: l for l in sheets["resGroup"]["lines"]}
+
+    sector_variant_weights = {}
+    for l in sheets["sector"]["lines"]:
+        wr = l.get("generation", {}).get("wreckResGen")
+        if not wr:
+            continue
+        weights = defaultdict(float)
+        for entry in wr:
+            weights[entry["resGen"]] += 1 / len(wr)
+        sector_variant_weights[l["id"]] = dict(weights)
+
+    def compute_for_pool(pool_by_level):
+        rows = []
+        for lx, entries in pool_by_level.items():
+            for item_entry in entries:
+                per_sector = {}
+                for sector_id, variant_weights in sector_variant_weights.items():
+                    max_loot_level = sectors[sector_id]["maxLootLevel"]
+                    expected_total = 0.0
+                    atleast_one_total = 0.0
+                    for resgen_id, w in variant_weights.items():
+                        tier = tier_of_resgen(resgen_id)
+                        level_prob = level_prob_for_tier(tier, max_loot_level)
+                        p = item_prob_given_level_dist(lx, pool_by_level, level_prob)
+                        if p <= 0:
+                            continue
+                        cstats = crate_count_stats_raw(resgen, resgroup, resgen_id, cache)
+                        expected_total += w * cstats["expectedCount"] * p
+                        p_at_least_one_variant = 1 - sum(
+                            frac * ((1 - p) ** k) for k, frac in cstats["countDistribution"].items()
+                        )
+                        atleast_one_total += w * p_at_least_one_variant
+                    if expected_total > 0:
+                        per_sector[sectors[sector_id]["name"]] = (
+                            sigfig(expected_total, 3),
+                            sigfig(atleast_one_total * 100, 3),
+                        )
+                if not per_sector:
+                    continue
+                groups = defaultdict(list)
+                for sector_name, key in per_sector.items():
+                    groups[key].append(sector_name)
+                grouped = [
+                    {"expectedPerWreck": k[0], "atLeastOnePct": k[1], "sectors": sorted(v)}
+                    for k, v in sorted(groups.items(), reverse=True)
+                ]
+                rows.append({
+                    "name": item_entry["name"],
+                    "level": lx,
+                    "bestExpectedPerWreck": grouped[0]["expectedPerWreck"],
+                    "groups": grouped,
+                })
+        rows.sort(key=lambda r: (r["level"], r["name"]))
+        return rows
+
+    return compute_for_pool(patch_by_level), compute_for_pool(bp_by_level)
 
 
 def main():
@@ -309,9 +454,18 @@ def main():
     }
     patch_rows = compute_item_drop_odds(patch_by_level, sector_level_prob)
     bp_rows = compute_item_drop_odds(bp_by_level, sector_level_prob)
-    crate_spawn_stats = compute_crate_spawn_stats(sheets, sectors)
+
+    # Shared across both consumers below (crateSpawn's own sector rollup AND
+    # the per-item wreck-site composition) so each of the ~9 distinct wreck
+    # resGen ids only gets Monte Carlo simulated once, not twice.
+    crate_stats_cache = {}
+    crate_spawn_stats = compute_crate_spawn_stats(sheets, sectors, crate_stats_cache)
     for sector_id, s in sectors.items():
         s["crateSpawn"] = crate_spawn_stats.get(s["name"])
+
+    wreck_site_patch_rows, wreck_site_bp_rows = compute_wreck_site_item_odds(
+        sheets, sectors, patch_by_level, bp_by_level, crate_stats_cache
+    )
 
     out = {
         "_meta": {
@@ -372,12 +526,27 @@ def main():
                 "Tier-independent; driven almost entirely by each sector's "
                 "Small:Big wreck-type mix (Small wrecks average <1 crate, Big "
                 "wrecks average ~3-4 and can have several).",
+                "itemDropOdds[*].groups[*].pct is CONDITIONAL ON a crate "
+                "already being open (P(item | one crate opened)) - it does "
+                "NOT account for how many crates a wreck actually has, which "
+                "varies 4x between Small and Big (see crateSpawn above). "
+                "wreckSiteItemOdds composes the two: expectedPerWreck = "
+                "E[crate count | wreck's SIZE] * P(item | wreck's TIER), "
+                "exact via linearity of expectation (a wreck's resGen id "
+                "fixes both size and tier at once, so this is computed once "
+                "per (size,tier) VARIANT actually reachable in a sector's "
+                "own wreckResGen list, then weight-averaged the same way "
+                "crateSpawn already weights tiers). atLeastOnePct is the "
+                "exact P(this item drops at least once across the WHOLE "
+                "wreck site), using the real crate-count distribution rather "
+                "than a Poisson approximation of expectedPerWreck.",
             ],
         },
         "patchPoolByLevel": {str(k): v for k, v in sorted(patch_by_level.items())},
         "blueprintPoolByLevel": {str(k): v for k, v in sorted(bp_by_level.items())},
         "sectors": sectors,
         "itemDropOdds": {"patches": patch_rows, "blueprints": bp_rows},
+        "wreckSiteItemOdds": {"patches": wreck_site_patch_rows, "blueprints": wreck_site_bp_rows},
     }
 
     OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
