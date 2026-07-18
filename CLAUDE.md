@@ -37,6 +37,18 @@ on type kind 23 again after a fresh checkout, this is why; the local
 [`tools/game_logic_notes.md`](tools/game_logic_notes.md)'s note on this
 for the full patch diff summary.
 
+## Keeping the finding logs current
+
+[`tools/game_logic_notes.md`](tools/game_logic_notes.md) and
+[`tools/hmd_format_notes.md`](tools/hmd_format_notes.md) are numbered-finding
+investigation logs, not just this file - both already do this well in
+several places (e.g. `hmd_format_notes.md`'s finding 15 disproving finding
+schemes it had earlier assumed necessary). When a new finding supersedes or
+invalidates an earlier one, correct/annotate that earlier finding in place
+(or clearly mark it superseded) rather than just appending a new finding
+number and leaving the old, now-wrong one sitting there uncorrected - these
+logs are read and trusted as current state, not a changelog.
+
 ## Ship Builder
 
 Launch with `start.bat` (double-click) or `python -m http.server 8765` then open `http://localhost:8765`.
@@ -136,7 +148,7 @@ Stats sourced from `part.stats` (game data in `ship_editor_data.json`) plus `sta
 
 The source game (SpaceCraft) runs on **Heaps.io** (a Haxe game engine), or a modified/customized build of it — confirmed by `res.pak`'s directory format, the `HMD` mesh magic, and a `.prefab` object-tree format that matches Heaps' `hxbit` binary serializer conventions (tag bytes 0/1/2/3/4/5/6/7 for null/false/true/int/float/object/string/array — see `tools/prefab_parse.py`). Assume Heaps/Haxe conventions when reverse-engineering any new binary format from `res.pak`.
 
-See [`tools/hmd_format_notes.md`](tools/hmd_format_notes.md) for full format documentation, coordinate transforms, vertex/index buffer layouts, and the .bin output format. **Keep this file up to date** with any new findings discovered during conversion work.
+See [`tools/hmd_format_notes.md`](tools/hmd_format_notes.md) for full format documentation, coordinate transforms, vertex/index buffer layouts, and the .bin output format. **Keep this file up to date** with any new findings discovered during conversion work - see "Keeping the finding logs current" above: correct/supersede a stale finding in place, don't just append a new one on top of it.
 
 **All tools must be saved to `tools/`** — never write a tool only in memory or in a code block. Save every script immediately after writing it, even if incomplete.
 

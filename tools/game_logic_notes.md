@@ -594,6 +594,56 @@ existing `itemDropOdds` math, just not previously multiplied together).
 rather than a Poisson approximation of `expectedPerWreck`, so it stays
 exact even for items with a non-negligible per-crate probability.
 
+## Finding 10: Agility's *only* gameplay consumer is weapon-hit resolution; asteroid DOT damage has no dodge roll at all
+
+Confirmed via `refto fn@8890` (every caller of `ent.Unit.getAgility`,
+findex 8890, in the whole binary) — exactly 3 hits:
+
+| Caller | Role |
+|---|---|
+| `ui.win.ship.ShipElement.redraw@20590` | UI: renders the stat on the ship panel |
+| `<none>@26902` | UI: `CurrentAgility_Display` string-keyed stat resolver (same "Display only" attribute noted in Finding 3) |
+| `st.Combat.applyImpact@11025` | **The only gameplay use** — weapon-hit crit/hit/miss resolution |
+
+So agility affects exactly one piece of gameplay math, and it's weapon
+combat, not asteroids. `serverUpdateAsteroidFieldDamage` (findex 9132,
+Finding 1) is not in this caller list, and its own damage path
+(Poisson tick-hit gate → fixed `AsteroidHitChance` roll → multiplier →
+`takeDamage`) has no dodge/miss roll anywhere in it — nor does
+`Unit.takeDamage__impl` (findex 8896, Finding 2), which also isn't a
+`getAgility` caller. Asteroid damage is only ever reduced by shields
+and `HullImpactDamageReduction`; there is no way to dodge it by flying
+better.
+
+`st.Combat.applyImpact` (`src/st/Combat.hx:123-137`) — raw opcodes,
+decompiler mangles this one (garbles the `evalue-1` reuse and drops a
+statement, so don't trust `decomp`'s output here):
+
+```
+if target.hull <= 0: return
+
+evalue = pow(e, HitChanceExpScale * (source.getAccuracy(skillId) - target.getAgility(null)))
+
+critChance = (evalue - 1) / ((evalue - 1) + 1/BaseCriticalProba)
+missChance = (1/evalue) / ((1/evalue - 1) + 1/BaseMissProba)
+
+r = random()
+if r < critChance:
+    damage *= CriticalHitDamageMultiplier
+elif r >= 1 - missChance:
+    damage = 0          # dodged
+# else: normal hit, damage unchanged
+
+takeDamage(target, damage, DamageSource.Unit(source))
+```
+
+So the target's agility raises `missChance` (harder to hit → more
+likely dodged) and the attacker's accuracy lowers it, via the shared
+`evalue` exponential term — a logistic-style hit-chance curve, not a
+flat percentage. `source`/`target`/`skillId`/`weaponIdx` are all
+per-shot params, confirming this only fires on weapon-fire impact
+resolution, never on the asteroid tick-damage path.
+
 A sector's own number is then the weighted average across whichever
 (size, tier) variants its own `wreckResGen` list actually reaches (same
 repetition-as-weight mechanic throughout this whole investigation) — not
