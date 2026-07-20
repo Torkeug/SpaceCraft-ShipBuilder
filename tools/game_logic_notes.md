@@ -792,26 +792,32 @@ as `generateResource`'s bytecode already implied. This rules out any
 "depends on what the player does" explanation for the Small gap.
 
 **The Small gap is a shape mismatch, not just a mean mismatch.** Comparing
-the full predicted count distribution (not just its mean) against 72
-historically-observed Small sites:
+the full predicted count distribution (not just its mean) against 75
+historically-observed Small sites (grew from 72 as passive tracking kept
+running between sessions):
 
-| crates | predicted (of 72) | observed |
+| crates | predicted (of 75) | observed |
 |---|---|---|
-| 0 | 6.1 | 0 |
-| 1 | 11.4 | 31 |
-| 2 | 13.5 | 24 |
-| 3 | 14.0 | 13 |
-| 4 | 14.3 | 2 |
-| 5 | 8.3 | 1 |
-| 6-8 | ~4.4 combined | 0 |
+| 0 | 6.2 | 0 |
+| 1 | 11.7 | 31 |
+| 2 | 14.1 | 26 |
+| 3 | 14.7 | 14 |
+| 4 | 15.0 | 2 |
+| 5 | 8.8 | 1 |
+| 6-8 | ~4.5 combined | 0 |
 | 9 | 0.06 | 1 |
 
-76% of observed sites (55/72) show exactly 1 or 2 crates; the model
-predicts a much broader, gently-peaked distribution centered on 3-4. Big
-wrecks, by contrast, show a full-histogram shape that tracks the model
-reasonably well end to end (checked the same way, n=41) - the mean match
-wasn't a coincidence for Big, but it may have been one for Small (its
-mean happens to sit inside a poorly-shaped predicted distribution).
+76% of observed sites show exactly 1 or 2 crates; the model predicts a
+much broader, gently-peaked distribution centered on 3-4. More precisely,
+the mismatch is a sharp CLIFF between 3 and 4, not a gradual taper: the
+model treats 3 and 4 as almost equally likely (19.6% vs 19.9%), but
+observed sites are ~7x rarer at 4 than at 3 (2 vs 14) - this looks more
+like something capping/truncating the distribution from above than like
+a smooth concentration at low counts. Big wrecks, by contrast, show a
+full-histogram shape that tracks the model reasonably well end to end
+(checked the same way, n=44) - the mean match wasn't a coincidence for
+Big, but it may have been one for Small (its mean happens to sit inside a
+poorly-shaped predicted distribution).
 
 **Ruled out, with evidence, as explanations for the Small-specific
 mismatch:**
@@ -877,19 +883,49 @@ mismatch:**
     applies to BIG's already-well-fitting mechanism, and says nothing
     about SMALL's direct-placement mechanism where the actual anomaly
     lives.
+- **Whole-group terrain-slope gate silently zeroing an entire roll**
+  (decompiled `generateGroup@11222` in full, findex 11222 ops 0-122,
+  `src/logic/gen/PlanetRes.hx:378-413`, since this was the concrete
+  next-step pointer left by the previous session): confirmed
+  `getNearCartesian@11238` + `isValidTerrainSlope@11225` gate the ENTIRE
+  group at the top of `generateGroup`, before the loop that rolls any
+  member's own count even starts (`getResGroupCount@11224` is called
+  inside that loop, ops 153-170, strictly after the gate) - so a single
+  failed terrain check zeroes everything the group would have rolled, not
+  just one item. This is real and asymmetric-by-construction (Small gets
+  only 1-2 independent group rolls total - its 1-2 JunkGroup debris rolls
+  plus 1 `resGroupSpawn` recursion from its single hull piece - so one
+  failure has an outsized chance of showing up in Small's total, where
+  Big's 5-10 independent rolls across 4 hull pieces average it away). But
+  it predicts the WRONG direction: it can only ever ADD zero-count sites,
+  and the model already predicts P(0)=8.3% (6.2 of 75 expected) while
+  observed shows ZERO true-zero Small sites - fewer zeros than the
+  baseline model, not more. Also separately re-verified
+  `DismantledJunkGroup_lvl{0,1,2}_Small`'s raw `data.cdb` definition
+  directly (`{min:0,max:4,res:LootChestRare_lvl{N}}` alongside a sibling
+  `{min:20,max:60,group:BasicLoot_lvl{N}}` entry, both under the same
+  `props:{groupDensity:1,size:7}`) - matches what was already modeled, no
+  transcription error hiding here. Rejected as the primary driver, though
+  it may still be a real, minor, wrong-direction contributor.
 
 **Still open**: no tested hypothesis explains why Small wrecks'
-crate-count distribution is this heavily concentrated at 1-2 with a sharp
-cutoff by 4-5 (one outlier at 9 aside). The mismatch is specific to the
-DIRECT-`res`-placement mechanism unique to Small's `resGroupSpawn` target
-among everything else examined in this whole investigation (every other
-crate-count-relevant mechanism found so far - debris-field RareLoot,
-Big's secondary spawn - routes through the SAME `RareLoot` override this
-repo has already modeled and verified). Whoever picks this up next:
-worth decompiling `isValidTerrainSlope@11225`/`getNearCartesian@11238` in
-full to understand what actually gates a DIRECT placement's success/
-failure (as opposed to reasoning about it from the outside, which is as
-far as this session got), and/or gathering more live-verified fresh Small
-wreck samples (only 3 gathered this session: 2, 1, 9 crates) to build a
-larger, contamination-free empirical distribution before trying to
-match it to a corrected model.
+crate-count distribution has a hard cliff between 3 and 4 (model treats
+them as near-equally likely; observed is ~7x rarer at 4) with zero
+true-zero sites, while the debris-field/Big-wreck mechanisms this repo
+has modeled and verified all produce smoother distributions. The mismatch
+is specific to the DIRECT-`res`-placement mechanism unique to Small's
+`resGroupSpawn` target - every other crate-count-relevant mechanism found
+so far (debris-field RareLoot, Big's secondary spawn) routes through the
+SAME `RareLoot` override this repo has already modeled and verified.
+`isValidTerrainSlope`/`getNearCartesian` are now fully decompiled (see
+above) and don't explain it - a cliff-shaped cap needs a different
+mechanism than either "silent zero-out" (wrong direction, ruled out
+above) or "re-roll on retry" (inapplicable to direct-`res` targets, ruled
+out earlier). Worth checking whether the retry loop's own MAX-ATTEMPT
+count (referenced but not yet pinned down precisely in this investigation
+- see `generateResource@11223`'s up-to-50-attempt retry loop) could
+itself impose a de facto ceiling specific to how many direct-`res` slots
+get exhausted before the loop gives up, and/or gathering more
+live-verified fresh Small wreck samples (only 3 gathered so far across
+sessions: 2, 1, 9 crates) to build a larger, contamination-free empirical
+distribution before trying to match it to a corrected model.
