@@ -197,7 +197,20 @@ def res_group_count(min_, max_, exploding_chance):
     decompiled logic.gen.PlanetRes.getResGroupCount (findex 11224): a plain
     uniform int in [min,max], or - with probability exploding_chance, when
     the *enclosing* group has that prop set (e.g. ShipWreck_JunkGroup_lvl0's
-    0.1) - a uniform int in the wider [2*min, 3*max] range instead."""
+    0.1) - a uniform int in the wider [2*min, 3*max] range instead.
+
+    NOTE (2026-07-20): raw opcodes (src/logic/gen/PlanetRes.hx:644-649) show
+    both branches actually draw TWO independent uniforms over the same span
+    and take the MINIMUM, not a single draw - min(A,B) sits lower on average
+    than one draw (E[min of 2 uniforms over span S] = S/3, not S/2), so this
+    plain-randint version overstates expected crate counts relative to the
+    real algorithm. NOT switched to the corrected version yet: doing so
+    widens the gap against CraftMap's live-tracked observed crate counts
+    (tools/audit_wreck_crate_rates.py in the sibling Craftmap repo) from
+    ~2x to ~4x rather than closing it, so there is still at least one other
+    unidentified factor at play and this file's shipped numbers are left
+    alone pending that - see the investigation thread referenced there
+    before changing this function."""
     if exploding_chance and random.random() < exploding_chance:
         lo, hi = 2 * min_, 3 * max_
     else:
@@ -275,18 +288,168 @@ def crate_count_stats_raw(resgen, resgroup, resgen_id, cache, trials=CRATE_SPAWN
     return stats
 
 
+def wreck_size_of_resgen(resgen_id):
+    """"Small" or "Big" from a resGen id like "ShipWreck_Big_1" - a sector's
+    wreckResGen list is a flat mix of both, and Small vs Big is the ONE
+    thing that moves crate count 4x (Finding 8) - tier does not. Confirmed
+    directly from data.cdb's resGroup sheet: GShipWreck_Small_lvlN places a
+    single ShipWreck_LvlN hull piece and rolls its JunkGroup 1-2 times;
+    GShipWreck_Big_lvlN places four hull debris pieces (BigPiece1/2_lvlN +
+    SmallPiece1/2 - "SmallPiece" here means small DEBRIS chunk of a Big
+    wreck's hull, unrelated to this Small/Big wreck-SIZE axis) and rolls
+    JunkGroup 5-10 times."""
+    if "_Big_" in resgen_id:
+        return "Big"
+    if "_Small_" in resgen_id:
+        return "Small"
+    return None
+
+
+def secondary_spawn_group_id(size, tier):
+    """The resGroupSpawn target fired for a wreck's own hull PIECE (not
+    the surrounding debris field crate_count_stats_raw/count_crates_in_wreck
+    already cover) - a SECOND, independent loot-generation pass, confirmed
+    (src/logic/gen/PlanetRes.hx:559-564, generateResource@11223) to fire
+    UNCONDITIONALLY at world-generation, the instant the hull piece is
+    first placed - NOT a player-triggered action. `ShipWreck_
+    DismantledJunkGroup_lvl{tier}[_Small]`'s own name is misleading here:
+    despite the name, it has NO connection to the player's actual "dismantle
+    a hull piece" RPC action (st.PlanetResourceManager.rpcDismantle__impl@
+    8117 -> _dismantle@23642) - that action grants a separate, fixed junk
+    bundle via the resource's own props.loot (confirmed: never includes a
+    crate, checked across the entire `resource` sheet), updates the parent
+    wreck Core's lastMining timestamp (feeding Finding 5's removal-cycle
+    probability), and _remove()s the dismantled piece - it never calls
+    generateGroup/resGroupSpawn at all. The two "dismantle"-named things
+    are unrelated; this function is named for the FIRST one only (the
+    resGroupSpawn target), not the player action.
+
+    Confirmed directly from data.cdb's `resource` sheet: exactly one hull
+    piece per wreck ever carries a props.resGroupSpawn at all - a Small
+    wreck's own single ShipWreck_Lvl{tier} piece (-> ShipWreck_
+    DismantledJunkGroup_lvl{tier}_Small, a direct {min:0,max:4}
+    ShipWreck_LootChestRare_lvl{tier} placement - no RareLoot override
+    layer), or for a Big wreck, ONLY BigPiece1_lvl{tier} (-> ShipWreck_
+    DismantledJunkGroup_lvl{tier}, a {min:3,max:15} RareLoot_lvl{tier}
+    invocation count, ~6x the debris field's own {min:0,max:2}) - never
+    BigPiece2/SmallPiece1/SmallPiece2.
+
+    This was missing entirely from both this file's original Monte Carlo
+    AND the sibling spacecraft-memory-research repo's independent
+    closed-form resgroup_expected_crate_count - neither ever looked past
+    a wreck's own outer GShipWreck_{size}_lvl{tier} resGroup tree into an
+    individually-placed resource's own props.resGroupSpawn, a completely
+    separate trigger mechanism from the generation tree both were already
+    walking. Confirmed live against CraftMap's wreck_events telemetry
+    (2026-07-20, see tools/audit_wreck_crate_rates.py in the sibling
+    Craftmap repo, and a direct live-memory read of 4 currently-existing
+    wrecks): debris-field-only expectedCount (3.65 Big / 0.89 Small)
+    undershot real observed per-wreck crate counts (~7.0 Big / ~1.86
+    Small) by 2-4x; debris + this secondary spawn (7.09 Big / 2.89 Small)
+    landed within 1.3% of observed for Big, but overshoots Small - and
+    since this pass is unconditional (not player-behavior-dependent, per
+    the trigger confirmation above), that Small gap is a genuinely
+    unresolved discrepancy, not a "players don't always mine it" story.
+    One further live-data anomaly still unexplained: 0 of 71 historically
+    observed Small wreck sites ever show 0 crates, though this model
+    predicts roughly an 8% chance of that outcome - some guarantee of at
+    least one crate on Small wrecks likely exists that neither this pass
+    nor the debris field accounts for."""
+    if size == "Small":
+        return f"ShipWreck_DismantledJunkGroup_lvl{tier}_Small"
+    return f"ShipWreck_DismantledJunkGroup_lvl{tier}"
+
+
+def crate_count_stats_for_group(resgroup, group_id, cache, trials=CRATE_SPAWN_TRIALS):
+    """Same Monte Carlo as crate_count_stats_raw, but for a resGroup id
+    reached directly via a resource's own props.resGroupSpawn (not wrapped
+    in a resGen entry the way a wreck's own initial debris field is) - see
+    secondary_spawn_group_id. Shares crate_count_stats_raw's cache (keyed
+    by id string, so a secondary-spawn group id never collides with a
+    resGen id)."""
+    if group_id in cache:
+        return cache[group_id]
+    counts = [count_crates_in_wreck(resgroup, group_id) for _ in range(trials)]
+    dist = defaultdict(int)
+    for c in counts:
+        dist[c] += 1
+    stats = {
+        "atLeastOne": sum(c > 0 for c in counts) / trials,
+        "expectedCount": sum(counts) / trials,
+        "countDistribution": {k: v / trials for k, v in dist.items()},
+    }
+    cache[group_id] = stats
+    return stats
+
+
+def combine_independent_counts(stats_a, stats_b):
+    """Count distribution of stats_a's crates PLUS stats_b's crates from
+    one wreck (e.g. debris field + the secondary resGroupSpawn pass) - a
+    convolution of the two independent distributions, not just their means
+    added (though the means DO simply add, by linearity of expectation -
+    it's countDistribution's own shape that needs the full convolution)."""
+    dist = defaultdict(float)
+    for ka, va in stats_a["countDistribution"].items():
+        for kb, vb in stats_b["countDistribution"].items():
+            dist[int(ka) + int(kb)] += va * vb
+    return {
+        "atLeastOne": round(1 - dist.get(0, 0.0), 4),
+        "expectedCount": round(stats_a["expectedCount"] + stats_b["expectedCount"], 3),
+        "countDistribution": {str(k): round(v, 4) for k, v in sorted(dist.items())},
+    }
+
+
 def compute_crate_spawn_stats(sheets, sectors, cache):
-    """{sector_name: {atLeastOne, expectedCount, countDistribution}} for a
-    randomly-rolled wreck in that sector, Monte Carlo simulated from the
-    actual generation tree - see game_logic_notes.md Finding 8.
+    """{sector_name: {atLeastOne, expectedCount, countDistribution, bySize}}
+    for a randomly-rolled wreck in that sector, Monte Carlo simulated from
+    the actual generation tree - see game_logic_notes.md Finding 8.
     Tier-independent (the crate-vs-junk override weight is identical at
     every tier - only Small vs Big wreck size moves these numbers), unlike
     lootLevelProbability. A single wreck can contain more than one crate
     (each JunkGroup invocation independently re-rolls its own RareLoot
     slot(s), and Big wrecks invoke JunkGroup many times) - countDistribution
-    captures that instead of just collapsing to a single spawn-or-not %."""
+    captures that instead of just collapsing to a single spawn-or-not %.
+
+    Every stat here comes in TWO flavors: the bare debris-field figures
+    (top level, and bySize.{Small,Big} - what a wreck's scattered debris
+    alone contains) and ITS OWN sibling (bySize.{Small,Big}.secondarySpawn/
+    total - the resGroupSpawn-triggered pass a wreck's hull piece ALWAYS
+    generates in addition, confirmed unconditional/not player-behavior-
+    dependent - see secondary_spawn_group_id - plus debris+secondarySpawn
+    combined). "total" is not an alternate scenario for a player who
+    happens to dismantle the hull - it fires regardless, so it's simply
+    the real total crate count for that wreck; debris-field-only is
+    exposed alongside it just to show where the total comes from.
+
+    The blended atLeastOne/expectedCount/countDistribution average across
+    EVERY wreck-size variant in the sector's own wreckResGen list (weighted
+    by repetition) - useful as an overall sector figure, but NOT what you
+    should expect from any one wreck you actually walk up to, since a
+    sector's Big wrecks alone already run ~4x a Small wreck's own expected
+    count (confirmed against live-tracked CraftMap wreck_events data - see
+    tools/audit_wreck_crate_rates.py in the sibling Craftmap repo). bySize
+    splits the identical Monte Carlo stats out per wreck SIZE (missing a
+    key if that sector's wreckResGen list has no variant of that size at
+    all) so a caller who already knows which size wreck it's looking at
+    (from the hull it can see - BigPiece/SmallPiece debris vs a single
+    plain hull piece) can quote the number that actually applies, instead
+    of the diluted sector-wide blend."""
     resgen = {l["id"]: l for l in sheets["resGen"]["lines"]}
     resgroup = {l["id"]: l for l in sheets["resGroup"]["lines"]}
+
+    def rollup(entries):
+        n = len(entries)
+        merged_dist = defaultdict(float)
+        for e in entries:
+            for k, v in e["countDistribution"].items():
+                merged_dist[k] += v / n
+        return {
+            "atLeastOne": round(sum(e["atLeastOne"] for e in entries) / n, 4),
+            "expectedCount": round(sum(e["expectedCount"] for e in entries) / n, 3),
+            "countDistribution": {
+                str(k): round(v, 4) for k, v in sorted(merged_dist.items(), key=lambda kv: kv[0])
+            },
+        }
 
     result = {}
     for l in sheets["sector"]["lines"]:
@@ -294,18 +457,26 @@ def compute_crate_spawn_stats(sheets, sectors, cache):
         if not wr:
             continue
         entries = [crate_count_stats_raw(resgen, resgroup, entry["resGen"], cache) for entry in wr]
-        n = len(entries)
-        merged_dist = defaultdict(float)
-        for e in entries:
-            for k, v in e["countDistribution"].items():
-                merged_dist[k] += v / n
-        result[sectors[l["id"]]["name"]] = {
-            "atLeastOne": round(sum(e["atLeastOne"] for e in entries) / n, 4),
-            "expectedCount": round(sum(e["expectedCount"] for e in entries) / n, 3),
-            "countDistribution": {
-                str(k): round(v, 4) for k, v in sorted(merged_dist.items(), key=lambda kv: kv[0])
-            },
+        sizes = [wreck_size_of_resgen(entry["resGen"]) for entry in wr]
+        tiers = [tier_of_resgen(entry["resGen"]) for entry in wr]
+        secondary_entries = [
+            crate_count_stats_for_group(resgroup, secondary_spawn_group_id(size, tier), cache)
+            for size, tier in zip(sizes, tiers)
+        ]
+        combined_entries = [
+            combine_independent_counts(base, bonus) for base, bonus in zip(entries, secondary_entries)
+        ]
+        stats = rollup(entries)
+        stats["bySize"] = {
+            size: {
+                **rollup([e for e, s in zip(entries, sizes) if s == size]),
+                "secondarySpawn": rollup([e for e, s in zip(secondary_entries, sizes) if s == size]),
+                "total": rollup([e for e, s in zip(combined_entries, sizes) if s == size]),
+            }
+            for size in ("Small", "Big")
+            if any(s == size for s in sizes)
         }
+        result[sectors[l["id"]]["name"]] = stats
     return result
 
 
@@ -365,13 +536,24 @@ def compute_wreck_site_item_odds(sheets, sectors, patch_by_level, bp_by_level, c
     crate is already open in my hands", which understates a Big wreck
     site (avg ~3.6 crates) by roughly that same factor.
 
+    "How many crates a wreck has" is the FULL total from
+    compute_crate_spawn_stats/secondary_spawn_group_id: the debris field
+    scattered at creation PLUS the second, independent generation pass a
+    wreck's marked hull piece ALWAYS triggers via its own resGroupSpawn -
+    confirmed unconditional, not tied to the player's actual dismantle
+    action (see Finding 11, game_logic_notes.md) - composed here via
+    combine_independent_counts, the same convolution compute_crate_spawn_
+    stats' own "total" figure already uses, so a wreck's per-item odds
+    match its own overall crate-count total rather than only the
+    debris-field slice of it.
+
     A sector's wreckResGen list is a flat list of resGen ids (e.g.
     "ShipWreck_Small_1"), each ALREADY fixing both size and tier at once -
     repetition in the list is the weight (same mechanic
     build_sector_profiles uses for tier alone, generalized here to the
     full (size, tier) pair via the id itself). For each such variant:
 
-        expectedPerWreck = E[crate count | that variant's SIZE]
+        expectedPerWreck = E[TOTAL crate count | that variant's (size, tier)]
                             * P(item | that variant's TIER)
 
     exact via linearity of expectation - no need to enumerate the count
@@ -380,10 +562,10 @@ def compute_wreck_site_item_odds(sheets, sectors, patch_by_level, bp_by_level, c
     sector's next wreck is variant X with probability weight[X]" mixture
     interpretation).
 
-        atLeastOnePct = 1 - sum_k P(count=k | variant's SIZE) * (1-p)**k
+        atLeastOnePct = 1 - sum_k P(TOTAL count=k | variant's (size,tier)) * (1-p)**k
 
-    uses the full count distribution (already computed for crateSpawn) -
-    exact, not a Poisson approximation of expectedPerWreck."""
+    uses the full (debris + dismantle-bonus) count distribution - exact,
+    not a Poisson approximation of expectedPerWreck."""
     resgen = {l["id"]: l for l in sheets["resGen"]["lines"]}
     resgroup = {l["id"]: l for l in sheets["resGroup"]["lines"]}
 
@@ -396,6 +578,20 @@ def compute_wreck_site_item_odds(sheets, sectors, patch_by_level, bp_by_level, c
         for entry in wr:
             weights[entry["resGen"]] += 1 / len(wr)
         sector_variant_weights[l["id"]] = dict(weights)
+
+    def total_crate_stats(resgen_id):
+        """Debris field + hull-dismantle bonus, convolved - see this
+        function's own docstring and Finding 11."""
+        key = f"total|{resgen_id}"
+        if key in cache:
+            return cache[key]
+        debris = crate_count_stats_raw(resgen, resgroup, resgen_id, cache)
+        size = wreck_size_of_resgen(resgen_id)
+        tier = tier_of_resgen(resgen_id)
+        bonus = crate_count_stats_for_group(resgroup, secondary_spawn_group_id(size, tier), cache)
+        total = combine_independent_counts(debris, bonus)
+        cache[key] = total
+        return total
 
     def compute_for_pool(pool_by_level):
         rows = []
@@ -412,10 +608,10 @@ def compute_wreck_site_item_odds(sheets, sectors, patch_by_level, bp_by_level, c
                         p = item_prob_given_level_dist(lx, pool_by_level, level_prob)
                         if p <= 0:
                             continue
-                        cstats = crate_count_stats_raw(resgen, resgroup, resgen_id, cache)
+                        cstats = total_crate_stats(resgen_id)
                         expected_total += w * cstats["expectedCount"] * p
                         p_at_least_one_variant = 1 - sum(
-                            frac * ((1 - p) ** k) for k, frac in cstats["countDistribution"].items()
+                            frac * ((1 - p) ** int(k)) for k, frac in cstats["countDistribution"].items()
                         )
                         atleast_one_total += w * p_at_least_one_variant
                     if expected_total > 0:
@@ -526,20 +722,63 @@ def main():
                 "Tier-independent; driven almost entirely by each sector's "
                 "Small:Big wreck-type mix (Small wrecks average <1 crate, Big "
                 "wrecks average ~3-4 and can have several).",
+                "sectors[*].crateSpawn.bySize.{Small,Big} = the same "
+                "atLeastOne/expectedCount/countDistribution stats, split by "
+                "wreck SIZE instead of blended across the sector's whole "
+                "wreckResGen mix (a key is absent if the sector has no "
+                "variant of that size at all). The blended top-level figures "
+                "answer 'this sector's wrecks, on average' - not 'the wreck "
+                "I'm looking at right now', since Big alone already runs ~4x "
+                "Small's own expected count. Added after CraftMap's live "
+                "wreck-tracking data (tools/audit_wreck_crate_rates.py in "
+                "the sibling Craftmap repo) showed real per-wreck crate "
+                "counts running well above the blended figure once split by "
+                "the hull actually observed (BigPiece1/2+SmallPiece1/2 debris "
+                "vs a single plain hull piece) - the size blend explained "
+                "SOME of that gap, but not all of it; see secondarySpawn "
+                "below and game_logic_notes.md Findings 11-12 for the rest.",
+                "sectors[*].crateSpawn.bySize.{Small,Big}.secondarySpawn/"
+                "total = a SECOND, independent loot-generation pass a "
+                "wreck's marked hull piece (a Small wreck's single hull "
+                "piece, or only BigPiece1 - never BigPiece2/SmallPiece1/"
+                "SmallPiece2 - for a Big wreck) ALWAYS triggers via that "
+                "resource's own props.resGroupSpawn in data.cdb - "
+                "confirmed (Finding 12, including a live before/after "
+                "test) to fire unconditionally at world-generation, NOT "
+                "when the player mines/dismantles that piece, despite the "
+                "underlying resGroup's own 'DismantledJunkGroup' name (a "
+                "wholly separate, unrelated mechanism actually triggers on "
+                "the player's real dismantle action - see Finding 12) - "
+                "completely separate from the debris-field generation tree "
+                "the bare bySize figures above cover. total is debris + "
+                "secondarySpawn (a convolution of the two independent "
+                "count distributions) - the real total for that wreck, not "
+                "an alternate scenario. See game_logic_notes.md Finding 11 "
+                "for the full derivation and live-data verification (within "
+                "~1-3% of observed for Big wrecks; Small's own total lands "
+                "close on the mean but its full count-distribution shape "
+                "does not match this or any tested model - Finding 12, "
+                "still open).",
                 "itemDropOdds[*].groups[*].pct is CONDITIONAL ON a crate "
                 "already being open (P(item | one crate opened)) - it does "
                 "NOT account for how many crates a wreck actually has, which "
                 "varies 4x between Small and Big (see crateSpawn above). "
                 "wreckSiteItemOdds composes the two: expectedPerWreck = "
-                "E[crate count | wreck's SIZE] * P(item | wreck's TIER), "
-                "exact via linearity of expectation (a wreck's resGen id "
-                "fixes both size and tier at once, so this is computed once "
-                "per (size,tier) VARIANT actually reachable in a sector's "
-                "own wreckResGen list, then weight-averaged the same way "
-                "crateSpawn already weights tiers). atLeastOnePct is the "
-                "exact P(this item drops at least once across the WHOLE "
-                "wreck site), using the real crate-count distribution rather "
-                "than a Poisson approximation of expectedPerWreck.",
+                "E[TOTAL crate count | wreck's SIZE] * P(item | wreck's "
+                "TIER), exact via linearity of expectation (a wreck's resGen "
+                "id fixes both size and tier at once, so this is computed "
+                "once per (size,tier) VARIANT actually reachable in a "
+                "sector's own wreckResGen list, then weight-averaged the "
+                "same way crateSpawn already weights tiers). 'TOTAL crate "
+                "count' is debris field + the hull piece's own secondary "
+                "generation pass (see game_logic_notes.md Findings 11-12 "
+                "and crateSpawn.bySize.*.total above) - a wreck's per-item "
+                "odds match the same total the sector-level crate stats "
+                "do, not just its debris field's own slice of it. "
+                "atLeastOnePct is the exact P(this item drops at least once "
+                "across the WHOLE wreck site), using the real (convolved) "
+                "crate-count distribution rather than a Poisson "
+                "approximation of expectedPerWreck.",
             ],
         },
         "patchPoolByLevel": {str(k): v for k, v in sorted(patch_by_level.items())},

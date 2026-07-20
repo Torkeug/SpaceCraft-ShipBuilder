@@ -676,3 +676,220 @@ factor) and with `atLeastOnePct` sitting fractionally below
 `expectedPerWreck`'s implied percentage as it must (P(≥1) ≤ E[count] always,
 by Markov's inequality, with equality only when multiple drops in one
 visit are impossible).
+
+## Finding 11: Rare loot crates ALSO spawn from dismantling a wreck's own hull piece - a second, independent loot pass Finding 8/9 never covered
+
+Findings 8/9 modeled a wreck's rare-loot-crate count entirely from its
+outer `GShipWreck_{Small,Big}_lvl{0,1,2}` resGroup's own `generation.groups`
+tree (`JunkGroup`/`JunkGroup_BlackBox` → `RareLoot` → 40:25 BasicLoot-vs-
+LootChestRare override) - the debris field scattered around a wreck at
+creation. That model, on its own, undershot CraftMap's live-tracked
+observed per-wreck crate counts (`Craftmap/tools/audit_wreck_crate_rates.py`)
+by roughly 2-4x, and a direct live-memory read of 4 currently-existing
+wrecks (`dump_planet_resources.py`'s `read_planet_static_resources`, not a
+simulation) confirmed the excess was real and specifically isolated to
+crates - junk/scrap item counts from the same wrecks tracked within
+~10-25% of the Finding-8 prediction, ruling out a general "everything is
+under-counted" explanation.
+
+**Root cause**: `data.cdb`'s `resource` sheet shows exactly ONE hull piece
+per wreck carries a `props.resGroupSpawn` field - a SEPARATE trigger that
+spawns an entirely independent loot-generation pass. **Correction (see
+Finding 12): this fires UNCONDITIONALLY at world-generation**, the instant
+the hull piece is first placed (`generateResource@11223`,
+src/logic/gen/PlanetRes.hx:559-564 - checks `props.resGroupSpawn` on
+every placed resource and immediately recurses into `generateGroup` if
+set, no player-action gate anywhere in that path) - NOT triggered by the
+player's actual dismantle action, despite the resGroup's own name. The
+player's real "dismantle a hull piece" RPC
+(`st.PlanetResourceManager.rpcDismantle__impl@8117` → `_dismantle@23642`)
+is a wholly separate, unrelated mechanism: it grants a fixed junk bundle
+via the resource's own `props.loot` (confirmed: never includes a crate,
+checked across the entire `resource` sheet), updates the parent wreck
+Core's `lastMining` timestamp (feeding Finding 5's removal-cycle
+probability), and `_remove()`s the piece - it never calls
+`generateGroup`/`resGroupSpawn` at all. Live-tested directly (Finding 12):
+dismantling a hull piece adds zero new resources of any kind. The two
+"dismantle"-named things are unrelated; naming this mechanism
+`dismantleBonus`/`totalIfDismantled` in the initial implementation (below)
+was a mistake that conflated them - renamed to `secondarySpawn`/`total`
+throughout the code as of Finding 12.
+
+- Small wreck: its own single `ShipWreck_Lvl{tier}` hull piece →
+  `resGroupSpawn: ShipWreck_DismantledJunkGroup_lvl{tier}_Small`, which
+  places `{min:0, max:4}` `ShipWreck_LootChestRare_lvl{tier}` DIRECTLY (no
+  RareLoot override layer at all - every roll in this range is a crate)
+  plus its own `{min:20,max:60}` BasicLoot junk.
+- Big wreck: **only** `BigPiece1_lvl{tier}` - never `BigPiece2_lvl{tier}`,
+  `SmallPiece1`, or `SmallPiece2` - carries
+  `resGroupSpawn: ShipWreck_DismantledJunkGroup_lvl{tier}` (no `_Small`
+  suffix), which invokes `RareLoot_lvl{tier}` (the same 40:25 override
+  Finding 8 already modeled) `{min:3, max:15}` times - about 6x the
+  debris field's own `{min:0,max:2}` RareLoot invocation count - plus its
+  own BasicLoot junk.
+
+Both `tools/extract_shipwreck_loot.py`'s Monte Carlo and this repo's own
+independent closed-form `resgroup_expected_crate_count`
+(`dump_galaxy_resources.py`) missed this entirely, for the same reason:
+neither ever looked past a wreck's own outer resGroup tree into an
+individually-placed resource's own `props.resGroupSpawn` - a completely
+separate spawn trigger, not a nested `gen.group`/`gen.res` reference
+reachable by the same tree walk both were already doing.
+
+**Verified**: adding this second pass's own Monte Carlo
+(`crate_count_stats_for_group`/`dismantle_group_id`/
+`combine_independent_counts` in `tools/extract_shipwreck_loot.py`) and
+summing it with Finding 8's original debris-field figure landed within
+1.3% of live-tracked observed Big-wreck crate counts (7.09 predicted vs
+7.00 observed) and reduced the Small-wreck gap from a ~2x undershoot to a
+~1.5x OVERshoot (2.89 predicted vs 1.86 observed) - consistent with
+players reliably mining open a Big wreck's main hull chunk to get inside,
+but not always bothering to fully dismantle a Small wreck's one simple
+hull piece - **superseded by Finding 12**: since this pass is confirmed
+unconditional (not player-behavior-dependent), that "players don't always
+mine it" story is wrong: the Small gap is real and still unexplained.
+`shipwreck_loot.json`'s `sectors[*].crateSpawn.bySize.{Small,Big}` carries
+both figures side by side (the bare debris-field number, unchanged from
+Finding 8, plus a `secondarySpawn`/`total` sibling - originally named
+`dismantleBonus`/`totalIfDismantled`, renamed per the correction above)
+rather than picking one blended assumption about player behavior - see
+that field's own docstring in `compute_crate_spawn_stats`.
+
+**Propagated to per-item odds too**: `wreckSiteItemOdds` (Finding 9,
+`compute_wreck_site_item_odds`) composes each item's per-tier drop
+probability against `total_crate_stats` - debris field + this secondary
+spawn, convolved via the same `combine_independent_counts` helper
+`compute_crate_spawn_stats` itself uses - rather than the debris-field
+count/distribution alone. Every `expectedPerWreck`/`atLeastOnePct` value
+in `shipwreck_loot.json` now reflects the same total
+`crateSpawn.bySize.*.total` uses at the sector level.
+
+## Finding 12: Small wrecks' crate count still doesn't match any tested model - `resGroupSpawn` timing confirmed, but the Small-specific distribution SHAPE is unexplained
+
+Finding 11's `total` figure (debris field + `resGroupSpawn`'s secondary
+pass) landed within 1.3% of live-tracked Big-wreck crate counts, but ran
+notably *higher* than observed for Small wrecks (2.89 predicted vs 1.86
+observed) - originally chalked up to "players don't always dismantle a
+Small wreck's one hull piece." That explanation is now confirmed WRONG
+(see below), and the real cause remains open. Investigated 2026-07-20
+against CraftMap's live-tracked `wreck_events` (`tools/
+audit_wreck_crate_rates.py`) plus direct live-memory captures of
+currently-existing, verifiably untouched wrecks
+(`dump_planet_resources.py`'s `read_planet_static_resources` via a
+`wreck_tracker.py`-cached-address fast attach, not a simulation).
+
+**`resGroupSpawn` timing confirmed unconditional, live, not player-
+triggered** (closing the loop Finding 11 left open): live before/after
+snapshots of an untouched Small wreck (9 crates) through looting the
+debris field, then separately dismantling its one hull piece, and of an
+untouched Big wreck (15 crates) dismantling first `BigPiece2_lvl2` (no
+`resGroupSpawn`, confirmed zero change) then `BigPiece1_lvl2` (the piece
+that DOES carry `resGroupSpawn`) - all four steps showed items only ever
+being REMOVED (consumed), never added. Collection and dismantling are
+both confirmed inert with respect to crate generation: the full crate
+count is baked in at world-gen, before the player ever arrives, exactly
+as `generateResource`'s bytecode already implied. This rules out any
+"depends on what the player does" explanation for the Small gap.
+
+**The Small gap is a shape mismatch, not just a mean mismatch.** Comparing
+the full predicted count distribution (not just its mean) against 72
+historically-observed Small sites:
+
+| crates | predicted (of 72) | observed |
+|---|---|---|
+| 0 | 6.1 | 0 |
+| 1 | 11.4 | 31 |
+| 2 | 13.5 | 24 |
+| 3 | 14.0 | 13 |
+| 4 | 14.3 | 2 |
+| 5 | 8.3 | 1 |
+| 6-8 | ~4.4 combined | 0 |
+| 9 | 0.06 | 1 |
+
+76% of observed sites (55/72) show exactly 1 or 2 crates; the model
+predicts a much broader, gently-peaked distribution centered on 3-4. Big
+wrecks, by contrast, show a full-histogram shape that tracks the model
+reasonably well end to end (checked the same way, n=41) - the mean match
+wasn't a coincidence for Big, but it may have been one for Small (its
+mean happens to sit inside a poorly-shaped predicted distribution).
+
+**Ruled out, with evidence, as explanations for the Small-specific
+mismatch:**
+- **Sector level / wreck tier**: broken the 72 sites down by tier (0/1/2)
+  - all three show the same "concentrated at 1-2, never 0" shape and
+    near-identical means (1.67/1.77/1.94). If sector level (gating which
+    tier a wreck rolls) drove this, tier 0 (reachable in the lowest-level
+    sectors) should look different from tier 2 (highest-level only). It
+    doesn't. Also independently confirmed structurally: `RareLoot_lvl0/1/2`
+    share the identical 40:25 weight and `DismantledJunkGroup_lvl0/1/2_
+    Small` share the identical `{min:0,max:4}` - tier moves loot LEVEL,
+    never crate COUNT (consistent with Finding 8).
+- **`linkedResource`/`detectMission`/`gainAttribute` fields**: checked
+  every wreck-related resource - `linkedResource` is `None` everywhere;
+  `ShipWreck_Core`'s `detectMission: ShipWreck` is a quest/scanner trigger
+  unrelated to loot.
+- **A hidden minimum in `DismantledJunkGroup_lvl{N}_Small`**: re-verified
+  directly from `data.cdb` field-by-field - genuinely `min:0`, not
+  misread. Big's parallel piece (`DismantledJunkGroup_lvl{N}`, no `_Small`
+  suffix) has `min:3` on its RareLoot invocation count (a partial floor -
+  P(0 crates from that alone) ≈ 23%, not zero) - Small has no analogous
+  floor on its direct placement at all, yet is the one that never shows 0.
+- **`props.flags` bit differences**: `ShipWreck_LootChestRare_lvl{0,1,2}`
+  shares the identical `flags: 360` with ordinary junk items like
+  `SteelHullScraps` - not a crate-specific differentiator.
+- **Stale Finding 8 baseline**: re-derived the debris-field distribution
+  fresh this session rather than trusting the old cached number - P(0)
+  came out to 41.9%, matching the original figure closely. Not a
+  reproduction bug.
+- **Historical data contaminated by wrecks already-partially-looted
+  before tracking started** (would explain observed running LOWER than
+  live-fresh samples): checked time-since-session-start for every
+  historical Small sighting - crate counts stay flat across the entire
+  ~27-hour tracked window (mean fluctuates narrowly in the 1-2 range from
+  minute 0 through minute 1600+), no upward drift as tracking continues
+  that would indicate early sightings were of already-depleted wrecks.
+  Rejected.
+- **Terrain-placement / spacing retry failures silently dropping some
+  rolled crates before they place** (`generateResource`'s up-to-50-attempt
+  placement retry, undocumented before this investigation - see below):
+  investigated at length and ultimately rejected for a specific, provable
+  reason, not just low confidence. The retry loop's behavior differs by
+  what the entry being retried resolves to:
+  - A **direct `res` target** (Small's own case: `{min:0,max:4,
+    res:LootChestRare}`) has no probabilistic decision inside it at all -
+    a failed attempt can only reposition or silently drop an
+    already-decided crate. It can never turn a would-be-crate into
+    nothing-then-crate-again, and can't explain a HIGHER-than-modeled "at
+    least 1" rate.
+  - A **`group` target** (Big's case: `{min:3,max:15,group:RareLoot}`)
+    genuinely does re-roll on retry - each attempt is a fresh
+    `generateGroup(RareLoot_lvl{N}, new_point)` call, and `generateGroup`'s
+    own "overrides" branch draws a brand new `random()` every invocation
+    (confirmed directly from `generateResource@11223`'s bytecode,
+    src/logic/gen/PlanetRes.hx:559-564, and `generateGroup@11222`'s own
+    retry-loop structure, findex 11222 ops ~245-338). But this mechanism
+    can only matter if first-attempt placement failure is common enough
+    for retries to actually fire - and the retry loop's own success
+    condition is "placed SOMETHING" (crate OR junk), not "placed a crate
+    specifically", so a first attempt that rolls junk and finds a valid
+    spot immediately exits successfully with junk, never reaching a
+    crate-reroll at all. This mechanism, even where it's real, only
+    applies to BIG's already-well-fitting mechanism, and says nothing
+    about SMALL's direct-placement mechanism where the actual anomaly
+    lives.
+
+**Still open**: no tested hypothesis explains why Small wrecks'
+crate-count distribution is this heavily concentrated at 1-2 with a sharp
+cutoff by 4-5 (one outlier at 9 aside). The mismatch is specific to the
+DIRECT-`res`-placement mechanism unique to Small's `resGroupSpawn` target
+among everything else examined in this whole investigation (every other
+crate-count-relevant mechanism found so far - debris-field RareLoot,
+Big's secondary spawn - routes through the SAME `RareLoot` override this
+repo has already modeled and verified). Whoever picks this up next:
+worth decompiling `isValidTerrainSlope@11225`/`getNearCartesian@11238` in
+full to understand what actually gates a DIRECT placement's success/
+failure (as opposed to reasoning about it from the outside, which is as
+far as this session got), and/or gathering more live-verified fresh Small
+wreck samples (only 3 gathered this session: 2, 1, 9 crates) to build a
+larger, contamination-free empirical distribution before trying to
+match it to a corrected model.
