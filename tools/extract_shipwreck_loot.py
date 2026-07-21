@@ -68,8 +68,36 @@ def tier_of_resgen(resgen_id):
     return int(m.group(1)) if m else None
 
 
+UNLOCK_TYPE_RANDOM_BLUEPRINT = 2
+"""craft.unlockType's own CastleDB enum column (`data.cdb`'s craft sheet,
+column typeStr: "5:Permit,Unique_Blueprint,Random_Blueprint,Cannot_Unlock,
+Study,Dismantle,Custo") - 0=Permit (always known), 1=Unique_Blueprint (a
+FIXED, non-random source - quest/vendor/location, NOT this crate system),
+2=Random_Blueprint, 3=Cannot_Unlock, 4=Study, 5=Dismantle, 6=Custom. Only
+value 2 is ever produced by the crate primary-item generator below."""
+
+
 def build_pools(sheets):
-    """Returns (patch_by_level, blueprint_by_level): {lootLevel: [{id, name}]}."""
+    """Returns (patch_by_level, blueprint_by_level): {lootLevel: [{id, name}]}.
+
+    Blueprint eligibility requires BOTH craft.lootLevel set AND
+    craft.unlockType == Random_Blueprint (2) - confirmed via raw opcodes,
+    the dedicated Blueprint-candidate closure at src/logic/Loot.hx:426-445
+    (embedded in generatePrimaryItemCandidate, called only for the item-type
+    category matching global@7374/"Blueprint" - see game_logic_notes.md
+    Finding 15). That closure iterates Data.craft.all directly (NOT the
+    `item` sheet used for Patch/Tool/Module) and explicitly skips any craft
+    row whose unlockType != 2, before ever looking at lootLevel-window
+    membership. A recipe with unlockType==1 (Unique_Blueprint, e.g. a fixed
+    quest/vendor/location source) has its own lootLevel populated in the
+    sheet but is UNREACHABLE from this crate system - confirmed live: as of
+    the 2026-07-21 game build, Patch_SystemIntegration3 ("Blueprint: Module
+    Patch: System III", lootLevel 9) is unlockType==1 and therefore excluded
+    here, despite carrying a dev note ("Placé en Random Blueprint when the
+    craft is right") suggesting it was intended to move to unlockType==2
+    eventually - it had not, as of that build. Earlier versions of this
+    function only checked lootLevel, which wrongly marked 16 Unique_Blueprint
+    recipes (of 84 total lootLevel-tagged craft rows) as crate-obtainable."""
     items = {l["id"]: l for l in sheets["item"]["lines"]}
     item_types = {l["id"]: l for l in sheets["itemType"]["lines"]}
     craft = sheets["craft"]["lines"]
@@ -83,12 +111,83 @@ def build_pools(sheets):
     for l in craft:
         if l.get("lootLevel") is None:
             continue
+        if l.get("unlockType") != UNLOCK_TYPE_RANDOM_BLUEPRINT:
+            continue
         out = l["outputs"][0]["item"] if l.get("outputs") else None
         item_name = items.get(out, {}).get("name", out)
         bp_by_level[l["lootLevel"]].append(
             {"id": l["id"], "name": f"Blueprint: {item_name}", "output_item": out}
         )
     return patch_by_level, bp_by_level
+
+
+def load_category_itl(sheets):
+    """The 'itl' (Item Type Level) baseline each primary-item category is
+    weighted around - read live from data.cdb's `constant` sheet (not
+    hardcoded, since these are real balance values, unlike the CHEST_LEVELS/
+    CHEST_WEIGHTS code constants above) so this stays correct across game
+    patches. Confirmed via raw opcodes (generatePrimaryItemCandidate,
+    findex 22154, and its embedded Blueprint-candidate closure at
+    Loot.hx:426-445 - see game_logic_notes.md Finding 15): each category's
+    itl is looked up either as a direct Const field (ToolModule, ShipDecorative)
+    or via Const.resolve(<name>) (Patch, Blueprint), all four ultimately
+    reading the same named rows in this sheet."""
+    constants = {
+        l["id"]: l["val"]["float"]
+        for l in sheets["constant"]["lines"]
+        if "float" in l.get("val", {})
+    }
+    return {
+        "toolmodule": constants["Loot_Primary_ItemTypeLevel_ToolModule"],
+        "patch": constants["Loot_Primary_ItemTypeLevel_Patch"],
+        "blueprint": constants["Loot_Primary_ItemTypeLevel_Blueprint"],
+        "shipdecorative": constants["Loot_Primary_ItemTypeLevel_ShipDecorative"],
+    }
+
+
+def category_weight(itl, target_level, item_level):
+    """A primary-item category's own selection weight once its in-window
+    representative item has been picked (item_level is that representative's
+    OWN lootLevel, either target_level or target_level-1) - exact formula
+    from raw opcodes, generatePrimaryItem@22152 (Loot.hx:295): weight =
+    max(0, 10 - |target_level - itl| - 2*(target_level - item_level)). See
+    game_logic_notes.md Finding 15."""
+    return max(0.0, 10 - abs(target_level - itl) - 2 * (target_level - item_level))
+
+
+def opposing_category_win_share(own_weight, opp_itl, opp_pool_by_level, target_level):
+    """P(own category's already-fixed-weight candidate wins the weighted
+    cross-category draw) against ONE opposing category, exact (not
+    simulated) - the opposing category's own in-window representative can
+    only land on target_level or target_level-1, so this is a 2-outcome
+    expectation weighted by the opposing pool's own split across those two
+    levels. Returns 1.0 if the opposing category has no eligible candidate
+    at all (no competition). Patch vs Blueprint is the ONLY pairwise
+    competition that actually matters for ShipWreck_LootChestRare_lvl{0,1,2}:
+    confirmed directly from data.cdb's `loot` sheet - the rows those crates
+    reference (ShipWreck_Loot_4..9) have primaryItemTypes==12 (bit order
+    Tool=1,Module=2,Patch=4,Blueprint=8,ShipDecorative=16 per that column's
+    own typeStr), i.e. Patch|Blueprint only - Tool/Module/ShipDecorative bits
+    are OFF, so those categories' branches in generatePrimaryItem never even
+    get a chance to compete for THIS crate type's primary-item slot, despite
+    existing as real code paths. This was confirmed after a direct play-
+    experience challenge (drops observed are always Patch/Blueprint/
+    materials, never a bare Tool or Module) - see game_logic_notes.md
+    Finding 15's own correction note."""
+    n_at_l = len(opp_pool_by_level.get(target_level, []))
+    n_at_lm1 = len(opp_pool_by_level.get(target_level - 1, []))
+    total = n_at_l + n_at_lm1
+    if total == 0:
+        return 1.0
+    share = 0.0
+    for n, opp_level in ((n_at_l, target_level), (n_at_lm1, target_level - 1)):
+        if n <= 0:
+            continue
+        p = n / total
+        opp_weight = category_weight(opp_itl, target_level, opp_level)
+        denom = own_weight + opp_weight
+        share += p * (own_weight / denom if denom > 0 else 0.5)
+    return share
 
 
 def build_sector_profiles(sheets):
@@ -137,7 +236,7 @@ def build_sector_profiles(sheets):
     return sectors
 
 
-def compute_item_drop_odds(pool_by_level, sector_level_prob):
+def compute_item_drop_odds(pool_by_level, own_itl, opp_itl, opp_pool_by_level, sector_level_prob):
     """For every item in pool_by_level, compute its drop probability per
     sector, using the CORRECTED 2-level search window (Finding 6):
     a crate targeting (capped) level L pools every candidate with
@@ -145,10 +244,16 @@ def compute_item_drop_odds(pool_by_level, sector_level_prob):
     opcodes at src/logic/Loot.hx:461-478. So an item with lootLevel Lx is
     reachable from a crate whose target level L is either Lx or Lx+1.
 
-    The Patch/Blueprint 50/50 split (when both categories have an eligible
-    candidate at a level) approximates a small per-candidate weighting
-    formula (src/logic/Loot.hx:295-317) not fully traced - see
-    game_logic_notes.md Finding 5.
+    The Patch-vs-Blueprint category split uses the REAL per-candidate
+    weighting formula (category_weight/opposing_category_win_share - see
+    game_logic_notes.md Finding 15), not a flat 50/50 guess as earlier
+    versions of this function assumed. This is the COMPLETE model for
+    ShipWreck_LootChestRare_lvl{0,1,2} specifically - confirmed from
+    data.cdb's own `loot` sheet that those crates' primaryItemTypes==12
+    (Patch|Blueprint only; Tool/Module/ShipDecorative bits are off), so no
+    third category ever competes for this crate type's primary-item slot,
+    despite Tool/Module/ShipDecorative all being real, separate branches in
+    the underlying code (see opposing_category_win_share's own docstring).
     """
 
     def pool_size(target_level):
@@ -167,7 +272,9 @@ def compute_item_drop_odds(pool_by_level, sector_level_prob):
                     n = pool_size(target_level)
                     if n == 0:
                         continue
-                    total += p_level * primary_drop_probability(target_level) * 0.5 / n
+                    own_weight = category_weight(own_itl, target_level, lx)
+                    share = opposing_category_win_share(own_weight, opp_itl, opp_pool_by_level, target_level)
+                    total += p_level * primary_drop_probability(target_level) * share / n
                 if total > 0:
                     per_sector[sector_name] = total
 
@@ -497,12 +604,15 @@ def level_prob_for_tier(tier, max_loot_level):
     return capped
 
 
-def item_prob_given_level_dist(entry_level, pool_by_level, level_prob):
+def item_prob_given_level_dist(entry_level, pool_by_level, own_itl, opp_itl, opp_pool_by_level, level_prob):
     """P(an item with this lootLevel drops | a single crate is opened and
     its target level is drawn from level_prob) - the same 2-level-window
     formula compute_item_drop_odds uses inline for its own sector-blended
     level_prob, factored out so compute_wreck_site_item_odds can reuse it
-    against an UNBLENDED, single-(size,tier)-variant level_prob instead."""
+    against an UNBLENDED, single-(size,tier)-variant level_prob instead. Uses
+    the same real category_weight/opposing_category_win_share split as
+    compute_item_drop_odds - the complete model for this crate type, not an
+    approximation - see that function's and Finding 15's own notes."""
     total = 0.0
     for target_level in (entry_level, entry_level + 1):
         p_level = level_prob.get(target_level)
@@ -511,7 +621,9 @@ def item_prob_given_level_dist(entry_level, pool_by_level, level_prob):
         n = pool_size(pool_by_level, target_level)
         if n == 0:
             continue
-        total += p_level * primary_drop_probability(target_level) * 0.5 / n
+        own_weight = category_weight(own_itl, target_level, entry_level)
+        share = opposing_category_win_share(own_weight, opp_itl, opp_pool_by_level, target_level)
+        total += p_level * primary_drop_probability(target_level) * share / n
     return total
 
 
@@ -527,7 +639,7 @@ def size_of_resgen(resgen_id):
     return None
 
 
-def compute_wreck_site_item_odds(sheets, sectors, patch_by_level, bp_by_level, cache):
+def compute_wreck_site_item_odds(sheets, sectors, patch_by_level, bp_by_level, itl, cache):
     """Composes crateSpawn (how many crates a wreck has, driven by SIZE
     only) with itemDropOdds (which item a crate contains, driven by TIER
     only) into a single per-item, per-sector answer to "how many of this
@@ -593,7 +705,7 @@ def compute_wreck_site_item_odds(sheets, sectors, patch_by_level, bp_by_level, c
         cache[key] = total
         return total
 
-    def compute_for_pool(pool_by_level):
+    def compute_for_pool(pool_by_level, own_itl, opp_itl, opp_pool_by_level):
         rows = []
         for lx, entries in pool_by_level.items():
             for item_entry in entries:
@@ -605,7 +717,9 @@ def compute_wreck_site_item_odds(sheets, sectors, patch_by_level, bp_by_level, c
                     for resgen_id, w in variant_weights.items():
                         tier = tier_of_resgen(resgen_id)
                         level_prob = level_prob_for_tier(tier, max_loot_level)
-                        p = item_prob_given_level_dist(lx, pool_by_level, level_prob)
+                        p = item_prob_given_level_dist(
+                            lx, pool_by_level, own_itl, opp_itl, opp_pool_by_level, level_prob
+                        )
                         if p <= 0:
                             continue
                         cstats = total_crate_stats(resgen_id)
@@ -637,19 +751,27 @@ def compute_wreck_site_item_odds(sheets, sectors, patch_by_level, bp_by_level, c
         rows.sort(key=lambda r: (r["level"], r["name"]))
         return rows
 
-    return compute_for_pool(patch_by_level), compute_for_pool(bp_by_level)
+    return (
+        compute_for_pool(patch_by_level, itl["patch"], itl["blueprint"], bp_by_level),
+        compute_for_pool(bp_by_level, itl["blueprint"], itl["patch"], patch_by_level),
+    )
 
 
 def main():
     sheets = load_sheets()
     patch_by_level, bp_by_level = build_pools(sheets)
     sectors = build_sector_profiles(sheets)
+    itl = load_category_itl(sheets)
 
     sector_level_prob = {
         s["name"]: {int(k): v for k, v in s["lootLevelProbability"].items()} for s in sectors.values()
     }
-    patch_rows = compute_item_drop_odds(patch_by_level, sector_level_prob)
-    bp_rows = compute_item_drop_odds(bp_by_level, sector_level_prob)
+    patch_rows = compute_item_drop_odds(
+        patch_by_level, itl["patch"], itl["blueprint"], bp_by_level, sector_level_prob
+    )
+    bp_rows = compute_item_drop_odds(
+        bp_by_level, itl["blueprint"], itl["patch"], patch_by_level, sector_level_prob
+    )
 
     # Shared across both consumers below (crateSpawn's own sector rollup AND
     # the per-item wreck-site composition) so each of the ~9 distinct wreck
@@ -660,7 +782,7 @@ def main():
         s["crateSpawn"] = crate_spawn_stats.get(s["name"])
 
     wreck_site_patch_rows, wreck_site_bp_rows = compute_wreck_site_item_odds(
-        sheets, sectors, patch_by_level, bp_by_level, crate_stats_cache
+        sheets, sectors, patch_by_level, bp_by_level, itl, crate_stats_cache
     )
 
     out = {
@@ -671,8 +793,8 @@ def main():
                 "levels, and per-item (Patch/Blueprint) drop odds by sector, "
                 "derived from sector.generation.wreckResGen + "
                 "sector.props.maxLootLevel/lootMaterial + craft.lootLevel + "
-                "item.lootLevel, cross-referenced against decompiled "
-                "src/logic/Loot.hx via hlbc."
+                "craft.unlockType + item.lootLevel, cross-referenced against "
+                "decompiled src/logic/Loot.hx via hlbc."
             ),
             "mechanism_notes": [
                 "A rare loot crate (ShipWreck_LootChestRare_lvl{0,1,2}) rolls one "
@@ -695,11 +817,39 @@ def main():
                 "a lootLevel:3 recipe (e.g. Blueprint: Wire) IS reachable from "
                 "a level-4 crate. Only lootLevel 2 and 10 items are truly "
                 "unreachable from any wreck crate.",
+                "Blueprint eligibility is gated on craft.unlockType==2 "
+                "(Random_Blueprint), NOT just craft.lootLevel being set - "
+                "confirmed via the dedicated Blueprint-candidate closure at "
+                "src/logic/Loot.hx:426-445, which iterates Data.craft.all "
+                "directly and explicitly skips unlockType!=2 rows. "
+                "unlockType==1 (Unique_Blueprint) recipes have a real "
+                "lootLevel in the sheet but are NOT reachable from this crate "
+                "system at all - they come from a fixed, non-random source "
+                "instead (quest/vendor/location). See game_logic_notes.md "
+                "Finding 15 for the full unlockType enum legend and a "
+                "confirmed example (Patch_SystemIntegration3, 'Blueprint: "
+                "Module Patch: System III') that is excluded by this gate "
+                "despite carrying a dev note suggesting eventual Random_"
+                "Blueprint status.",
                 "Category choice (Patch vs Blueprint) when a primary item "
                 "drops is a weighted pick per src/logic/Loot.hx:295-317 "
-                "depending on a per-candidate 'itl' reference value not fully "
-                "traced; this dataset approximates it as 50/50 when both "
-                "categories have eligible candidates.",
+                "(generatePrimaryItem) - weight = max(0, 10 - |target_level - "
+                "itl| - 2*(target_level - item's own lootLevel)), where itl is "
+                "a per-category constant from data.cdb's `constant` sheet: "
+                "ToolModule=3, Patch=5, Blueprint=7, ShipDecorative=3 (see "
+                "Finding 15). This dataset now computes the REAL Patch-vs-"
+                "Blueprint weighted split (category_weight/opposing_category_"
+                "win_share) instead of a flat 50/50. This IS the complete "
+                "model for ShipWreck_LootChestRare_lvl{0,1,2} - confirmed "
+                "directly from data.cdb's `loot` sheet, the rows those crates "
+                "reference (ShipWreck_Loot_4..9) have primaryItemTypes==12 "
+                "(Patch|Blueprint bits only; Tool/Module/ShipDecorative bits "
+                "are off), so no third category ever competes for this crate "
+                "type's primary-item slot even though Tool/Module/"
+                "ShipDecorative are real, separate branches in the underlying "
+                "code - matches direct play experience (drops observed are "
+                "always Patch/Blueprint/materials, never a bare Tool or "
+                "Module).",
                 "In-game blueprint display name convention: "
                 '"Blueprint: <output item display name>".',
                 "sectors[*].crateSpawn = stats for a randomly-rolled wreck in "

@@ -400,6 +400,8 @@ So a crate targeting (capped) level `L` pools together **every** eligible Patch/
 
 Practical consequence: an item's own `lootLevel` doesn't gate it to only the identically-numbered crate roll — a `lootLevel: 3` recipe (e.g. `BP_IronWire`/`BP_AluminiumWire`, both "Blueprint: Wire") is reachable from any crate whose *capped* target level is 4 (window `[3,4]`), not just from a hypothetical level-3 crate (which doesn't exist — the lowest crate tier only rolls levels 4-7). Confirmed by direct play report. Only `lootLevel: 2` and `lootLevel: 10` items are truly unreachable from any shipwreck crate, since no crate ever has a capped target of 2/3 (window would need to reach down to level 2) or 10/11 (window would need to reach up to level 10) — every level 3-9 item is reachable from *some* sector.
 
+**Important addendum (Finding 15): this window applies to Blueprint candidates too, but `lootLevel` in-window is NOT sufficient for a Blueprint specifically** — it also requires `craft.unlockType == 2` (Random_Blueprint), a separate, unconditional filter in the Blueprint-specific candidate closure. A `unlockType != 2` recipe (e.g. `Unique_Blueprint`) can have a perfectly in-window `lootLevel` and still never be drawable from any crate. See Finding 15 for the full mechanism, the `unlockType` enum legend, and a confirmed real example.
+
 ## Finding 7: "Nexus Market" (player-to-player trading) is not accessible offline or via any HTTP API
 
 The in-game player-to-player marketplace UI is labelled `market_title: "::station:: Trade Nexus"`
@@ -1088,3 +1090,147 @@ specific named variant (Spacekorn Plain's entry), and not every
 `adjacency`/enrichment `attr` is a speed ratio — some (`FarmPlantDissolveDead`)
 are plain boolean toggles, identifiable by having no ARatio/MRatio `note`
 on the `attribute` sheet.
+
+## Finding 15: Blueprint crate-loot eligibility requires `craft.unlockType==2` (Random_Blueprint), not just `craft.lootLevel` — and the Patch-vs-Blueprint category split from Finding 5/6's era was a wrong guess, not an unresolved trace
+
+Two corrections to how `tools/extract_shipwreck_loot.py` (and this file's
+own Finding 6) modeled the rare-crate primary-item generator, both found
+while investigating whether one specific item — "Blueprint: Module Patch:
+System III" (recipe `Patch_SystemIntegration3`, `lootLevel: 9`) — is really
+obtainable from shipwreck crates. It is **not**, and the reason why exposes
+a real gap in the tooling that had nothing to do with `lootLevel`.
+
+**Root cause of the initial wrong answer**: `generatePrimaryItemCandidate`
+(`src/logic/Loot.hx`, findex 22154) dispatches on item-type category via
+four `isTypeMatching`/`isTypeToolOrModule` branches. The type-matching
+globals for these branches are `global@7276` (Patch), `global@4808`
+(**ShipDecorative**, confirmed via `refto string@1396` →
+`Loot_Primary_ItemTypeLevel_ShipDecorative` → `constant@1016` → `global@1050`,
+which is exactly the itl value that branch reads), and `global@7374`
+(**Blueprint** — confirmed the same way, its own inline
+`generateAttemptDownUp` closure at findex 24562 does
+`itl = Const.Loot_Primary_ItemTypeLevel_Blueprint` in the clear, at
+`Loot.hx:444`). An earlier pass through this same disassembly swapped the
+last two — assuming category order matched the `10:Tool,Module,Patch,
+Blueprint,ShipDecorative` bitmask column order from Finding 5/6 — and
+concluded the Blueprint branch couldn't ever produce a candidate at all
+(chasing a dead end where the only `item` sheet row of `type=="Blueprint"`
+has `lootLevel: null`). **Lesson: never infer which decompiled branch is
+which category from column/bitmask ordering — confirm via `refto` on the
+category's own named `itl` constant string, since that's the one thing
+guaranteed to appear literally in the branch that owns it.**
+
+**The real Blueprint-candidate closure** (findex 24562, `Loot.hx:426-445`,
+raw opcodes, not `decomp` — it mangled this one):
+
+```
+for craft in Data.craft.all:
+    if craft.lootLevel is null: continue
+    if craft.lootLevel not in {level-1, level}: continue    # same 2-level window as Finding 6
+    if craft.unlockType != 2: continue                       # <-- the missing filter
+    candidates.push(craft)
+pick one uniformly at random -> new ItemBlueprint(craft.id)
+result.itl = Const.Loot_Primary_ItemTypeLevel_Blueprint      # = 7
+result.lootLevel = craft.lootLevel
+```
+
+So Blueprint candidates are drawn from the **craft/recipe sheet directly**
+(not the `item` sheet the Patch/Tool/Module branches use), and **must have
+`unlockType == 2`** — confirmed as a real, in-code, unconditional filter,
+not a heuristic. `craft.unlockType`'s enum legend comes straight from
+`data.cdb`'s own column definition (`craft` sheet, column `unlockType`,
+`typeStr: "5:Permit,Unique_Blueprint,Random_Blueprint,Cannot_Unlock,Study,
+Dismantle,Custo"`):
+
+| value | name | meaning |
+|---|---|---|
+| 0 | Permit | always known (308 of 479 recipes) |
+| 1 | Unique_Blueprint | unlocked via a fixed, non-random source (quest/vendor/location) — **not** this crate system, even if `lootLevel` is set (16 recipes) |
+| 2 | Random_Blueprint | the only value this crate system ever draws from (68 recipes) |
+| 3 | Cannot_Unlock | 26 recipes |
+| 4 | Study | 22 recipes |
+| 5 | Dismantle | 32 recipes |
+| 6 | Custo(m) | 7 recipes |
+
+`Patch_SystemIntegration3` is `unlockType: 1`, so despite `lootLevel: 9`
+being set, it is **excluded** from the crate's Blueprint candidate pool —
+confirmed live against `data.cdb` re-extracted from the currently-installed
+game (2026-07-21). Its own dev comment (`"Placé en Random Blueprint when the
+craft is right"`) reads as a TODO to eventually flip it to `unlockType: 2` —
+as of that build, this had not happened. The same is true for 15 other
+`unlockType==1` recipes (`BP_BarrierShield{1,2,3}`, `BP_HeavyShield{2,3}`,
+`Patch_BatteryMultiplicator3`, `Patch_HeatAbsorber3`,
+`Patch_FuelEfficiency2/3`, `Patch_PowerEfficiency3`, `Patch_MiningTier2PH`
+[`BP_Beam1_Platinium`'s own note reads `"Would be Blueprint"`, a step
+earlier still], `BP_SteelPlatings`/`BP_KineticShield3` — the latter two
+excluded anyway since their level 2 falls outside any crate's reachable
+window per Finding 6, but for the wrong reason under the old model, which
+never checked `unlockType` at all).
+
+**The Patch-vs-Blueprint category weight (Finding 5/6-era "50/50
+approximation") is now fully traced, not just re-approximated.** Raw
+opcodes, `generatePrimaryItem` (findex 22152, `Loot.hx:289-320`):
+
+```
+for each enabled category (ToolModule/Patch/Blueprint/ShipDecorative):
+    candidate = generatePrimaryItemCandidate(category, level, ...)   # null if that category's pool is empty in-window
+    if candidate != null:
+        weight = max(0, 10 - |level - candidate.itl| - 2*(level - candidate.lootLevel))
+        candidates.push({item: candidate.item, weight})
+if every pushed weight == 0: treat all weights as 1 (uniform fallback)
+pick one candidate, weighted-random by `weight`
+```
+
+`itl` is a per-category constant, read from `data.cdb`'s `constant` sheet
+(`Loot_Primary_ItemTypeLevel_*` rows) — **not** a per-candidate mystery
+value as the old caveat assumed:
+
+| category | itl | how it's read in code |
+|---|---|---|
+| ToolModule | 3 | direct `Const` field access |
+| Patch | 5 | `Const.resolve("Loot_Primary_ItemTypeLevel_Patch")` |
+| Blueprint | 7 | `Const.resolve("Loot_Primary_ItemTypeLevel_Blueprint")` |
+| ShipDecorative | 3 | direct `Const` field access |
+
+(`Const.resolve(name)`, findex 501, is a generic named-constant lookup —
+`src/Const.hx:69-73` — confirmed via raw disasm, not a guess.)
+
+`tools/extract_shipwreck_loot.py` now computes the real pairwise Patch-vs-
+Blueprint weighted split (`category_weight`/`opposing_category_win_share`)
+using these constants and each candidate's own resolved `lootLevel`,
+instead of a flat 50/50.
+
+**Correction (caught via a direct play-experience challenge — reported drops
+from these crates are always Patch/Blueprint/materials, never a bare Tool or
+Module): this pairwise split is not an approximation of a wider 4-category
+draw, it IS the complete model for `ShipWreck_LootChestRare_lvl{0,1,2}`.**
+An earlier version of this finding assumed ToolModule (and in principle
+ShipDecorative) also compete for the primary-item slot, reasoning from the
+bitmask *column legend* order (`10:Tool,Module,Patch,Blueprint,
+ShipDecorative`) without checking what integer value the actual crate rows
+use — the same category of mistake as this finding's own branch-mislabeling
+correction above. Checked directly against `data.cdb`'s `loot` sheet: the
+rows these crates reference (`ShipWreck_Loot_4` through `ShipWreck_Loot_9` —
+found via `resource.items[].loot` on `ShipWreck_LootChestRare_lvl{0,1,2}`,
+matching the already-documented `CHEST_LEVELS`/`CHEST_WEIGHTS` 40/30/20/10
+banding) all have `primaryItemTypes: 12`. With bit order `Tool=1, Module=2,
+Patch=4, Blueprint=8, ShipDecorative=16`, **12 = 4+8 = Patch|Blueprint
+only** — the Tool and Module bits are off. So `generatePrimaryItem`'s
+ToolModule/ShipDecorative branches are real code, reachable from other loot
+tables in the `loot` sheet (39 rows total, several with different
+`primaryItemTypes` values), but never invoked for this specific crate
+resource — confirming the 23 `ShipTool`-chain + 20 `ShipModule`-chain items
+with a `lootLevel` set never actually compete for a
+`ShipWreck_LootChestRare` primary-item slot, and
+`Craftmap/game_data_extract/shipwreck_loot.json`'s Patch/Blueprint `pct`
+figures already reflect the true, complete draw, not an under-estimate.
+
+**Net effect on `Craftmap/game_data_extract/shipwreck_loot.json`**: blueprint
+rows dropped from 84 to 68 (exactly the `unlockType==2` count); 9 of the 16
+removed rows had previously been shown as `"obtainable": true` with nonzero
+odds (a real false positive players could have been misled by), the other 7
+were already `"obtainable": false` for the unrelated level-2/10-unreachable
+reason (Finding 6) but for the wrong stated reason under the old model.
+Surviving Patch/Blueprint `bestPct` values shifted modestly (Patch odds up
+slightly, low-level Blueprint odds down slightly) now that the split uses
+real weights instead of an even 50/50.
