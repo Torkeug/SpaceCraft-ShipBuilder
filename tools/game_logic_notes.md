@@ -1251,7 +1251,7 @@ Surviving Patch/Blueprint `bestPct` values shifted modestly (Patch odds up
 slightly, low-level Blueprint odds down slightly) now that the split uses
 real weights instead of an even 50/50.
 
-## Finding 15: Farming — the `requires` gate is checked every tick during growth (not just once), a 5-hour unmet-conditions death timer, and an Invasive-tag spread-on-maturity mechanic
+## Finding 16: Farming — the `requires` gate is checked every tick during growth (not just once), a 5-hour unmet-conditions death timer, and an Invasive-tag spread-on-maturity mechanic
 
 Source: `ent.b.PlotZone.updatePlots` (findex 22002, `Farm.hx:~280-378`,
 decompiled cleanly, no mangling) and `ent.b.PlotZone.checkProgress`
