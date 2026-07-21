@@ -929,3 +929,162 @@ get exhausted before the loop gives up, and/or gathering more
 live-verified fresh Small wreck samples (only 3 gathered so far across
 sessions: 2, 1, 9 crates) to build a larger, contamination-free empirical
 distribution before trying to match it to a corrected model.
+
+## Finding 13: Farming — "Rockwood Nut" (Xenic Farm) variant outcomes, exact gate conditions, and enrichment bonuses
+
+Source: `data.cdb` sheet `farm` (rows `RockwoodSeed` and its 5 grown-variant
+rows + their `_Gather`/`_Dead` children), cross-checked against
+`ent.b.PlotZone.pickVariant`/`hasMinRequirement` (`hlboot.dat`,
+`src/ent/b/Farm.hx:440-485`, findex 22005/22006). Internal row IDs are noted
+in parens the first time each is named; everything else below uses the
+in-game display name. Building: **Xenic Farm** (`B_Farm`).
+
+**Mechanism.** Planting a Rockwood Nut starts germination (4.5-5h, needs
+only Water), then rolls into exactly one of 5 grown variants. The Xenic
+Farm has **one shared Temperature dial** (set to exactly one of Cold /
+Temperate / Warm / Hot) and **one shared Light dial** (set to exactly one
+of UV / Natural / Dark) — a single farm is never in two temperature or
+light states at once. Each variant's gate is a bitmask *set of acceptable
+dial positions*; the check (`hasMinRequirement`) tests whether the farm's
+one current dial position falls inside that variant's allowed set — it is
+OR-across-allowed-states, not several states holding simultaneously.
+**All variants whose gates currently pass become candidates, and the game
+picks uniformly at random among them** (not priority order); if none pass,
+the plant dies instead of stalling.
+
+**Grown variants and their exact gates:**
+
+| Variant | Fruit | Byproduct | Fertilizer required | Fertilizer forbidden | Temperature dial (any ONE of) | Light dial (any ONE of) | Neighbor restriction |
+|---|---|---|---|---|---|---|---|
+| Rockwood Green (`Rockwood`) | Rockwood Nut | Lime | Neutral Fertilizer | Metallic Fertilizer | any | any | no Reclusive-tagged neighbor plant |
+| Rockwood White (`Whitewood`) | Rockwood Nut | Kaolinite | Metallic Fertilizer | — | any | any | no Reclusive-tagged neighbor plant |
+| Rockwood Dream (`Dreamwood`) | Dreamwood Fruit | Elmerium Nugget | Elmerium Dust | — | Cold, OR Temperate, OR Warm (raw bitmask `7`; excludes Hot) | Dark only (raw `4`) | — |
+| Rockwood Glow (`Glowwood`) | Glowwood Fruit | Rockwood Bark | none | — | any (field present, literal `0` = unconstrained) | any (field present, literal `0` = unconstrained) | no Reclusive-tagged neighbor plant |
+| Rockwood Bitter (`Sulfwood`) | Rockwood Nut | Pyrite | Acidic Fertilizer OR Metallic Fertilizer | Carbonic Fertilizer | Warm, OR Hot (raw bitmask `12`) | any | — |
+
+Each variant also carries its own bio-tag (relevant to *other* variants'
+"no neighbor" checks and to a couple of enrichments below): Rockwood
+Green = Reclusive, Rockwood White = Reclusive, Rockwood Dream =
+Invasive, Rockwood Glow = Reclusive, Rockwood Bitter = Putrescent.
+
+**Growth-phase durations and production cycle (hours):**
+
+| Variant | Growth duration | Fruit cycle | Byproduct cycle |
+|---|---|---|---|
+| Rockwood Green | 57.6-64 | 20-28 | 0.14-0.18 |
+| Rockwood White | 57.6-64 | 60-80 | 1.3-1.7 |
+| Rockwood Dream | 81-89 | 16-24 | 3-4.6 |
+| Rockwood Glow | 50-60 | 0.01-0.02 | 0.01-0.02 |
+| Rockwood Bitter | 57.6-64 | 28-34 | 1.1-1.35 |
+
+`_Gather`/`_Dead` stages carry no timer (0/0 — static states, not ticking
+phases). No yield-quantity, weight, or plot-slot/power field exists on
+this sheet; output rate is governed entirely by the production-speed
+attributes below, and plot-slot/power requirements (if any) belong to the
+Xenic Farm building itself, not to individual plants.
+
+**Enrichment bonuses** (conditions checked against the SAME current single
+temperature/light dial position, plus supplement presence / neighbor tag;
+`ARatio` = additive %, e.g. `1.0` = +100%; `MRatio` = multiplicative, e.g.
+`0.6` = ×0.6 i.e. -40%):
+
+- **Rockwood Green**: Carbonic Fertilizer present → Fruit speed +50%,
+  Byproduct speed +50%.
+- **Rockwood White**: Neutral Fertilizer present → Byproduct speed +75%.
+  Carbonic Fertilizer present → Fruit speed +50%, Byproduct speed +50%.
+  Neighbor tagged Putrescent → Growth speed / Liquid consumption /
+  Supplement consumption all ×0.6 (-40% each).
+- **Rockwood Dream**: Temperature dial = Cold, OR Temperate (raw `3`) →
+  Growth+Production speed +100%. Carbonic Fertilizer present → Fruit
+  speed +350%. Acidic Fertilizer present → Byproduct speed +120%.
+- **Rockwood Glow**: Light dial = Dark (raw `4`) → Fruit speed +30%.
+  Carbonic Fertilizer present → Fruit speed +20%, Byproduct speed +20%.
+  Neighbor tagged Putrescent → Growth+Production speed +25%, Byproduct
+  speed +25%.
+- **Rockwood Bitter**: Light dial = Dark (raw `4`) → Growth speed /
+  Liquid consumption / Supplement consumption all ×0.8 (-20% each).
+  Light dial = UV (raw `1`) → Growth+Production speed +30%. Temperature
+  dial = Hot (raw `8`) → Byproduct speed +40%.
+
+**Adjacency effects** (what each variant does to *neighboring* plots,
+each applies once, doesn't stack):
+
+| Variant | Effect on neighbor |
+|---|---|
+| Rockwood Green | Neighbor seed germination speed +100%; neighbor seed death speed ×0.5 |
+| Rockwood White | Neighbor supplement consumption -50% |
+| Rockwood Dream | Neighbor tolerates 1 unmet requirement instead of dying |
+| Rockwood Glow | Neighbor treated as if lit by UV, regardless of the farm's actual light dial |
+| Rockwood Bitter | Neighbor's decay speed if its own requirements go unmet ×0.05 (dies far slower while starved) |
+
+## Finding 14: Farming — "Spacekorn" variant outcomes, exact gate conditions, and enrichment bonuses
+
+Source: `data.cdb` sheet `farm`, seed row `EinkornSeed` (display name
+"Spacekorn"; seed item display name "Spacekorn Seed", item id
+`SpaceWheat_Seed`) and its 3 grown-variant rows + `_Gather`/`_Dead`
+children. Same sheet/column schema as Finding 13 (Rockwood Nut) — read
+that finding first for the schema reference and the temperature/light
+single-dial OR-semantics (a farm has exactly one current Temperature
+position and one current Light position; a bitmask gate is the *set of
+positions that satisfy it*, not several positions active at once).
+
+**Structurally different from Rockwood Nut**: only **3 grown variants**
+(not 5), germination is faster (2.7-3h vs 4.5-5h), and one variant
+(Woolly Spacekorn) fruits into an intermediate shell item (Wooly Korn —
+"contains a few spacekorn seed, a grinder is required to extract them")
+rather than directly back into Spacekorn Seed.
+
+**Grown variants and their exact gates:**
+
+| Variant | Fruit | Byproduct | Fertilizer required | Fertilizer forbidden | Temperature dial (any ONE of) | Light dial | Neighbor restriction | bioTag |
+|---|---|---|---|---|---|---|---|---|
+| Spacekorn Plain (`Plainkorn`) | Spacekorn Seed | Plain Pulp | — | Metallic Fertilizer | Temperate, OR Warm (raw `6`) | any (unconstrained — key absent) | — | Invasive |
+| Spacekorn Sour (`SourEinkorn`) | Spacekorn Seed | Sour Pulp | Carbonic Fertilizer | Acidic Fertilizer | Warm, OR Hot (raw `12`) | any | — | Putrescent |
+| Woolly Spacekorn (`ChillyEinkorn`) | Wooly Korn (shell item) | Frost Pulp | — | — | Cold only (raw `1`) | any | no Putrescent-tagged neighbor plant | none (only variant across both crops with no bioTag at all) |
+
+Unlike Rockwood Glow, an "unconstrained" dial here is encoded by the
+`temperature`/`light` key being **absent** from `requires` rather than
+present with literal value `0` — same practical effect (no gate), just a
+different raw encoding; worth knowing if grepping the sheet for one form
+and not finding the other.
+
+**Growth-phase durations and production cycle (hours):**
+
+| Variant | Growth duration | Fruit cycle | Byproduct cycle |
+|---|---|---|---|
+| Spacekorn Plain | 36-40 | 9-12 | 4-6 |
+| Spacekorn Sour | 36-40 | 20-27 | 3.2-4.4 |
+| Woolly Spacekorn | 36-40 | 20-27 | 4-6 |
+
+Germination (`EinkornSeed`, needs Water only): 2.7-3h. `_Gather`/`_Dead`
+stages carry no timer (0/0), same as Rockwood.
+
+**Enrichment bonuses** (all three variants share the same first three —
+light/supplement — entries; ARatio = additive %, MRatio = multiplicative):
+
+- **All three variants**: Light dial = Natural (raw `2`) → Growth+Production
+  speed +100%. Light dial = UV (raw `1`) → Growth+Production speed +150%,
+  but Byproduct quantity ×0.8 (-20%). Neutral Fertilizer present →
+  Byproduct quantity +100%.
+- **Spacekorn Plain** additionally: Temperature dial = Temperate (raw `2`)
+  → Growth+Production speed +100%. Neighbor tagged Putrescent → Germ
+  quantity +40%, Byproduct quantity +40%.
+- **Spacekorn Sour**: no additional entries beyond the shared three.
+- **Woolly Spacekorn** additionally: Carbonic Fertilizer present →
+  Byproduct quantity +100% (stacks with the shared Neutral-Fertilizer
+  entry above if somehow both present).
+
+**Adjacency effects** (what each variant does to neighboring plots):
+
+| Variant | value | attr | target | once | Meaning |
+|---|---|---|---|---|---|
+| Spacekorn Plain | 0.15 | `FarmPlantAllSpeed` | **Plainkorn only** | false (repeatable) | Buffs neighboring Spacekorn Plain plants specifically (not any neighbor) +15% Growth/Production speed; not consumed on use |
+| Spacekorn Sour | 0 | `FarmPlantDissolveDead` | any | true | Boolean toggle, not a speed ratio (`FarmPlantDissolveDead` has no ARatio/MRatio in the `attribute` sheet) — neighbor's dead plants auto-dissolve instead of lingering; `value: 0` is a placeholder, not a percentage |
+| Woolly Spacekorn | 0.2 | `FarmPlantExtraProductionSpeed` | any | false (repeatable) | +20% Byproduct quantity for any neighbor |
+
+Two schema features not seen in Finding 13's Rockwood data: an
+`adjacency` entry can carry a `target` field restricting the buff to a
+specific named variant (Spacekorn Plain's entry), and not every
+`adjacency`/enrichment `attr` is a speed ratio — some (`FarmPlantDissolveDead`)
+are plain boolean toggles, identifiable by having no ARatio/MRatio `note`
+on the `attribute` sheet.
