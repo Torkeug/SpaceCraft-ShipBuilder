@@ -1274,9 +1274,32 @@ variant's fertilizer/temperature/light/neighbor gate while growing):
 - **Gate NOT satisfied this tick**: growth/fruit/byproduct progress does
   not advance at all (stalls, doesn't reverse), and `progressDeath`
   *increases* instead, at a rate of 1×`dt`/tick by default — modifiable by
-  a neighbor's adjacency effect, e.g. Rockwood Bitter's neighbor-decay
-  effect multiplies it by 0.05 (from Finding 13), Rockwood White's
-  Putrescent-neighbor penalty multiplies it by 0.6.
+  a neighbor's `FarmPlantDeathSpeed` adjacency effect, confirmed (raw
+  disassembly, `Farm.hx:332`, op 222-225: `progressDeathMRatio *= adj.value`)
+  to be the only adjacency attr this loop routes into the death-rate
+  accumulator. Rockwood Bitter is the only variant across Finding 13/14
+  that emits this attr (×0.05 on its neighbor). A lower multiplier means
+  *slower* accumulation toward the death threshold below, i.e. a *longer*
+  grace period, not shorter — the direction only goes one way, there's no
+  variant that speeds up a neighbor's death-rate accumulation via this
+  mechanism.
+  - **Correction**: an earlier draft of this finding also claimed
+    Rockwood White's Putrescent-neighbor ×0.6 modifier shortened this same
+    grace period. That was wrong on two counts, not just the arithmetic
+    direction (which alone would already have been backwards — a <1
+    multiplier always lengthens the grace period, same direction as
+    Bitter, never shortens it): that ×0.6 figure is White's own
+    *enrichment* (a self-effect triggered by a Putrescent neighbor,
+    applying to White's own Growth/Liquid-consumption/Supplement-
+    consumption multipliers — a different code path, `getEnrichmentValue`,
+    entirely separate from this adjacency loop) — not an adjacency effect
+    on neighbors' death rate at all. White's actual adjacency effect
+    (`FarmPlantSupplementConsumption`, −50%, Finding 13) isn't even one of
+    the attr names this loop recognizes (`FarmPlantAllSpeed`/`DeathSpeed`/
+    `DissolveDead`/`Extra…`/`Fruit…`/`Growth…`/`SeedDeathSpeed`/
+    `SeedGerminateSpeed` — confirmed exhaustive from the raw disassembly's
+    string-compare chain, `Farm.hx:316-345`); an unrecognized attr name
+    just falls through as a no-op in this specific loop.
 
 **Death threshold, from `checkProgress`'s raw disassembly**: if
 `progressDeath` exceeds `FarmPlantDeathTime` (`data.cdb` sheet `constant`,
@@ -1284,8 +1307,7 @@ raw value **5**, comment "In hours") × 3600, the plot's plant is replaced
 by its `deadVariant`. This is fully recoverable up to that point — restore
 the gate before 5 accumulated unmet-hours and the plant resumes growing
 instead of dying (with Bitter's neighbor effect stretching that grace
-period to ~100h, Whitewood's Putrescent-neighbor penalty shrinking it to
-~8.3h).
+period to ~100h, per the confirmed mechanism above).
 
 **Variant selection is separate and one-time**, confirmed by
 `checkProgress`'s raw disassembly: only once `plot.progress > plot.duration`
