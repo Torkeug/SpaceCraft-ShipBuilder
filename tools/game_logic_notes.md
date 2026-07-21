@@ -1250,3 +1250,65 @@ reason (Finding 6) but for the wrong stated reason under the old model.
 Surviving Patch/Blueprint `bestPct` values shifted modestly (Patch odds up
 slightly, low-level Blueprint odds down slightly) now that the split uses
 real weights instead of an even 50/50.
+
+## Finding 15: Farming — the `requires` gate is checked every tick during growth (not just once), a 5-hour unmet-conditions death timer, and an Invasive-tag spread-on-maturity mechanic
+
+Source: `ent.b.PlotZone.updatePlots` (findex 22002, `Farm.hx:~280-378`,
+decompiled cleanly, no mangling) and `ent.b.PlotZone.checkProgress`
+(findex 22003, `Farm.hx:378-397`, decompiled + raw disassembly
+cross-checked to resolve a decompiler scope-mangle at the top). Extends
+Finding 13/14's per-variant `requires` tables — this finding is about
+*when* those requirements are enforced, which those findings didn't cover.
+
+**The gate is continuous, not a one-time snapshot.** Every tick,
+`updatePlots` iterates every non-`NoUpdate`-flagged plot (i.e. germinating
+seeds and in-progress grown variants — `_Gather`/`_Dead` rows are
+`NoUpdate`-flagged and are skipped entirely, so fertilizer/temperature/
+light stop mattering the instant a plant reaches Gather or Dead) and calls
+`hasMinRequirement` against **the current stage's own `requires`** (the
+seed's `{liquid: Water}` while germinating, or the already-chosen grown
+variant's fertilizer/temperature/light/neighbor gate while growing):
+- **Gate satisfied this tick**: growth/fruit/byproduct progress advances
+  (using the enrichment-modified speed ratios from Finding 13/14), and
+  `progressDeath` (a per-plot decay counter) is forced to *decrease*.
+- **Gate NOT satisfied this tick**: growth/fruit/byproduct progress does
+  not advance at all (stalls, doesn't reverse), and `progressDeath`
+  *increases* instead, at a rate of 1×`dt`/tick by default — modifiable by
+  a neighbor's adjacency effect, e.g. Rockwood Bitter's neighbor-decay
+  effect multiplies it by 0.05 (from Finding 13), Rockwood White's
+  Putrescent-neighbor penalty multiplies it by 0.6.
+
+**Death threshold, from `checkProgress`'s raw disassembly**: if
+`progressDeath` exceeds `FarmPlantDeathTime` (`data.cdb` sheet `constant`,
+raw value **5**, comment "In hours") × 3600, the plot's plant is replaced
+by its `deadVariant`. This is fully recoverable up to that point — restore
+the gate before 5 accumulated unmet-hours and the plant resumes growing
+instead of dying (with Bitter's neighbor effect stretching that grace
+period to ~100h, Whitewood's Putrescent-neighbor penalty shrinking it to
+~8.3h).
+
+**Variant selection is separate and one-time**, confirmed by
+`checkProgress`'s raw disassembly: only once `plot.progress > plot.duration`
+(the current stage's own growth timer has fully elapsed) does it call
+`pickVariant`/`applyPlant` to move to the next stage — for a germinating
+seed, that's the once-only Green/White/Dream/Glow/Bitter (or
+Plain/Sour/Woolly for Spacekorn) branch decision Finding 13/14 already
+covers; for an already-grown variant, that's the transition into its own
+`_Gather` row. It is never re-rolled mid-growth — only the *already-chosen*
+variant's own gate keeps mattering for the rest of that growth phase.
+
+**Bonus finding — Invasive bioTag spread-on-maturity** (not previously
+documented; relevant since Rockwood Dream and Spacekorn Plain are both
+`Invasive`-tagged per Finding 13/14): immediately after an
+`Invasive`-tagged plant completes its stage transition (same
+`progress > duration` moment above), `checkProgress` rolls a spread chance
+against every neighboring plot:
+- Neighbor is an **empty plot**: `FarmPlantInvasiveSpreadEmptyChance`
+  (`data.cdb` sheet `constant`, raw value **0.5** — 50%) chance to place a
+  copy of the same plant there.
+- Neighbor is a **germinating seed or a dead plant**: overwrites it with a
+  copy of the same plant at `FarmPlantInvasiveSpreadOccupiedChance` (raw
+  value **0.25** — 25%) chance instead.
+- Neighbor is a **live, already-grown plant** (not a seed, not dead): no
+  spread roll happens at all — Invasive spread cannot displace an
+  established plant, only claim empty/seed/dead ones.
