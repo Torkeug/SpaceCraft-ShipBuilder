@@ -954,6 +954,22 @@ OR-across-allowed-states, not several states holding simultaneously.
 picks uniformly at random among them** (not priority order); if none pass,
 the plant dies instead of stalling.
 
+**`requires.supplements` is AND, `requires.noSupplements` is OR — verified
+against raw disassembly, not just decompiler pseudocode** (a plot/slot can
+hold up to 3 supplements at once, per the user, so a multi-item AND
+requirement is a real, reachable state, not a design impossibility).
+`hasMinRequirement`'s `supplements` loop (`Farm.hx:437-444`, ops 84-126)
+only advances to the next list entry when the current one *is* present;
+the instant one is missing it does `missingCount++` and breaks out of the
+whole block — so the block only avoids a miss if **every** listed item is
+present (short-circuit AND). `noSupplements` (`Farm.hx:446-452`, ops
+127-168) is the mirror case: it breaks the instant it finds **any**
+forbidden item present (short-circuit OR-to-fail), which is the correct
+reading for a deny-list. An earlier pass through this data mistakenly
+described `supplements` as an OR/"any one satisfies" match — that was
+wrong and is corrected here; see Rockwood Bitter below for the one variant
+where this actually changes the answer (its 2-item `supplements` list).
+
 **Grown variants and their exact gates:**
 
 | Variant | Fruit | Byproduct | Fertilizer required | Fertilizer forbidden | Temperature dial (any ONE of) | Light dial (any ONE of) | Neighbor restriction |
@@ -962,7 +978,7 @@ the plant dies instead of stalling.
 | Rockwood White (`Whitewood`) | Rockwood Nut | Kaolinite | Metallic Fertilizer | — | any | any | no Reclusive-tagged neighbor plant |
 | Rockwood Dream (`Dreamwood`) | Dreamwood Fruit | Elmerium Nugget | Elmerium Dust | — | Cold, OR Temperate, OR Warm (raw bitmask `7`; excludes Hot) | Dark only (raw `4`) | — |
 | Rockwood Glow (`Glowwood`) | Glowwood Fruit | Rockwood Bark | none | — | any (field present, literal `0` = unconstrained) | any (field present, literal `0` = unconstrained) | no Reclusive-tagged neighbor plant |
-| Rockwood Bitter (`Sulfwood`) | Rockwood Nut | Pyrite | Acidic Fertilizer OR Metallic Fertilizer | Carbonic Fertilizer | Warm, OR Hot (raw bitmask `12`) | any | — |
+| Rockwood Bitter (`Sulfwood`) | Rockwood Nut | Pyrite | Acidic Fertilizer AND Metallic Fertilizer (both required simultaneously — see AND/OR note above) | Carbonic Fertilizer | Warm, OR Hot (raw bitmask `12`) | any | — |
 
 Each variant also carries its own bio-tag (relevant to *other* variants'
 "no neighbor" checks and to a couple of enrichments below): Rockwood
