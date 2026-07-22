@@ -424,70 +424,86 @@ sibling `spacecraft-memory-research` repo's `RESEARCH_LOG.md`. This is a
 live, advancing PRNG object (`seed`/`seed2` fields both mutate on every
 draw), not a static lookup table.
 
-**Position itself is computed continuously off that advancing PRNG**, not
-selected from a fixed candidate list. Raw opcodes,
-`PlanetRes.generateGroups` (`PlanetRes.hx:327-341`), two branches:
-- **General placement** (`this.poi == null`, `PlanetRes.hx:328-329`):
+**Position itself is computed continuously off that advancing PRNG, subject
+to real validation - not selected from a fixed candidate list.** This
+paragraph replaces two earlier, partially-wrong passes at this same
+question (one had an inequality backwards, the next mislabeled which
+branch/line-range was which) - both caught by the user pushing back and
+asking to re-check the code rather than trust the writeup. Final version,
+every branch and threshold re-read directly from `PlanetRes.generateGroups`
+(findex 11231)'s raw opcodes end to end:
+
+`generateGroups` has THREE placement branches, not two, selected up front
+by `get_isAsteroid()` then `this.poi`:
+- **Asteroid branch** (`PlanetRes.hx:327-330`, only if `isAsteroid`):
   `lat = acos(draw()/10007)`, `lon = (draw()/10007) * PI` - `draw()` being
-  one raw step of `this.rand`. `acos` of a uniform draw is the standard
-  trick for a uniform distribution over a SPHERE (not a flat lat/lon grid),
-  so this is genuine continuous surface sampling.
-- **POI-anchored placement** (`this.poi != null`, `PlanetRes.hx:337-340`):
-  `r = sqrt(draw()/10007) * poi.angle`, `theta = (draw()/10007) * 2*PI`,
-  `lat = poi.lat + r*cos(theta)`, `lon = poi.lon + r*sin(theta)` - uniform-
-  DISC sampling (the `sqrt` on the radius draw is what makes area, not just
-  radius, uniform) centered on the POI.
+  one raw Marsaglia step of `this.rand`. Falls straight through to the
+  shared validation below with **no stamp/free-space check at all** -
+  asteroids skip that step entirely.
+- **General/whole-planet branch** (`PlanetRes.hx:331-334`, non-asteroid,
+  `this.poi == null`): the SAME `acos`/`*PI` formula shape as the asteroid
+  branch, but wrapped in a real retry loop: `stampVal =
+  getStampResAt(planetHeight, lon, lat)`; accept if `stampVal <= 0`,
+  otherwise jump back to the top of this branch and redraw a fully fresh
+  lat/lon (not a nudge - a brand new pair of `this.rand` draws).
+- **POI-anchored branch** (`PlanetRes.hx:336-341`, non-asteroid,
+  `this.poi != null`): disc sampling around a POI's center - `r =
+  sqrt(draw()/10007) * poi.angle`, `theta = (draw()/10007) * 2*PI`, `lat =
+  poi.lat + r*cos(theta)`, `lon = poi.lon + r*sin(theta)` (the `sqrt` on
+  the radius draw is what makes AREA, not just radius, uniform). Also a
+  retry loop, but with the OPPOSITE accept condition: `stampVal =
+  getStampResAt(...)`; accept if `stampVal >= 1`, else redraw. Two
+  different branches, two different thresholds - don't conflate them.
 
-**Correction (same day): the candidate lat/lon above is then validated, not
-placed unconditionally** - caught by the user asking "isn't there a
-validation step for terrain?", which also caught an inequality I had
-backwards. Two genuinely different mechanisms, both in raw opcodes
-immediately after the lat/lon math (`PlanetRes.hx:341-370`):
+**Which branch wrecks actually use - resolved by tracing where `this.poi`
+gets set**, not assumed: `PlanetRes.run` (`PlanetRes.hx:226,236,243`) sets
+`this.poiIndex` from each resGen entry's own `props.poiIndex`, then `this
+.poi = this.poiIndex == null ? null : this.pois[this.poiIndex]`. Checked
+live against `data.cdb`'s `resGen` sheet (NOT `resGroup` - different sheet,
+easy to conflate, see the field glossary above) for the actual wreck rows
+referenced by `sector.generation.wreckResGen`: `ShipWreck_Small_0` ->
+`{maxSectorLevel: 3}`, `ShipWreck_Big_0` -> `{minSectorLevel: 2,
+maxSectorLevel: 2}`, and so on for all six tiers - none of them set
+`poiIndex`. So `this.poi` is always null for wrecks: **wrecks always use
+the general/whole-planet branch, never the POI-disc branch** - positions
+are drawn from the planet's full surface (`acos`/`*PI` sphere sampling),
+not clustered around a landmark.
 
-- **A real retry loop** (`PlanetRes.hx:341`): `stampVal =
-  getStampResAt(planetHeight, lon, lat)`. Accept requires `stampVal >= 1`
-  (NOT `< 1` as first written here) - if `stampVal < 1`, jump back to the
-  top of the position-draw loop and try again with a fresh `this.rand`
-  draw. `getStampResAt` reads a stamp/occupancy texture on the planet's
-  heightmap, tying back into the `addExclusionZones`/
-  `getGenExclusionZones` call already documented earlier in `PlanetRes.run`
-  - this is a real collision/overlap check against already-placed content,
-  and it does keep re-rolling the position until it finds a free spot.
-- **Three hard-reject checks that do NOT retry** - each just aborts the
-  whole `generateGroups` call (`return false`) if violated, rather than
-  redrawing a new position:
-  - *Light-level* (`PlanetRes.hx:345-353`, general placement only): if the
-    resGroup's `props.lightMin`/`lightMax` are set and the light value at
-    that lat/lon (via an unresolved helper, `planet.<field92-style-fn>`)
-    falls outside that band, bail.
-  - *Altitude* (`PlanetRes.hx:358-365`, non-asteroids only):
-    `altitude = getZLatLon(lat,lon) - planet.getSize()`; if outside the
-    resGroup's `props.altitudeMin`/`altitudeMax`, bail.
-  - *Underwater* (`PlanetRes.hx:368-370`): if `altitude < 0` AND the
-    resGroup's `props.flags` has bit 7 set AND `planet.hasWater()`, bail.
+**Neither retry loop has a counter or cap** - confirmed by reading the full
+345-op function; there's no fallback-to-a-fixed-position code path if the
+free-space check keeps failing, it just keeps redrawing forever. This
+directly rules out one candidate explanation for "wrecks keep showing up
+in the same spot" reports: there's no mechanism in this code that reuses
+or falls back to a previous/fixed coordinate.
 
-**Whether this matters for wrecks specifically - checked against live
-`data.cdb`**: `GShipWreck_{Small,Big}_lvl{0,1,2}`'s `props` are only
-`{groupDensity, flatTerrain: true, size}` - no `lightMin`/`lightMax`/
-`altitudeMin`/`altitudeMax` at all, so those two hard-reject checks are
-dead code for wrecks (both `JNull`-guarded, skip when the prop is unset).
-`flatTerrain: true` IS set on both tiers, plausibly what compiles down to
-the `flags` bit-7 checked by the underwater rejection (packed booleans
-compiling to a bitfield is a pattern already seen elsewhere in this
-project) - not confirmed further, would need the `props` virtual type's
-column-to-bit order to nail down. So in practice, a wreck's position is
-constrained only by the free-space/overlap retry loop, not by light or
-altitude bounds - consistent with wrecks visibly showing up in varied
-terrain in-game.
+**Beyond the free-space retry, three hard-reject checks follow** (shared
+by all three branches, `PlanetRes.hx:345-370`) - these abort the whole
+`generateGroups` call (`return false`) rather than retrying:
+- *Light-level* (general branch only): if the resGroup's `props.lightMin`/
+  `lightMax` are set and the light value at that lat/lon falls outside
+  that band, bail.
+- *Altitude* (non-asteroids only): `altitude = getZLatLon(lat,lon) -
+  planet.getSize()`; if outside `props.altitudeMin`/`altitudeMax`, bail.
+- *Underwater*: if `altitude < 0` AND `props.flags` bit 7 is set AND
+  `planet.hasWater()`, bail.
+Checked against live `data.cdb`: `GShipWreck_{Small,Big}_lvl{0,1,2}`
+(`resGroup` sheet this time) only set `{groupDensity, flatTerrain: true,
+size}` - no light/altitude bounds, so those two checks are dead code for
+wrecks specifically. `flatTerrain: true` is set on both tiers, plausibly
+feeding the underwater check's `flags` bit 7, but the exact column-to-bit
+mapping wasn't traced further.
 
-**Conclusion**: both links in the chain that would need to be fixed/
-deterministic for wreck locations to NOT be truly random - the seed source
-and the placement math - are confirmed genuinely random from raw bytecode,
-subject to the free-space retry constraint above (and, for other resGroup
-types with light/altitude props set, those bounds too). A respawning
-wreck's exact coordinates cannot be predicted or reproduced even with full
-knowledge of the system's `genProps.seed`, unlike the planet's INITIAL
-content.
+**Conclusion**: a wreck's exact spawn position is drawn fresh, every spawn
+cycle, from a continuously-advancing PRNG seeded with real per-call entropy
+(not the deterministic per-system seed used for initial world-gen),
+constrained only by the free-space/overlap retry loop (general branch,
+whole-planet, no POI clustering, no retry cap or fallback). It cannot be
+predicted or reproduced even with full knowledge of the system's
+`genProps.seed`. If players report wrecks reappearing "in the same spot,"
+the mechanism here gives no support for that being literal - the more
+likely explanations are perceptual (same general area looking similar) or
+a still-existing wreck being mistaken for a new one, not this code
+reusing a coordinate.
 
 ## Finding 6: Loot-level candidate search is a 2-level window, not an exact match
 
