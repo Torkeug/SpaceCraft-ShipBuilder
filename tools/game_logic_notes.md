@@ -1105,8 +1105,45 @@ where this actually changes the answer (its 2-item `supplements` list).
 | Rockwood Green (`Rockwood`) | Rockwood Nut | Lime | Neutral Fertilizer | Metallic Fertilizer | any | any | no Reclusive-tagged neighbor plant |
 | Rockwood White (`Whitewood`) | Rockwood Nut | Kaolinite | Metallic Fertilizer | — | any | any | no Reclusive-tagged neighbor plant |
 | Rockwood Dream (`Dreamwood`) | Dreamwood Fruit | Elmerium Nugget | Elmerium Dust | — | Cold, OR Temperate, OR Warm (raw bitmask `7`; excludes Hot) | Dark only (raw `4`) | — |
-| Rockwood Glow (`Glowwood`) | Glowwood Fruit | Rockwood Bark | none | — | any (field present, literal `0` = unconstrained) | any (field present, literal `0` = unconstrained) | no Reclusive-tagged neighbor plant |
+| Rockwood Glow (`Glowwood`) | Glowwood Fruit | Rockwood Bark | none | — | **impossible under normal play — see correction below**, not "any" | **impossible under normal play — see correction below**, not "any" | no Reclusive-tagged neighbor plant |
 | Rockwood Bitter (`Sulfwood`) | Rockwood Nut | Pyrite | Acidic Fertilizer AND Metallic Fertilizer (both required simultaneously — see AND/OR note above) | Carbonic Fertilizer | Warm, OR Hot (raw bitmask `12`) | any | — |
+
+**Correction, confirmed both by re-tracing raw disassembly and by a real
+in-game test (2026-07-22: a Rockwood Nut planted with no supplement at
+all came up all-dead stems, matching this reading, contradicting the
+"Glow is the no-requirement catch-all" claim previously made here).**
+Glowwood's `requires.temperature` and `requires.light` are **present with
+literal integer `0`** (confirmed directly against `data.cdb`'s raw JSON —
+`"light": 0, "temperature": 0`, not `null`/absent). `hasMinRequirement`'s
+temperature/light checks (`Farm.hx:454-459`, raw disassembly) only skip
+the check when the field is **`null`** (`JNull ... jump to 184/205`); a
+present field, even `0`, runs the full bitwise-AND-against-the-farm's-
+current-dial-bit test. Since `0 & (1 << anything)` is always `0`, this
+check can **never** pass for Glowwood — not "any dial position is fine,"
+but "no dial position is ever fine." This is the opposite of Spacekorn's
+encoding for the same intent (Finding 14 below): Spacekorn variants leave
+the key **absent** (`null`) to mean unconstrained, which correctly skips
+the check; Glowwood's literal `0` instead guarantees a `missingCount`
+hit on *both* temperature and light, every single tick, with no
+farm-dial configuration able to satisfy it.
+
+Since default `allowMissing` is `0`, this makes Glowwood's own gate fail
+unconditionally in ordinary play — meaning a bare Rockwood Nut planting
+with no supplement applied has **all five variants failing
+simultaneously** (Green/White/Dream/Bitter for their unmet fertilizer
+requirement, Glow for this always-fails bug), which is exactly why the
+seed died outright instead of becoming Glow. The only theoretical
+loophole, confirmed by decompiling `calcUniqueEffect` (findex 22011,
+which sums `e.value` across every currently-pushed matching unique
+effect for that plot, not just the first): `allowMissing` could reach
+`2` — enough to tolerate both the temperature and light misses — if the
+Glow candidate's plot has **two separate already-grown Rockwood Dream
+neighbors** simultaneously (each pushes its own `FarmPlantIgnoreMinRequirement`
+value-`1` effect once per tick, per Finding 16, and these sum). This is
+an extremely narrow, deliberately-engineered setup, not something a
+normal planting would ever produce — whether it's the game's *intended*
+path to Rockwood Glow or Glowwood's `requires` block is simply a content
+bug is not something this repo can determine from data/bytecode alone.
 
 Each variant also carries its own bio-tag (relevant to *other* variants'
 "no neighbor" checks and to a couple of enrichments below): Rockwood
@@ -1188,11 +1225,16 @@ rather than directly back into Spacekorn Seed.
 | Spacekorn Sour (`SourEinkorn`) | Spacekorn Seed | Sour Pulp | Carbonic Fertilizer | Acidic Fertilizer | Warm, OR Hot (raw `12`) | any | — | Putrescent |
 | Woolly Spacekorn (`ChillyEinkorn`) | Wooly Korn (shell item) | Frost Pulp | — | — | Cold only (raw `1`) | any | no Putrescent-tagged neighbor plant | none (only variant across both crops with no bioTag at all) |
 
-Unlike Rockwood Glow, an "unconstrained" dial here is encoded by the
-`temperature`/`light` key being **absent** from `requires` rather than
-present with literal value `0` — same practical effect (no gate), just a
-different raw encoding; worth knowing if grepping the sheet for one form
-and not finding the other.
+This crop's "unconstrained" dials are correctly encoded by the
+`temperature`/`light` key being **absent** (`null`) from `requires`, which
+`hasMinRequirement` skips entirely — genuinely no gate. This is *not* the
+same as Rockwood Glow's encoding (Finding 13, corrected): Glow's
+`temperature`/`light` are present with **literal `0`**, which the same
+function does *not* skip, and a `0` bitmask can never satisfy the
+farm-dial-bit check — so Glow's fields don't mean "unconstrained" at all,
+they mean "always fails." Spacekorn has no equivalent bug in any of its
+three variants; every "any" in the table above is a genuine absent-key
+skip, confirmed the same way.
 
 **Growth-phase durations and production cycle (hours):**
 
