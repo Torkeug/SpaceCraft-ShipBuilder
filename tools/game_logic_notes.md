@@ -436,17 +436,58 @@ selected from a fixed candidate list. Raw opcodes,
   `r = sqrt(draw()/10007) * poi.angle`, `theta = (draw()/10007) * 2*PI`,
   `lat = poi.lat + r*cos(theta)`, `lon = poi.lon + r*sin(theta)` - uniform-
   DISC sampling (the `sqrt` on the radius draw is what makes area, not just
-  radius, uniform) centered on the POI. Followed by a real accept/reject
-  loop against terrain validity (`getStampResAt(planetHeight, lon, lat)`
-  must be `< 1`, `PlanetRes.hx:341`, else jump back and redraw) - a
-  standard rejection-sampling pattern, not a fixed slot list either.
+  radius, uniform) centered on the POI.
+
+**Correction (same day): the candidate lat/lon above is then validated, not
+placed unconditionally** - caught by the user asking "isn't there a
+validation step for terrain?", which also caught an inequality I had
+backwards. Two genuinely different mechanisms, both in raw opcodes
+immediately after the lat/lon math (`PlanetRes.hx:341-370`):
+
+- **A real retry loop** (`PlanetRes.hx:341`): `stampVal =
+  getStampResAt(planetHeight, lon, lat)`. Accept requires `stampVal >= 1`
+  (NOT `< 1` as first written here) - if `stampVal < 1`, jump back to the
+  top of the position-draw loop and try again with a fresh `this.rand`
+  draw. `getStampResAt` reads a stamp/occupancy texture on the planet's
+  heightmap, tying back into the `addExclusionZones`/
+  `getGenExclusionZones` call already documented earlier in `PlanetRes.run`
+  - this is a real collision/overlap check against already-placed content,
+  and it does keep re-rolling the position until it finds a free spot.
+- **Three hard-reject checks that do NOT retry** - each just aborts the
+  whole `generateGroups` call (`return false`) if violated, rather than
+  redrawing a new position:
+  - *Light-level* (`PlanetRes.hx:345-353`, general placement only): if the
+    resGroup's `props.lightMin`/`lightMax` are set and the light value at
+    that lat/lon (via an unresolved helper, `planet.<field92-style-fn>`)
+    falls outside that band, bail.
+  - *Altitude* (`PlanetRes.hx:358-365`, non-asteroids only):
+    `altitude = getZLatLon(lat,lon) - planet.getSize()`; if outside the
+    resGroup's `props.altitudeMin`/`altitudeMax`, bail.
+  - *Underwater* (`PlanetRes.hx:368-370`): if `altitude < 0` AND the
+    resGroup's `props.flags` has bit 7 set AND `planet.hasWater()`, bail.
+
+**Whether this matters for wrecks specifically - checked against live
+`data.cdb`**: `GShipWreck_{Small,Big}_lvl{0,1,2}`'s `props` are only
+`{groupDensity, flatTerrain: true, size}` - no `lightMin`/`lightMax`/
+`altitudeMin`/`altitudeMax` at all, so those two hard-reject checks are
+dead code for wrecks (both `JNull`-guarded, skip when the prop is unset).
+`flatTerrain: true` IS set on both tiers, plausibly what compiles down to
+the `flags` bit-7 checked by the underwater rejection (packed booleans
+compiling to a bitfield is a pattern already seen elsewhere in this
+project) - not confirmed further, would need the `props` virtual type's
+column-to-bit order to nail down. So in practice, a wreck's position is
+constrained only by the free-space/overlap retry loop, not by light or
+altitude bounds - consistent with wrecks visibly showing up in varied
+terrain in-game.
 
 **Conclusion**: both links in the chain that would need to be fixed/
 deterministic for wreck locations to NOT be truly random - the seed source
-and the placement math - are confirmed genuinely random from raw bytecode.
-A respawning wreck's exact coordinates cannot be predicted or reproduced
-even with full knowledge of the system's `genProps.seed`, unlike the
-planet's INITIAL content.
+and the placement math - are confirmed genuinely random from raw bytecode,
+subject to the free-space retry constraint above (and, for other resGroup
+types with light/altitude props set, those bounds too). A respawning
+wreck's exact coordinates cannot be predicted or reproduced even with full
+knowledge of the system's `genProps.seed`, unlike the planet's INITIAL
+content.
 
 ## Finding 6: Loot-level candidate search is a 2-level window, not an exact match
 
