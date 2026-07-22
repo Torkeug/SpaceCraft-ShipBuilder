@@ -377,6 +377,77 @@ Constants (`data.cdb` `constant` sheet):
 | `MaxWreckPerPlanet` | 10 | only enforced during *initial* planet generation (`SystemContent.generatePlanet`), not in the runtime cycle above |
 | `RadarWreckFinderDistanceFactor` | 4 | multiplies detection range for radars with the `WreckFinder` attribute |
 
+**Addendum (2026-07-22): exact spawn position is also genuinely randomized each
+cycle, traced all the way from RNG seed to placed coordinate — not inferred
+from watching outputs differ.** Raised directly by the user, who correctly
+rejected an earlier draft of this finding that only observed several
+non-repeating wreck positions in a live event log and called that
+"confirmed random" — that observation can't distinguish true randomness from
+a fixed pool of candidate slots. Settled instead by tracing the actual
+mechanism in raw bytecode (findices below are current as of this game
+build; the ones in the section above have drifted since this doc was first
+written - `checkPerformShipWreckCycle`/`performShipWreckCycle`/
+`generateShipwreck`/`generateResGens` are now 8106/8108/8110/8111, not
+8098-8103; re-resolve by name via `sfn <name>` if they drift again).
+
+**Call path, confirmed via `hlbc`'s `refto` (each hop below has exactly ONE
+caller anywhere in the bytecode - checked directly, not assumed):**
+```
+ent.Ship.serverRegularUpdate@9094 (per-tick, orbit-arrival branch)
+  -> checkPerformShipWreckCycle@8106
+  -> performShipWreckCycle@8108        (the "Spawn pass" documented above)
+  -> generateShipwreck@8110
+  -> generateResGens@8111
+  -> logic.gen.PlanetRes.run@11230
+  -> logic.gen.PlanetRes.generateGroups@11231
+```
+This confirms `generateResGens` is reachable ONLY from the ongoing,
+wall-clock/ship-arrival-gated cycle - never from initial world/server
+creation (`logic.gen.SystemContent.generatePlanet`, the separate function
+already noted above for `MaxWreckPerPlanet`, is untouched by this chain).
+
+**The seed fed into placement is freshly minted from real entropy every
+single call**, not the deterministic per-system `genProps.seed` used for
+initial world-gen (contrast with the "Initial generation is fully
+deterministic" paragraph above). Raw opcodes, `PlanetResourceManager.hx:717`
+(`generateResGens`):
+```
+seed = int(random() * 65536 + sys_time())
+```
+`random()` here resolves to `Std.random` -> HashLink's native `rnd_float`
+(`Math.hx:85`, backed by `$Std.rnd`, an `hl_random` object) - real
+engine/OS entropy, confirmed distinct from the seeded `hxd.Rand` path.
+That seed is passed into `PlanetRes.run` (`PlanetRes.hx:189-191`), which
+does `this.rand = new hxd.Rand(seed)` - the same Marsaglia multiply-with-
+carry generator already reverse-engineered for asteroid-name RNG in the
+sibling `spacecraft-memory-research` repo's `RESEARCH_LOG.md`. This is a
+live, advancing PRNG object (`seed`/`seed2` fields both mutate on every
+draw), not a static lookup table.
+
+**Position itself is computed continuously off that advancing PRNG**, not
+selected from a fixed candidate list. Raw opcodes,
+`PlanetRes.generateGroups` (`PlanetRes.hx:327-341`), two branches:
+- **General placement** (`this.poi == null`, `PlanetRes.hx:328-329`):
+  `lat = acos(draw()/10007)`, `lon = (draw()/10007) * PI` - `draw()` being
+  one raw step of `this.rand`. `acos` of a uniform draw is the standard
+  trick for a uniform distribution over a SPHERE (not a flat lat/lon grid),
+  so this is genuine continuous surface sampling.
+- **POI-anchored placement** (`this.poi != null`, `PlanetRes.hx:337-340`):
+  `r = sqrt(draw()/10007) * poi.angle`, `theta = (draw()/10007) * 2*PI`,
+  `lat = poi.lat + r*cos(theta)`, `lon = poi.lon + r*sin(theta)` - uniform-
+  DISC sampling (the `sqrt` on the radius draw is what makes area, not just
+  radius, uniform) centered on the POI. Followed by a real accept/reject
+  loop against terrain validity (`getStampResAt(planetHeight, lon, lat)`
+  must be `< 1`, `PlanetRes.hx:341`, else jump back and redraw) - a
+  standard rejection-sampling pattern, not a fixed slot list either.
+
+**Conclusion**: both links in the chain that would need to be fixed/
+deterministic for wreck locations to NOT be truly random - the seed source
+and the placement math - are confirmed genuinely random from raw bytecode.
+A respawning wreck's exact coordinates cannot be predicted or reproduced
+even with full knowledge of the system's `genProps.seed`, unlike the
+planet's INITIAL content.
+
 ## Finding 6: Loot-level candidate search is a 2-level window, not an exact match
 
 Correction to an assumption made while analyzing Finding 5's `ShipWreck_LootChestRare_lvl{0,1,2}` primary-item rolls (Patch/Blueprint category, per the `loot` sheet's `primaryItemTypes`/`secondaryItemTypes` flag columns — `10:Tool,Module,Patch,Blueprint,ShipDecorative` / `10:Gathering,Material,Manufactured,LuxuryArticle,Scrap`, a bitmask over that column's own local enum, **not** an index into the `itemType` sheet). Verified via raw opcodes, `src/logic/Loot.hx:461-478`:
