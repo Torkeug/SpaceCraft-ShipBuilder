@@ -1132,18 +1132,32 @@ unconditionally in ordinary play — meaning a bare Rockwood Nut planting
 with no supplement applied has **all five variants failing
 simultaneously** (Green/White/Dream/Bitter for their unmet fertilizer
 requirement, Glow for this always-fails bug), which is exactly why the
-seed died outright instead of becoming Glow. The only theoretical
-loophole, confirmed by decompiling `calcUniqueEffect` (findex 22011,
-which sums `e.value` across every currently-pushed matching unique
-effect for that plot, not just the first): `allowMissing` could reach
-`2` — enough to tolerate both the temperature and light misses — if the
-Glow candidate's plot has **two separate already-grown Rockwood Dream
-neighbors** simultaneously (each pushes its own `FarmPlantIgnoreMinRequirement`
-value-`1` effect once per tick, per Finding 16, and these sum). This is
-an extremely narrow, deliberately-engineered setup, not something a
-normal planting would ever produce — whether it's the game's *intended*
-path to Rockwood Glow or Glowwood's `requires` block is simply a content
-bug is not something this repo can determine from data/bytecode alone.
+seed died outright instead of becoming Glow.
+
+**No loophole exists via `allowMissing` either — checked and ruled out.**
+An earlier version of this note speculated that two adjacent already-grown
+Rockwood Dream neighbors could stack `FarmPlantIgnoreMinRequirement` to
+`allowMissing = 2` (enough to tolerate both the temperature and light
+misses). That's wrong: `updatePlots`' neighbor-adjacency loop checks
+`hasUniqueEffect(adj.attr, row, col)` **before** calling `pushUniqueEffect`
+and `continue`s (skips the push) if an entry with that same `kind` already
+exists at that position this tick (confirmed via raw decompile of both
+`hasUniqueEffect`@22010 and `pushUniqueEffect`@22009) — so the first
+Dreamwood neighbor's push blocks every subsequent neighbor's push of the
+same attr, and at most one `value: 1` entry can ever exist per position
+per tick regardless of neighbor count. `allowMissing` therefore caps at
+**1**, never `2`, no matter how many Dreamwood neighbors surround the
+plot. Since Glowwood's gate needs *two* simultaneous misses tolerated
+(temperature and light both always fail) and the cap is one, **Rockwood
+Glow cannot be reached through `pickVariant` under any farm/neighbor
+configuration this repo has found** — it isn't rare or hard, it's
+unreachable through the normal grow path as currently coded. The only
+other way this repo has found to place it on a plot at all is
+`ent.b.Farm.adminSetPlant__impl` (findex 21909) — a debug/admin-only
+function, not something normal play can invoke. Whether this is a
+genuine content bug (a `0` that should have been `null`, matching every
+other "unconstrained" encoding in this sheet) or deliberately unreachable
+placeholder content is not something data/bytecode alone can answer.
 
 Each variant also carries its own bio-tag (relevant to *other* variants'
 "no neighbor" checks and to a couple of enrichments below): Rockwood
