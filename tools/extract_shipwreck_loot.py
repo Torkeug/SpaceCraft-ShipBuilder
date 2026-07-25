@@ -223,6 +223,19 @@ def build_sector_profiles(sheets):
             tier_count[t] += 1
         total = len(tiers)
 
+        # Distribution of wreck SIZE (as opposed to tier, above) this
+        # sector's wreckResGen list produces - unlike wreckTierCounts, this
+        # is what actually moves crate count 4x (Finding 8, see
+        # wreck_size_of_resgen), so it's the one worth surfacing per sector
+        # in the UI (see compute_crate_spawn_stats's own docstring for why
+        # the per-size crate-count figures themselves are sector-invariant
+        # - only this MIX varies by sector).
+        sizes = [wreck_size_of_resgen(r["resGen"]) for r in wreck_resgen]
+        size_count = defaultdict(int)
+        for sz in sizes:
+            if sz:
+                size_count[sz] += 1
+
         # Weighted level distribution across whichever wreck tiers this
         # sector's wreckResGen list can produce, then capped by maxLootLevel
         # (a crate's raw rolled level clamps to the sector's ceiling before
@@ -241,6 +254,7 @@ def build_sector_profiles(sheets):
             "exploLevel": explo_level,
             "maxLootLevel": max_loot_level,
             "wreckTierCounts": dict(tier_count),
+            "wreckSizeCounts": dict(size_count),
             "lootLevelProbability": {str(k): round(v, 4) for k, v in sorted(capped_prob.items())},
             "secondaryMaterialPool": loot_material,
         }
