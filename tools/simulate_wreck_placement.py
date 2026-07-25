@@ -15,6 +15,18 @@ Mirrors the decoded bytecode of logic.gen.PlanetRes (post-2026-07 findices):
     dist < node.size + resSize; resource visible to centroid math
     immediately but added to the collision partition only AFTER its
     resGroupSpawn recursion completes (the partition-blind window).
+
+Importable as a library: crate_count_distribution(root, trials) is the
+entry point extract_shipwreck_loot.py uses to source its shipped
+crateSpawn/secondarySpawn/total figures (see that file's
+spatial_crate_stats) - it's the placement-faithful alternative to that
+file's own abstract, non-spatial tree-walk Monte Carlo
+(count_crates_in_wreck), which undercounts placement-retry/collision
+losses and consequently overshoots Big-wreck crate counts by ~10%
+(closed-form/tree-walk ~7.08 vs this module's ~6.6, vs live-tracked
+~6.47 observed, n=103 - see game_logic_notes.md's Finding 12 resolution).
+Run standalone (`python tools/simulate_wreck_placement.py`) for the old
+diagnostic printout instead of the importable stats.
 """
 import random, math, collections
 
@@ -39,7 +51,7 @@ def roll_count(mn,mx,expl):
 
 class Sim:
     def __init__(s):
-        s.res=[]        # placed: (name,x,y,size)  - centroid sees these
+        s.res=[]        # placed: (name,x,y,size,origin) - centroid sees these
         s.part=[]       # collision partition: indices into s.res
         s.generated=collections.Counter()
     def collide(s,x,y,r):
@@ -47,25 +59,25 @@ class Sim:
             n=s.res[i]
             if (n[1]-x)**2+(n[2]-y)**2 < (n[3]+r)**2: return True
         return False
-    def place_res(s,name,x,y,secondary=None):
+    def place_res(s,name,x,y,secondary=None,origin='debris'):
         r=R[name]
         if s.collide(x,y,r): return False
-        s.res.append((name,x,y,r)); idx=len(s.res)-1
+        s.res.append((name,x,y,r,origin)); idx=len(s.res)-1
         s.generated[name]+=1
         if secondary:               # resGroupSpawn: partition-blind window
-            s.gen_group(secondary,x,y,0.0,)
+            s.gen_group(secondary,x,y,0.0,origin='secondary')
         s.part.append(idx)
         return True
     def rollback(s,n):
         s.res=s.res[:n]; s.part=[i for i in s.part if i<n]
-    def gen_group(s,G,ax,ay,size_hint,top=False):
+    def gen_group(s,G,ax,ay,size_hint,top=False,origin='debris'):
         if G.get('overrides'):
             tot=sum(w for w,_ in G['overrides']); r=random.random()*tot
             for w,br in G['overrides']:
                 r-=w
                 if r<0:
-                    if isinstance(br,str): return s.place_res(br,ax,ay)
-                    return s.gen_group(br,ax,ay,size_hint)
+                    if isinstance(br,str): return s.place_res(br,ax,ay,origin=origin)
+                    return s.gen_group(br,ax,ay,size_hint,origin=origin)
             return False
         gsize=G['size']
         if not top and s.collide(ax,ay,gsize): return False
@@ -86,9 +98,9 @@ class Sim:
                     th=random.random()*2*math.pi
                     px,py=ax+d*math.cos(th),ay+d*math.sin(th)
                     if e.get('res'):
-                        ok=s.place_res(e['res'],px,py,e.get('secondary'))
+                        ok=s.place_res(e['res'],px,py,e.get('secondary'),origin=origin)
                     else:
-                        ok=s.gen_group(e['group'],px,py,size_hint)
+                        ok=s.gen_group(e['group'],px,py,size_hint,origin=origin)
                     if ok: break
                     s.rollback(saved)
                 if not ok: return False
@@ -136,6 +148,51 @@ def big_root(p2_secondary):
         {'min':1,'max':1,'group':junk_group_bb()},
         {'min':5,'max':10,'group':junk_group()}]}
 
+def _dist_stats(counts):
+    n = len(counts)
+    dist = collections.Counter(counts)
+    return {
+        "atLeastOne": sum(c > 0 for c in counts) / n,
+        "expectedCount": sum(counts) / n,
+        "countDistribution": {str(k): v / n for k, v in sorted(dist.items())},
+    }
+
+
+def crate_count_distribution(root, trials):
+    """{"debris": stats, "secondarySpawn": stats, "total": stats} from
+    `trials` full wreck-placement simulations (success-conditioned,
+    matching run@11230's reroll-until-the-whole-wreck-places semantics -
+    see the Sim.gen_group/place_res `origin` tag threaded through every
+    recursive call: 'debris' for the wreck's own outer resGroup tree,
+    'secondary' for anything placed via a resGroupSpawn recursion).
+
+    Unlike extract_shipwreck_loot.py's combine_independent_counts (which
+    convolves two SEPARATELY-simulated distributions under an independence
+    assumption), debris/secondary/total here are all tallied from the
+    SAME simulated wreck per trial - debris+secondary literally sums to
+    total for every trial, no independence assumption or convolution
+    needed, and the placement/collision/retry dynamics that connect the
+    two passes (e.g. the debris field crowding a piece's own secondary
+    disc) are captured automatically rather than assumed away."""
+    debris, secondary, total = [], [], []
+    for _ in range(trials):
+        while True:
+            s = Sim()
+            if s.gen_group(root, 0, 0, 0.0, top=True):
+                break
+        crates = [r for r in s.res if r[0] == 'Crate']
+        d = sum(1 for c in crates if c[4] == 'debris')
+        sec = sum(1 for c in crates if c[4] == 'secondary')
+        debris.append(d)
+        secondary.append(sec)
+        total.append(d + sec)
+    return {
+        "debris": _dist_stats(debris),
+        "secondarySpawn": _dist_stats(secondary),
+        "total": _dist_stats(total),
+    }
+
+
 def run(root_fn,N):
     tot=collections.Counter(); glued=collections.defaultdict(collections.Counter)
     junk_n=[]; bb=0; bbd=[]; rejects=0
@@ -167,7 +224,8 @@ def run(root_fn,N):
         print(f"  glued<4u at {piece}: {{ {', '.join(f'{k}:{v/m:.2f}' for k,v in sorted(c.items()))} }}")
     print(f"  junk/wreck mean={statistics.mean(junk_n):.0f}   blackbox present={bb/n:.2f} dist~{statistics.median(bbd):.0f}u   reroll rate={rejects/(n+rejects):.2f}")
 
-random.seed(11)
-print("SMALL wreck (client data.cdb as-is):"); run(small_root(),4000)
-print("BIG wreck, P1 secondary only (client data.cdb):"); run(big_root(False),2000)
-print("BIG wreck, P1+P2 secondaries (server hypothesis):"); run(big_root(True),2000)
+if __name__ == "__main__":
+    random.seed(11)
+    print("SMALL wreck (client data.cdb as-is):"); run(small_root(),4000)
+    print("BIG wreck, P1 secondary only (client data.cdb):"); run(big_root(False),2000)
+    print("BIG wreck, P1+P2 secondaries (server-verified):"); run(big_root(True),2000)

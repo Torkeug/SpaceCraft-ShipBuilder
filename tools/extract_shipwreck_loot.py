@@ -14,6 +14,15 @@ findings are revised.
 
 Usage:
     python tools/extract_shipwreck_loot.py
+
+Runtime: several minutes (was seconds before 2026-07-25) - the shipped
+crateSpawn/secondarySpawn/total figures now come from a placement-faithful
+spatial simulation (spatial_crate_stats -> tools/simulate_wreck_placement.
+py's crate_count_distribution), not this file's own fast, non-spatial
+tree-walk Monte Carlo (which is retained as an independent cross-check,
+not the shipped source of truth - see spatial_crate_stats' docstring for
+why). Only 2 simulations ever run (one per wreck SIZE, cached), regardless
+of how many sectors/tiers reference them.
 """
 import json
 import random
@@ -21,6 +30,8 @@ import re
 from collections import defaultdict
 from math import floor, log10
 from pathlib import Path
+
+import simulate_wreck_placement as wreck_sim
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 CDB_PATH = REPO_ROOT / "shipbuilder" / "pak_out" / "data.cdb"
@@ -532,6 +543,37 @@ def secondary_spawn_stats(resgroup, size, tier, cache):
     return stats
 
 
+def spatial_crate_stats(size, cache, trials=CRATE_SPAWN_TRIALS):
+    """The SHIPPED debris/secondarySpawn/total crate-count distributions
+    for a wreck of this SIZE (tier-independent - see wreck_size_of_resgen),
+    from tools/simulate_wreck_placement.py's placement-faithful spatial
+    simulation, rather than this file's own abstract, non-spatial
+    tree-walk (count_crates_in_wreck/secondary_spawn_stats/combine_
+    independent_counts, still retained above as an independent
+    cross-check - it agrees with the spatial model to within a few
+    percent for Small, but overshoots Big by ~10% since it can't see
+    placement-retry/collision losses a real spatial layout produces -
+    see game_logic_notes.md's Finding 12 resolution for the full
+    picture). debris+secondarySpawn=total EXACTLY here (both tallied
+    from the SAME simulated wreck per trial, not convolved from two
+    separately-simulated distributions under an independence
+    assumption - see crate_count_distribution's own docstring).
+
+    Cached per size (only 2 possible values), so this expensive
+    simulation (success-conditioned - a failed wreck placement attempt
+    is fully discarded and retried elsewhere, matching run@11230's own
+    reroll-until-placed semantics - taking minutes per size at
+    CRATE_SPAWN_TRIALS) only ever runs twice per invocation of this
+    script, no matter how many sectors/resGen variants reference it."""
+    key = f"spatial|{size}"
+    if key in cache:
+        return cache[key]
+    root = wreck_sim.small_root() if size == "Small" else wreck_sim.big_root(True)
+    stats = wreck_sim.crate_count_distribution(root, trials)
+    cache[key] = stats
+    return stats
+
+
 def combine_independent_counts(stats_a, stats_b):
     """Count distribution of stats_a's crates PLUS stats_b's crates from
     one wreck (e.g. debris field + the secondary resGroupSpawn pass) - a
@@ -583,9 +625,11 @@ def compute_crate_spawn_stats(sheets, sectors, cache):
     all) so a caller who already knows which size wreck it's looking at
     (from the hull it can see - BigPiece/SmallPiece debris vs a single
     plain hull piece) can quote the number that actually applies, instead
-    of the diluted sector-wide blend."""
-    resgen = {l["id"]: l for l in sheets["resGen"]["lines"]}
-    resgroup = {l["id"]: l for l in sheets["resGroup"]["lines"]}
+    of the diluted sector-wide blend. All three flavors (debris,
+    secondarySpawn, total) come from spatial_crate_stats, the
+    placement-faithful simulation - see its own docstring for why that's
+    the shipped source of truth rather than this file's abstract
+    tree-walk Monte Carlo."""
 
     def rollup(entries):
         n = len(entries)
@@ -606,16 +650,11 @@ def compute_crate_spawn_stats(sheets, sectors, cache):
         wr = l.get("generation", {}).get("wreckResGen")
         if not wr:
             continue
-        entries = [crate_count_stats_raw(resgen, resgroup, entry["resGen"], cache) for entry in wr]
         sizes = [wreck_size_of_resgen(entry["resGen"]) for entry in wr]
-        tiers = [tier_of_resgen(entry["resGen"]) for entry in wr]
-        secondary_entries = [
-            secondary_spawn_stats(resgroup, size, tier, cache)
-            for size, tier in zip(sizes, tiers)
-        ]
-        combined_entries = [
-            combine_independent_counts(base, bonus) for base, bonus in zip(entries, secondary_entries)
-        ]
+        spatial_by_size = {size: spatial_crate_stats(size, cache) for size in set(sizes)}
+        entries = [spatial_by_size[size]["debris"] for size in sizes]
+        secondary_entries = [spatial_by_size[size]["secondarySpawn"] for size in sizes]
+        combined_entries = [spatial_by_size[size]["total"] for size in sizes]
         stats = rollup(entries)
         stats["bySize"] = {
             size: {
@@ -692,15 +731,11 @@ def compute_wreck_site_item_odds(sheets, sectors, patch_by_level, bp_by_level, i
     site (avg ~3.6 crates) by roughly that same factor.
 
     "How many crates a wreck has" is the FULL total from
-    compute_crate_spawn_stats/secondary_spawn_group_id: the debris field
-    scattered at creation PLUS the second, independent generation pass a
-    wreck's marked hull piece ALWAYS triggers via its own resGroupSpawn -
-    confirmed unconditional, not tied to the player's actual dismantle
-    action (see Finding 11, game_logic_notes.md) - composed here via
-    combine_independent_counts, the same convolution compute_crate_spawn_
-    stats' own "total" figure already uses, so a wreck's per-item odds
-    match its own overall crate-count total rather than only the
-    debris-field slice of it.
+    spatial_crate_stats (the same placement-faithful simulation
+    compute_crate_spawn_stats' own "total" figure uses - see that
+    function's and spatial_crate_stats' own docstrings), so a wreck's
+    per-item odds match its own overall crate-count total rather than
+    only the debris-field slice of it.
 
     A sector's wreckResGen list is a flat list of resGen ids (e.g.
     "ShipWreck_Small_1"), each ALREADY fixing both size and tier at once -
@@ -719,11 +754,8 @@ def compute_wreck_site_item_odds(sheets, sectors, patch_by_level, bp_by_level, i
 
         atLeastOnePct = 1 - sum_k P(TOTAL count=k | variant's (size,tier)) * (1-p)**k
 
-    uses the full (debris + dismantle-bonus) count distribution - exact,
+    uses the full (debris + secondary-spawn) count distribution - exact,
     not a Poisson approximation of expectedPerWreck."""
-    resgen = {l["id"]: l for l in sheets["resGen"]["lines"]}
-    resgroup = {l["id"]: l for l in sheets["resGroup"]["lines"]}
-
     sector_variant_weights = {}
     for l in sheets["sector"]["lines"]:
         wr = l.get("generation", {}).get("wreckResGen")
@@ -735,18 +767,10 @@ def compute_wreck_site_item_odds(sheets, sectors, patch_by_level, bp_by_level, i
         sector_variant_weights[l["id"]] = dict(weights)
 
     def total_crate_stats(resgen_id):
-        """Debris field + hull-dismantle bonus, convolved - see this
-        function's own docstring and Finding 11."""
-        key = f"total|{resgen_id}"
-        if key in cache:
-            return cache[key]
-        debris = crate_count_stats_raw(resgen, resgroup, resgen_id, cache)
-        size = wreck_size_of_resgen(resgen_id)
-        tier = tier_of_resgen(resgen_id)
-        bonus = secondary_spawn_stats(resgroup, size, tier, cache)
-        total = combine_independent_counts(debris, bonus)
-        cache[key] = total
-        return total
+        """The wreck's true total crate-count distribution (debris +
+        secondary spawn) - see spatial_crate_stats, cached there per size
+        (tier-independent), not re-simulated per resgen_id here."""
+        return spatial_crate_stats(wreck_size_of_resgen(resgen_id), cache)["total"]
 
     def compute_for_pool(pool_by_level, own_itl, opp_itl, opp_pool_by_level):
         rows = []
@@ -955,20 +979,21 @@ def main():
                 "generation rules; the live client itself runs on a "
                 "further-SANITIZED, server-distributed data.cdb with "
                 "generation/loot props stripped entirely. total is debris "
-                "+ secondarySpawn (a convolution of the independent count "
-                "distributions, self-convolved once more for Big's two "
-                "passes) - the real total for that wreck, not an "
+                "+ secondarySpawn - the real total for that wreck, not an "
                 "alternate scenario. RESOLVED 2026-07-25 (see "
                 "game_logic_notes.md's Finding 12 resolution for the full "
-                "evidence chain and count-roll correction): matches "
-                "live-tracked data closely (Small ~1.9 vs ~1.93 observed "
-                "n=189; this file's closed-form/Monte-Carlo Big figure "
-                "runs ~7.1, about 10% above the ~6.47 observed n=103 - "
-                "the residual is attributable to placement-retry/"
-                "collision losses this count-only model doesn't simulate "
-                "spatially; see tools/simulate_wreck_placement.py for the "
-                "placement-faithful simulation that closes that gap to "
-                "~6.6 if a more precise Big figure is ever needed).",
+                "evidence chain): these figures are computed by a "
+                "placement-faithful spatial simulation (tools/"
+                "simulate_wreck_placement.py, actually laying out every "
+                "piece with real collision/retry dynamics), not a "
+                "count-only tree walk - matching live-tracked data closely "
+                "(Small ~1.9 vs ~1.93 observed n=189; Big ~6.6-6.8 vs "
+                "~6.47 observed n=103). This file's own non-spatial "
+                "Monte Carlo (count_crates_in_wreck) is retained as an "
+                "independent cross-check, not the source of these "
+                "numbers - it runs ~10% high for Big specifically, since "
+                "it can't see the placement-retry/collision losses a real "
+                "spatial layout produces.",
                 "itemDropOdds[*].groups[*].pct is CONDITIONAL ON a crate "
                 "already being open (P(item | one crate opened)) - it does "
                 "NOT account for how many crates a wreck actually has, which "
