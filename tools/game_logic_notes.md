@@ -590,15 +590,19 @@ resource placer Finding 5 already named as `generateShipwreck`'s target).
 
 **The generation-tree semantics, confirmed from decompiled bytecode**:
 - A resGroup's `generation.groups` list is an **AND**: every listed entry
-  independently contributes `count = uniform_int(min, max)` placed
-  instances (confirmed matching the already-documented `depositGroupSizes`
-  behavior in the sibling `spacecraft-memory-research` repo). If the
-  *enclosing* group has its own `props.explodingChance` set (e.g.
-  `ShipWreck_JunkGroup_lvl0`'s `0.1`), that count is instead drawn from a
-  wider `uniform_int(2*min, 3*max)` range with that probability — the exact
-  bit-level trigger check was mangled by the decompiler (same class of
-  issue as Finding 6's opcode soup), so this is modeled as a literal
-  probability roll, the obvious reading of a field named `explodingChance`.
+  independently contributes a rolled count of placed instances.
+  **CORRECTED (Finding 12 resolution, 2026-07-25): the count roll is NOT
+  `uniform_int(min, max)`.** `getResGroupCount` (findex 11234 post-2026-07
+  update; was 11224), decoded from raw opcodes at `PlanetRes.hx:644-649`:
+  the normal branch returns `min + MIN(U1, U2)` where U1/U2 are two
+  independent uniform draws over `{0 .. max-min}` — the **minimum of two
+  rolls**, biasing every count toward its low end (E[count] for `{0,2}` is
+  0.556, not 1.0; for `{1,2}` it's 1.25, not 1.5). If the *enclosing*
+  group has `props.explodingChance` set (e.g. `ShipWreck_JunkGroup_lvl0`'s
+  `0.1`), that probability instead selects `2*min + MIN(U1, U2)` over
+  `{0 .. 3*max-2*min}` — also min-of-two, not the flat
+  `uniform_int(2*min, 3*max)` modeled before. Every simulation/expectation
+  in Findings 8/9/11 that used a single uniform draw overstates counts.
 - A resGroup's `generation.overrides` list is an **OR**: exactly one entry
   is chosen, weighted by its own `weight` — this is the mechanic Finding
   5/`CHEST_LEVELS` already relies on for the crate's own level roll.
@@ -629,7 +633,11 @@ single spawn-or-not roll. `count_crates_in_wreck` in
 simulated pass, not just a boolean.
 
 **Simulated (20k-trial Monte Carlo per wreck type, replicating the
-algorithm above exactly against live `data.cdb` values)**:
+algorithm above exactly against live `data.cdb` values)** — **SUPERSEDED
+(Finding 12 resolution): these figures assume single-uniform count rolls
+and no secondary pass; the corrected debris-field-only figures under the
+real min-of-two roll are E[count] ~0.43 (Small) / ~1.8 (Big), and the
+correct TOTAL per-wreck numbers live in Finding 12's resolution below**:
 
 | Wreck type | P(≥1 crate) | E[crate count] | Distribution |
 |---|---|---|---|
@@ -1038,27 +1046,178 @@ mismatch:**
   transcription error hiding here. Rejected as the primary driver, though
   it may still be a real, minor, wrong-direction contributor.
 
-**Still open**: no tested hypothesis explains why Small wrecks'
-crate-count distribution has a hard cliff between 3 and 4 (model treats
-them as near-equally likely; observed is ~7x rarer at 4) with zero
-true-zero sites, while the debris-field/Big-wreck mechanisms this repo
-has modeled and verified all produce smoother distributions. The mismatch
-is specific to the DIRECT-`res`-placement mechanism unique to Small's
-`resGroupSpawn` target - every other crate-count-relevant mechanism found
-so far (debris-field RareLoot, Big's secondary spawn) routes through the
-SAME `RareLoot` override this repo has already modeled and verified.
-`isValidTerrainSlope`/`getNearCartesian` are now fully decompiled (see
-above) and don't explain it - a cliff-shaped cap needs a different
-mechanism than either "silent zero-out" (wrong direction, ruled out
-above) or "re-roll on retry" (inapplicable to direct-`res` targets, ruled
-out earlier). Worth checking whether the retry loop's own MAX-ATTEMPT
-count (referenced but not yet pinned down precisely in this investigation
-- see `generateResource@11223`'s up-to-50-attempt retry loop) could
-itself impose a de facto ceiling specific to how many direct-`res` slots
-get exhausted before the loop gives up, and/or gathering more
-live-verified fresh Small wreck samples (only 3 gathered so far across
-sessions: 2, 1, 9 crates) to build a larger, contamination-free empirical
-distribution before trying to match it to a corrected model.
+**RESOLVED (2026-07-25)** - the Small distribution shape is fully
+explained by two count-roll behaviors decoded from raw opcodes (findices
+are post-2026-07-update; the whole `logic.gen.PlanetRes` block shifted
++10: generateGroup 11222->11232, generateResource 11223->11233,
+getResGroupCount 11224->11234), plus the placement geometry, all
+cross-verified against 189 tracked Small sites from the sibling repo's
+`wreck_events.jsonl` (up from the 75 this Finding originally used):
+
+1. **Every count roll is the MINIMUM of two uniform draws, not one**
+   (`getResGroupCount@11234`, see the corrected semantics bullet in
+   Finding 8). This alone collapses the model's fat 3-5 shoulder: the
+   Small secondary's `{0,4}` direct placement rolls
+   {0:36%, 1:28%, 2:20%, 3:12%, 4:4%}, not 20% each, and the debris
+   field's expected crates drop from ~0.89 to ~0.43 (observed across the
+   189 sites, counting crates ≥3u from the hull: 0.46).
+2. **A direct-`res` entry that rolls 0 is bumped to 1 if that resource id
+   hasn't been generated yet in the current `PlanetRes` run**
+   (`generateGroup@11232` ops 176-199, `PlanetRes.hx:430`: `count==0 &&
+   entry.max>0 && (generatedResources[res.id] null or 0) -> count=1`).
+   `generatedResources` is per-run and starts empty - `loadExisting` only
+   feeds the spatial partition, verified from its closure's opcodes - and
+   every cycle-spawned wreck is its own run (`generateShipwreck` ->
+   `generateResGens` -> `new PlanetRes`), so **every cycle-spawned Small
+   wreck's hull `resGroupSpawn` pass places at least 1 crate,
+   unconditionally**. That's the "never zero" observation (189/189 sites
+   with >=1 crate). Group entries don't get the bump, which is why Big
+   sites CAN roll zero (2 of 103 observed - Big's secondary routes
+   through the `RareLoot` group). Note the bump implies initial
+   world-gen wrecks (all placed in ONE run at world creation) only
+   guarantee a crate for the FIRST Small wreck per planet-run - but every
+   wreck standing today came from the ongoing per-0.5-day cycle, so in
+   practice the guarantee is universal.
+3. **Placement geometry pins the guaranteed crate to the hull**: the
+   `resGroupSpawn` recursion anchors at the hull piece's exact lat/lon
+   (`generateResource@11233`, `PlanetRes.hx:559-564`), and
+   `generateGroup`'s first-instance scatter radius works out to
+   ~2 x resSize x groupDensity ~= 1.5u for the 0.75-size crate - observed:
+   the nearest crate sits 0.125-1.56u from the hull in 189/189 sites.
+   Later instances drift outward as the anchor re-centers on the
+   size-weighted centroid of what's been placed (`PlanetRes.hx:486-497`),
+   giving the observed 2-4u second/third crates.
+
+**Corrected Small model vs the 189 tracked sites** (Monte Carlo faithful
+to the decoded rolls; hull part = min-of-two{0..4} with 0->1 bump, debris
+= min-of-two rolls through `JunkGroup`/`RareLoot`/blackbox):
+
+| crates | predicted (of 189) | observed |
+|---|---|---|
+| 0 | 0.0 | 0 |
+| 1 | 80.1 | 85 |
+| 2 | 57.2 | 55 |
+| 3 | 32.1 | 36 |
+| 4 | 14.6 | 8 |
+| 5 | 4.0 | 4 |
+| 6+ | ~0.9 | 0 (+1 nine-crate outlier, a merged double site) |
+
+Predicted mean 1.99 vs observed 1.93. The hull-crate sub-distribution
+alone (crates <3u of hull) matches {64%, 20%, 12%, 4%} predicted vs
+{67%, 21%, 11%, 2%} observed. The old model's unexplained "cliff between
+3 and 4" is just the min-of-two roll (3s and 4s are NOT near-equally
+likely: 12% vs 4% before debris smearing); the k=4 row's remaining modest
+overprediction (14.6 vs 8) is the one residual, plausibly placement-
+failure losses of a 3rd/4th crate in the crowded hull disc - minor, and
+in the opposite-and-smaller direction of the original 2.89-vs-1.86
+anomaly.
+
+**Big wrecks under the corrected model - RESOLVED TOO (2026-07-25,
+follow-up session)**: min-of-two deflates Big's static total to ~4.5
+expected, but observed is 6.47 (n=103, isolation-checked: identical
+numbers clustering at 150/250/500u) - so Finding 11's celebrated "7.09
+predicted vs 7.00 observed" agreement was substantially coincidental (a
+single-uniform overshoot compensating a genuinely missing mechanism).
+The missing ~2.5 crates: **`BigPiece2` fires the same
+`DismantledJunkGroup_lvl{N}` secondary pass as `BigPiece1` on the live
+servers, even though the SHIPPED client `data.cdb` carries
+`props.resGroupSpawn` only on `BigPiece1`.** Evidence chain, in order of
+discovery (raised by the user's own in-game impression that P2 behaves
+like P1):
+
+- Tracked sightings show a crate within 4u of BigPiece2 at the same rate
+  and with the SAME count distribution as BigPiece1 (P1
+  {0:20%, 1:22%, 2:34%, 3:17%, 4:6%} vs P2 {0:17%, 1:28%, 2:34%, 3:14%,
+  4:7%}, n=103 each) - one shared mechanism, not coincidence.
+- Under the decoded collision rule (sum-of-radii: a placement fails
+  within `node.size + mySize` of any partitioned node - confirmed
+  empirically by the observed P1<->P2 spacing floor: min 45.1u over 103
+  wrecks vs the 25+20 radius sum) it is geometrically IMPOSSIBLE to
+  place a crate 1-3u from an already-placed P2 or to place P2 next to an
+  existing crate. The only window that allows a glued crate is the
+  piece's own `resGroupSpawn` recursion (a resource enters the collision
+  partition only AFTER that recursion - `generateResource@11233` op
+  order: resources.push -> resGroupSpawn -> partition.add).
+- Crate top-up over time is ruled out (10 stray later-appearing crates
+  near 206 tracked pieces across days - leave/return artifacts; and
+  `performShipWreckCycle@8108`/`flush@8112` contain no generation call
+  besides `generateShipwreck@8110` for NEW wrecks).
+- The client `data.cdb` is NOT stale: re-extracted from the current
+  `res.pak` (post-2026-07-22 patch) and md5-identical to the copy read.
+  So this is a real client-data-vs-server-behavior divergence - the
+  authoritative server (which runs all generation; the client only
+  receives results) evidently has `resGroupSpawn` on both BigPiece1 AND
+  BigPiece2 (or equivalent server-side data/code). First documented case
+  in this project of the shipped `data.cdb` not matching live-server
+  generation behavior; worth remembering for any future static-data
+  conclusion.
+- **Follow-up (same day): the divergence mechanism itself was then found
+  and live-verified - the client does not even RUN on `res.pak`'s
+  `data.cdb`.** Two independent proofs: (1) `hlboot.dat`'s string table
+  contains `".networkData/data.cdb"` and `"cdbTmpFilename"` - the client
+  DOWNLOADS a server-distributed `data.cdb` at connect and loads that
+  (the cache file itself wasn't found on disk - possibly transient/
+  deleted after load - but the code path is unambiguous). (2) Reading
+  the RUNNING online client's parsed CDB rows directly out of process
+  memory (via the sibling repo's `hl_process.py`: `$Data` global ->
+  `resource.all` ArrayDyn -> per-row vdynobj field lookups, using
+  hl_hash_gen's exact semantics incl. C signed-int32 overflow before the
+  single final modulo - short names hash fine either way, longer ones
+  like "props" NEED the overflow emulation): every wreck piece's
+  `props` is EMPTY in live memory - `resGroupSpawn` is null/absent even
+  on `BigPiece1` and the Small hulls, where `res.pak`'s copy plainly
+  sets it. (Reads a few minutes apart show those fields flickering
+  between absent and present-but-null - that's HL's dynobj-to-virtual
+  cast machinery lazily materializing MISSING virtual fields as null
+  lookup entries as the game touches props; the values are never
+  non-null.) So the server distributes a SANITIZED data file to clients
+  - generation/loot-relevant props stripped, presumably anti-datamining
+  - and there are really THREE data.cdb variants: the server's
+  authoritative full copy (never client-visible; the only one where
+  BigPiece2's `resGroupSpawn` actually lives), the sanitized
+  server-distributed copy the live client runs on, and `res.pak`'s
+  shipped full-but-stale snapshot (the only full copy we can read -
+  correct for BigPiece1/Small hull, missing the BigPiece2 change).
+  Consequence: for server-side generation questions, the shipped
+  `data.cdb` is a *lower bound* on what the server's data contains, and
+  live-observed behavior (tracked events) outranks it - exactly how the
+  BigPiece2 secondary was established.
+- **Open, cheap discriminating test (solo mode)**: the game has a solo
+  mode where the client must run generation locally - with whichever
+  data copy it uses there. Prediction: if solo uses `res.pak` data, solo
+  Big wrecks show glued crates at BigPiece1 but NOT BigPiece2 (directly
+  demonstrating the pak-vs-server divergence in-game); if solo uses the
+  sanitized network copy, solo wrecks spawn with no secondary crates at
+  all (and Small hulls lose their guaranteed crate). Either outcome is
+  informative; not yet tested.
+- Verified by simulation: `tools/simulate_wreck_placement.py` (added
+  with this finding) implements the decoded placement algorithm
+  faithfully - min-of-two counts, the 0->1 bump, sum-of-radii
+  collisions, the partition-blind window, per-attempt override
+  re-rolls, 50-attempt instance retries, size-weighted recentering, and
+  `run@11230`'s reroll-the-whole-wreck-on-failure conditioning
+  (PlanetRes.hx:261-298: a failed attempt is fully rolled back via
+  `cancelResources` and regenerated elsewhere - which is also why live
+  wrecks ALWAYS have their black box and full junk complement). With P2's
+  secondary OFF (client data as-is): Big total 4.12, P2 glued 0% -
+  contradicted. With it ON: **Big total 6.61 vs 6.47 observed**, P1/P2
+  glued distributions match bin-for-bin, black box 100% at ~61u (observed
+  100% at ~53u). Small-wreck regression under the same simulator: total
+  1.84 vs 1.93 observed, glued {1:67%, 2:19%, 3:10%, 4:3%} vs
+  {63/21/15/2} - intact.
+- The re-roll-on-retry crate-share inflation suspected in the previous
+  paragraph IS real as a mechanism (the Overrides arm re-picks 40:25 on
+  every parent retry - confirmed from `generateGroup@11232` ops 427-524)
+  but is inherently included in the simulation and turns out NOT to be a
+  significant contributor; the P2 secondary accounts for the gap.
+
+Corrected per-wreck crate expectations, both now empirically validated:
+**Small ~1.9** (guaranteed hull crate + min-of-two extras + debris),
+**Big ~6.6** (two per-piece secondary passes + debris). A black box is
+guaranteed 1 per wreck (the same 0->1 bump on its `{0,1}` direct-res
+entry - user-confirmed as known in-game behavior, and 133/133 tracked
+sites once black-box tracking was enabled; earlier lower rates in the
+event log were a tracking-coverage artifact, not depletion).
 
 ## Finding 13: Farming — "Rockwood Nut" (Xenic Farm) variant outcomes, exact gate conditions, and enrichment bonuses
 

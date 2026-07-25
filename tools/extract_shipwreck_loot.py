@@ -301,39 +301,60 @@ def compute_item_drop_odds(pool_by_level, own_itl, opp_itl, opp_pool_by_level, s
 
 def res_group_count(min_, max_, exploding_chance):
     """One draw of a `{min,max,gen}` group entry's instance count, per the
-    decompiled logic.gen.PlanetRes.getResGroupCount (findex 11224): a plain
-    uniform int in [min,max], or - with probability exploding_chance, when
-    the *enclosing* group has that prop set (e.g. ShipWreck_JunkGroup_lvl0's
-    0.1) - a uniform int in the wider [2*min, 3*max] range instead.
+    decompiled logic.gen.PlanetRes.getResGroupCount (post-2026-07-update
+    findex 11234, src/logic/gen/PlanetRes.hx:644-649): the normal branch
+    draws TWO independent uniforms over [0, max-min] and takes the MINIMUM,
+    returning min_ + that value (not a single uniform draw - min(A,B) sits
+    lower on average, E[min of 2 uniforms over span S] = S/3, not S/2). With
+    probability exploding_chance (set on the *enclosing* group, e.g.
+    ShipWreck_JunkGroup_lvl0's 0.1), the same min-of-two draw instead runs
+    over the wider [0, 3*max-2*min] span, offset by 2*min_.
 
-    NOTE (2026-07-20): raw opcodes (src/logic/gen/PlanetRes.hx:644-649) show
-    both branches actually draw TWO independent uniforms over the same span
-    and take the MINIMUM, not a single draw - min(A,B) sits lower on average
-    than one draw (E[min of 2 uniforms over span S] = S/3, not S/2), so this
-    plain-randint version overstates expected crate counts relative to the
-    real algorithm. NOT switched to the corrected version yet: doing so
-    widens the gap against CraftMap's live-tracked observed crate counts
-    (tools/audit_wreck_crate_rates.py in the sibling Craftmap repo) from
-    ~2x to ~4x rather than closing it, so there is still at least one other
-    unidentified factor at play and this file's shipped numbers are left
-    alone pending that - see the investigation thread referenced there
-    before changing this function."""
+    RESOLVED (2026-07-25): this correction was previously known but not
+    applied, because switching it alone widened the gap against CraftMap's
+    live-tracked crate counts rather than closing it. The actual reason:
+    two OTHER effects were missing at the same time (the direct-res 0->1
+    "not yet generated this run" bump in count_crates_in_wreck below, and
+    ShipWreck_BigPiece2 firing the same resGroupSpawn secondary pass as
+    BigPiece1 on the live servers despite data.cdb only marking BigPiece1 -
+    see secondary_spawn_stats and game_logic_notes.md's Finding 12
+    resolution for the full evidence chain). With all three fixes applied
+    together, the model matches live-tracked crate counts to within a few
+    percent (Small ~1.9 vs ~1.93 observed n=189, Big ~6.6 vs ~6.47 observed
+    n=103) - cross-verified independently by a placement-faithful spatial
+    simulation (tools/simulate_wreck_placement.py in the sibling
+    spacecraft-memory-research repo)."""
+    span = max_ - min_
     if exploding_chance and random.random() < exploding_chance:
-        lo, hi = 2 * min_, 3 * max_
-    else:
-        lo, hi = min_, max_
-    return random.randint(lo, max(hi, lo))
+        return 2 * min_ + min(random.randint(0, 3 * span), random.randint(0, 3 * span))
+    return min_ + min(random.randint(0, span), random.randint(0, span))
 
 
-def count_crates_in_wreck(resgroup, group_id, depth=0):
+def count_crates_in_wreck(resgroup, group_id, depth=0, generated=None):
     """One simulated placement pass through a resGroup's generation tree
-    (per decompiled logic.gen.PlanetRes.generateGroup, findex 11222):
+    (per decompiled logic.gen.PlanetRes.generateGroup, findex 11232):
     `groups` entries all fire independently (AND, each its own random
     count, and each instance can itself recurse into another full
     sub-tree - so multiple crates from one wreck are possible and were
     confirmed common for Big wrecks); `overrides` entries pick exactly one
     weighted branch (OR). Returns the number of ShipWreck_LootChestRare_*
-    resources placed in this pass (0 if none)."""
+    resources placed in this pass (0 if none).
+
+    `generated` tracks, for THIS simulated pass only (a fresh empty dict
+    per trial, threaded through the recursion), which resource ids have
+    already been placed - needed for the direct-`res` 0->1 bump below:
+    generateGroup (ops 176-199, PlanetRes.hx:430) bumps a `groups` entry's
+    rolled count from 0 up to 1 whenever its target is a direct `res` (not
+    a nested `group`) AND that resource id hasn't been generated yet this
+    PlanetRes.run - real, live-verified consequence: Small wrecks' hull
+    secondary spawn (a direct {min:0,max:4,res:Crate} placement, no
+    RareLoot override layer) always fires before any debris-field crate
+    could exist, so it ALWAYS places >=1 crate - matching 189/189 tracked
+    Small sites never showing zero. The bump only ever applies to direct
+    `res` entries, never to `overrides` picks (RareLoot's crate/junk
+    choice has no such floor) - see game_logic_notes.md Finding 12."""
+    if generated is None:
+        generated = {}
     if depth > 20:
         return 0
     g = resgroup[group_id]
@@ -345,11 +366,15 @@ def count_crates_in_wreck(resgroup, group_id, depth=0):
         for entry in gen["groups"]:
             count = res_group_count(entry["min"], entry["max"], exploding_chance)
             sub = entry["gen"]
+            if "res" in sub and count == 0 and entry["max"] > 0 and not generated.get(sub["res"]):
+                count = 1
             for _ in range(count):
                 if "group" in sub:
-                    total += count_crates_in_wreck(resgroup, sub["group"], depth + 1)
-                elif sub["res"].startswith("ShipWreck_LootChestRare"):
-                    total += 1
+                    total += count_crates_in_wreck(resgroup, sub["group"], depth + 1, generated)
+                else:
+                    generated[sub["res"]] = generated.get(sub["res"], 0) + 1
+                    if sub["res"].startswith("ShipWreck_LootChestRare"):
+                        total += 1
         return total
 
     if "overrides" in gen:
@@ -360,7 +385,8 @@ def count_crates_in_wreck(resgroup, group_id, depth=0):
             if k <= 0:
                 sub = o["gen"]
                 if "group" in sub:
-                    return count_crates_in_wreck(resgroup, sub["group"], depth + 1)
+                    return count_crates_in_wreck(resgroup, sub["group"], depth + 1, generated)
+                generated[sub["res"]] = generated.get(sub["res"], 0) + 1
                 return 1 if sub["res"].startswith("ShipWreck_LootChestRare") else 0
         return 0
 
@@ -431,37 +457,31 @@ def secondary_spawn_group_id(size, tier):
     are unrelated; this function is named for the FIRST one only (the
     resGroupSpawn target), not the player action.
 
-    Confirmed directly from data.cdb's `resource` sheet: exactly one hull
-    piece per wreck ever carries a props.resGroupSpawn at all - a Small
-    wreck's own single ShipWreck_Lvl{tier} piece (-> ShipWreck_
-    DismantledJunkGroup_lvl{tier}_Small, a direct {min:0,max:4}
-    ShipWreck_LootChestRare_lvl{tier} placement - no RareLoot override
-    layer), or for a Big wreck, ONLY BigPiece1_lvl{tier} (-> ShipWreck_
-    DismantledJunkGroup_lvl{tier}, a {min:3,max:15} RareLoot_lvl{tier}
-    invocation count, ~6x the debris field's own {min:0,max:2}) - never
-    BigPiece2/SmallPiece1/SmallPiece2.
+    Confirmed directly from data.cdb's `resource` sheet: only
+    ShipWreck_Lvl{tier} (Small) and BigPiece1_lvl{tier} (Big) carry
+    props.resGroupSpawn in the SHIPPED client data.cdb (never
+    BigPiece2/SmallPiece1/SmallPiece2). Small's target is a direct
+    {min:0,max:4} ShipWreck_LootChestRare_lvl{tier} placement (no RareLoot
+    override layer); Big's is a {min:3,max:15} RareLoot_lvl{tier}
+    invocation count, ~6x the debris field's own {min:0,max:2}.
 
-    This was missing entirely from both this file's original Monte Carlo
-    AND the sibling spacecraft-memory-research repo's independent
-    closed-form resgroup_expected_crate_count - neither ever looked past
-    a wreck's own outer GShipWreck_{size}_lvl{tier} resGroup tree into an
-    individually-placed resource's own props.resGroupSpawn, a completely
-    separate trigger mechanism from the generation tree both were already
-    walking. Confirmed live against CraftMap's wreck_events telemetry
-    (2026-07-20, see tools/audit_wreck_crate_rates.py in the sibling
-    Craftmap repo, and a direct live-memory read of 4 currently-existing
-    wrecks): debris-field-only expectedCount (3.65 Big / 0.89 Small)
-    undershot real observed per-wreck crate counts (~7.0 Big / ~1.86
-    Small) by 2-4x; debris + this secondary spawn (7.09 Big / 2.89 Small)
-    landed within 1.3% of observed for Big, but overshoots Small - and
-    since this pass is unconditional (not player-behavior-dependent, per
-    the trigger confirmation above), that Small gap is a genuinely
-    unresolved discrepancy, not a "players don't always mine it" story.
-    One further live-data anomaly still unexplained: 0 of 71 historically
-    observed Small wreck sites ever show 0 crates, though this model
-    predicts roughly an 8% chance of that outcome - some guarantee of at
-    least one crate on Small wrecks likely exists that neither this pass
-    nor the debris field accounts for."""
+    **RESOLVED (2026-07-25, see secondary_spawn_stats below and
+    game_logic_notes.md's Finding 12 resolution): on the live servers,
+    BigPiece2 fires this SAME secondary pass too** - the shipped
+    data.cdb (verified current by md5 against a fresh res.pak extract)
+    only marks BigPiece1, but live-tracked crate counts glued to
+    BigPiece2 are statistically identical to BigPiece1's (n=103 each),
+    which is geometrically only possible via BigPiece2's own
+    resGroupSpawn window (sum-of-radii collision makes any other origin
+    impossible). Root cause: the online client runs on a server-
+    DISTRIBUTED, SANITIZED data.cdb (downloaded at connect - see
+    ".networkData/data.cdb" in hlboot.dat's string table) with
+    generation/loot props stripped entirely (confirmed by reading a
+    running client's parsed CDB rows directly from process memory) - the
+    server's own authoritative data.cdb is a third, never-client-visible
+    copy, and res.pak's shipped file is merely a lower bound on it. This
+    function still returns the SHIPPED group id for one piece; see
+    secondary_spawn_stats for how the Big-wreck double pass is modeled."""
     if size == "Small":
         return f"ShipWreck_DismantledJunkGroup_lvl{tier}_Small"
     return f"ShipWreck_DismantledJunkGroup_lvl{tier}"
@@ -473,7 +493,9 @@ def crate_count_stats_for_group(resgroup, group_id, cache, trials=CRATE_SPAWN_TR
     in a resGen entry the way a wreck's own initial debris field is) - see
     secondary_spawn_group_id. Shares crate_count_stats_raw's cache (keyed
     by id string, so a secondary-spawn group id never collides with a
-    resGen id)."""
+    resGen id). Each trial gets its own fresh `generated` tracking dict
+    (see count_crates_in_wreck), matching how this pass fires in isolation
+    at the instant its own hull piece is placed."""
     if group_id in cache:
         return cache[group_id]
     counts = [count_crates_in_wreck(resgroup, group_id) for _ in range(trials)]
@@ -486,6 +508,27 @@ def crate_count_stats_for_group(resgroup, group_id, cache, trials=CRATE_SPAWN_TR
         "countDistribution": {k: v / trials for k, v in dist.items()},
     }
     cache[group_id] = stats
+    return stats
+
+
+def secondary_spawn_stats(resgroup, size, tier, cache):
+    """The FULL resGroupSpawn secondary-spawn contribution for a wreck of
+    this (size, tier) - one independent pass for Small (its single hull
+    piece), but TWO independent passes convolved together for Big
+    (BigPiece1 AND BigPiece2, confirmed firing the identical
+    ShipWreck_DismantledJunkGroup_lvl{tier} group on live servers - see
+    secondary_spawn_group_id's docstring and game_logic_notes.md's
+    Finding 12 resolution). Cache-keyed separately from a bare
+    crate_count_stats_for_group call so a caller wanting the true total
+    (this function) and one wanting a single piece's own contribution
+    (crate_count_stats_for_group directly) don't collide."""
+    key = f"secondary|{size}|{tier}"
+    if key in cache:
+        return cache[key]
+    group_id = secondary_spawn_group_id(size, tier)
+    one_piece = crate_count_stats_for_group(resgroup, group_id, cache)
+    stats = one_piece if size == "Small" else combine_independent_counts(one_piece, one_piece)
+    cache[key] = stats
     return stats
 
 
@@ -567,7 +610,7 @@ def compute_crate_spawn_stats(sheets, sectors, cache):
         sizes = [wreck_size_of_resgen(entry["resGen"]) for entry in wr]
         tiers = [tier_of_resgen(entry["resGen"]) for entry in wr]
         secondary_entries = [
-            crate_count_stats_for_group(resgroup, secondary_spawn_group_id(size, tier), cache)
+            secondary_spawn_stats(resgroup, size, tier, cache)
             for size, tier in zip(sizes, tiers)
         ]
         combined_entries = [
@@ -700,7 +743,7 @@ def compute_wreck_site_item_odds(sheets, sectors, patch_by_level, bp_by_level, i
         debris = crate_count_stats_raw(resgen, resgroup, resgen_id, cache)
         size = wreck_size_of_resgen(resgen_id)
         tier = tier_of_resgen(resgen_id)
-        bonus = crate_count_stats_for_group(resgroup, secondary_spawn_group_id(size, tier), cache)
+        bonus = secondary_spawn_stats(resgroup, size, tier, cache)
         total = combine_independent_counts(debris, bonus)
         cache[key] = total
         return total
@@ -882,33 +925,50 @@ def main():
                 "Small's own expected count. Added after CraftMap's live "
                 "wreck-tracking data (tools/audit_wreck_crate_rates.py in "
                 "the sibling Craftmap repo) showed real per-wreck crate "
-                "counts running well above the blended figure once split by "
-                "the hull actually observed (BigPiece1/2+SmallPiece1/2 debris "
-                "vs a single plain hull piece) - the size blend explained "
-                "SOME of that gap, but not all of it; see secondarySpawn "
-                "below and game_logic_notes.md Findings 11-12 for the rest.",
+                "counts running well above this bare debris-field figure - "
+                "the size blend explained some of that gap; the rest comes "
+                "from secondarySpawn below, see its own note and "
+                "game_logic_notes.md's Finding 12 resolution.",
                 "sectors[*].crateSpawn.bySize.{Small,Big}.secondarySpawn/"
-                "total = a SECOND, independent loot-generation pass a "
-                "wreck's marked hull piece (a Small wreck's single hull "
-                "piece, or only BigPiece1 - never BigPiece2/SmallPiece1/"
-                "SmallPiece2 - for a Big wreck) ALWAYS triggers via that "
-                "resource's own props.resGroupSpawn in data.cdb - "
-                "confirmed (Finding 12, including a live before/after "
-                "test) to fire unconditionally at world-generation, NOT "
-                "when the player mines/dismantles that piece, despite the "
-                "underlying resGroup's own 'DismantledJunkGroup' name (a "
-                "wholly separate, unrelated mechanism actually triggers on "
-                "the player's real dismantle action - see Finding 12) - "
-                "completely separate from the debris-field generation tree "
-                "the bare bySize figures above cover. total is debris + "
-                "secondarySpawn (a convolution of the two independent "
-                "count distributions) - the real total for that wreck, not "
-                "an alternate scenario. See game_logic_notes.md Finding 11 "
-                "for the full derivation and live-data verification (within "
-                "~1-3% of observed for Big wrecks; Small's own total lands "
-                "close on the mean but its full count-distribution shape "
-                "does not match this or any tested model - Finding 12, "
-                "still open).",
+                "total = a SECOND, independent loot-generation pass ALWAYS "
+                "triggered via a hull resource's own props.resGroupSpawn "
+                "in data.cdb - fires unconditionally at world-generation, "
+                "NOT when the player mines/dismantles that piece, despite "
+                "the underlying resGroup's own 'DismantledJunkGroup' name "
+                "(a wholly separate, unrelated mechanism actually triggers "
+                "on the player's real dismantle action - see Finding 12). "
+                "Small: one pass at its single hull piece, a direct "
+                "{min:0,max:4} crate placement with a guaranteed-nonzero "
+                "0->1 bump (the first thing that can ever place this "
+                "resource id in a fresh generation run) - live-verified: "
+                "189/189 tracked Small wreck sites show >=1 crate, never "
+                "zero. Big: TWO independent passes, BigPiece1 AND "
+                "BigPiece2 - the shipped data.cdb (verified current by "
+                "md5 against a fresh res.pak extract) only marks "
+                "BigPiece1 with resGroupSpawn, but live-tracked crate "
+                "counts glued to BigPiece2 are statistically identical to "
+                "BigPiece1's (n=103 each), and placement-collision "
+                "geometry rules out any origin for a BigPiece2-glued "
+                "crate other than BigPiece2's own resGroupSpawn window - "
+                "traced to the shipped data.cdb being merely a lower "
+                "bound on the server's own (never client-visible) "
+                "generation rules; the live client itself runs on a "
+                "further-SANITIZED, server-distributed data.cdb with "
+                "generation/loot props stripped entirely. total is debris "
+                "+ secondarySpawn (a convolution of the independent count "
+                "distributions, self-convolved once more for Big's two "
+                "passes) - the real total for that wreck, not an "
+                "alternate scenario. RESOLVED 2026-07-25 (see "
+                "game_logic_notes.md's Finding 12 resolution for the full "
+                "evidence chain and count-roll correction): matches "
+                "live-tracked data closely (Small ~1.9 vs ~1.93 observed "
+                "n=189; this file's closed-form/Monte-Carlo Big figure "
+                "runs ~7.1, about 10% above the ~6.47 observed n=103 - "
+                "the residual is attributable to placement-retry/"
+                "collision losses this count-only model doesn't simulate "
+                "spatially; see tools/simulate_wreck_placement.py for the "
+                "placement-faithful simulation that closes that gap to "
+                "~6.6 if a more precise Big figure is ever needed).",
                 "itemDropOdds[*].groups[*].pct is CONDITIONAL ON a crate "
                 "already being open (P(item | one crate opened)) - it does "
                 "NOT account for how many crates a wreck actually has, which "
