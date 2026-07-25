@@ -1105,7 +1105,7 @@ where this actually changes the answer (its 2-item `supplements` list).
 | Rockwood Green (`Rockwood`) | Rockwood Nut | Lime | Neutral Fertilizer | Metallic Fertilizer | any | any | no Reclusive-tagged neighbor plant |
 | Rockwood White (`Whitewood`) | Rockwood Nut | Kaolinite | Metallic Fertilizer | — | any | any | no Reclusive-tagged neighbor plant |
 | Rockwood Dream (`Dreamwood`) | Dreamwood Fruit | Elmerium Nugget | Elmerium Dust | — | Cold, OR Temperate, OR Warm (raw bitmask `7`; excludes Hot) | Dark only (raw `4`) | — |
-| Rockwood Glow (`Glowwood`) | Glowwood Fruit | Rockwood Bark | none | — | **impossible under normal play — see correction below**, not "any" | **impossible under normal play — see correction below**, not "any" | no Reclusive-tagged neighbor plant |
+| Rockwood Glow (`Glowwood`) | Glowwood Fruit | Rockwood Bark | — (corrected in Finding 18: an earlier reading of this cell as "no fertilizer of ANY kind may be present" was wrong — no such gate type exists in the game; Glow's data simply has neither a supplements nor a noSupplements list) | — | **impossible under normal play — see correction below**, not "any" | **impossible under normal play — see correction below**, not "any" | no Reclusive-tagged neighbor plant |
 | Rockwood Bitter (`Sulfwood`) | Rockwood Nut | Pyrite | Acidic Fertilizer AND Metallic Fertilizer (both required simultaneously — see AND/OR note above) | Carbonic Fertilizer | Warm, OR Hot (raw bitmask `12`) | any | — |
 
 **Correction, confirmed both by re-tracing raw disassembly and by a real
@@ -1183,25 +1183,45 @@ Xenic Farm building itself, not to individual plants.
 **Enrichment bonuses** (conditions checked against the SAME current single
 temperature/light dial position, plus supplement presence / neighbor tag;
 `ARatio` = additive %, e.g. `1.0` = +100%; `MRatio` = multiplicative, e.g.
-`0.6` = ×0.6 i.e. -40%):
+`0.6` = ×0.6 i.e. -40%. **"Fruit"/"Byproduct" entries below are Quantity,
+not Speed — see Finding 17**, which corrects this list in place: an
+earlier pass wrote these as "Fruit speed"/"Byproduct speed" by
+pattern-matching the `FarmPlantFruitProductionSpeed`/
+`FarmPlantExtraProductionSpeed` attr ids' literal "...Speed" suffix,
+without checking that the `attribute` sheet's own display name for both
+is "Germ Quantity"/"Byproduct Quantity" and that the code only ever reads
+them into a one-time end-of-growth harvest quantity, never into any
+duration. `FarmPlantAllSpeed`/`FarmPlantGrowthSpeed(Mult)` entries
+("Growth speed"/"Growth+Production speed") are unaffected — those
+generic ARatio/MRatio conventions above still.):
 
-- **Rockwood Green**: Carbonic Fertilizer present → Fruit speed +50%,
-  Byproduct speed +50%.
-- **Rockwood White**: Neutral Fertilizer present → Byproduct speed +75%.
-  Carbonic Fertilizer present → Fruit speed +50%, Byproduct speed +50%.
+- **Rockwood Green**: Carbonic Fertilizer present → Fruit quantity +50%,
+  Byproduct quantity +50%.
+- **Rockwood White**: Neutral Fertilizer present → Byproduct quantity +75%.
+  Carbonic Fertilizer present → Fruit quantity +50%, Byproduct quantity +50%.
   Neighbor tagged Putrescent → Growth speed / Liquid consumption /
-  Supplement consumption all ×0.6 (-40% each).
+  Supplement consumption all ×0.6 (-40% each) — and because harvest yield
+  divides by this metabolic-speed multiplier (Finding 18's formula), the
+  ×0.6 is simultaneously a ~×1.67 fruit-AND-byproduct yield boost per
+  harvest: a slower-but-richer tradeoff, not a pure malus.
 - **Rockwood Dream**: Temperature dial = Cold, OR Temperate (raw `3`) →
   Growth+Production speed +100%. Carbonic Fertilizer present → Fruit
-  speed +350%. Acidic Fertilizer present → Byproduct speed +120%.
-- **Rockwood Glow**: Light dial = Dark (raw `4`) → Fruit speed +30%.
-  Carbonic Fertilizer present → Fruit speed +20%, Byproduct speed +20%.
-  Neighbor tagged Putrescent → Growth+Production speed +25%, Byproduct
-  speed +25%.
+  quantity +350%. Acidic Fertilizer present → Byproduct quantity +120%.
+- **Rockwood Glow**: Light dial = Dark (raw `4`) → Fruit quantity +30%.
+  Carbonic Fertilizer present → Fruit quantity +20%, Byproduct quantity +20%.
+  Neighbor tagged Putrescent → Growth+Production speed +25% (this part is
+  `FarmPlantAllSpeed`, genuine speed) AND, separately, Byproduct quantity
+  +25% (this part is `FarmPlantExtraProductionSpeed` — a second, distinct
+  effect gated by the same condition, not a second speed number).
 - **Rockwood Bitter**: Light dial = Dark (raw `4`) → Growth speed /
-  Liquid consumption / Supplement consumption all ×0.8 (-20% each).
+  Liquid consumption / Supplement consumption all ×0.8 (-20% each) — same
+  Finding 18 tradeoff as White's ×0.6 above: the slower metabolic speed
+  also means ~×1.25 fruit-and-byproduct yield per harvest.
   Light dial = UV (raw `1`) → Growth+Production speed +30%. Temperature
-  dial = Hot (raw `8`) → Byproduct speed +40%.
+  dial = Hot (raw `8`) → Byproduct quantity +40% (corrected 2026-07-25,
+  originally per live in-game testing and now confirmed against
+  `data.cdb`/disassembly in Finding 17 — this whole list's Fruit/Byproduct
+  entries were mislabeled "speed" the same way, see that finding).
 
 **Adjacency effects** (what each variant does to *neighboring* plots,
 each applies once, doesn't stack):
@@ -1266,8 +1286,12 @@ light/supplement — entries; ARatio = additive %, MRatio = multiplicative):
 
 - **All three variants**: Light dial = Natural (raw `2`) → Growth+Production
   speed +100%. Light dial = UV (raw `1`) → Growth+Production speed +150%,
-  but Byproduct quantity ×0.8 (-20%). Neutral Fertilizer present →
-  Byproduct quantity +100%.
+  but Byproduct quantity ×0.8 (-20%) — **this malus is dead code as of the
+  current build, see Finding 17**: it's read from
+  `FarmPlantExtraProductionSpeedMult`, which `updatePlots` computes but
+  never actually applies, so in practice UV only delivers the +150% speed
+  with no byproduct tradeoff. Neutral Fertilizer present → Byproduct
+  quantity +100%.
 - **Spacekorn Plain** additionally: Temperature dial = Temperate (raw `2`)
   → Growth+Production speed +100%. Neighbor tagged Putrescent → Germ
   quantity +40%, Byproduct quantity +40%.
@@ -1518,3 +1542,234 @@ against every neighboring plot:
 - Neighbor is a **live, already-grown plant** (not a seed, not dead): no
   spread roll happens at all — Invasive spread cannot displace an
   established plant, only claim empty/seed/dead ones.
+
+## Finding 17: Farming — `Fruit`/`Extra` "ProductionSpeed" attrs are Quantity, not Speed (corrects Finding 13/14), and the `*Mult` siblings are dead code
+
+Source: `ent.b.PlotZone.updatePlots` (findex 22002, raw disassembly
+`Farm.hx:293-373` — `decomp`'s pseudocode output for this function garbles
+the operator grouping into a misleading `+ 1 + x * 1 + y * dt` shape, so
+this finding is built off `fn 22002`'s raw opcodes, not `decomp`) and
+`ent.SpaceBase.gatherPlant__impl` (findex 21908, decompiles cleanly) plus
+`data.cdb` sheet `attribute`'s own `name`/`desc`/`note` fields for every
+`FarmPlant*` id. Prompted by a player report that Rockwood Bitter's
+Temperature=Hot bonus (Finding 13) read "Byproduct speed +40%" in the
+CraftMap app but behaved as a quantity bonus in actual play — tracing that
+down turned up a mislabeling that runs through most of Finding 13/14's
+enrichment lists, not just that one line.
+
+**The `attribute` sheet's own display name/desc, not the raw attr id
+string, is the ground truth for what a `FarmPlant*` attr does.** Finding
+13/14's original "Fruit speed"/"Byproduct speed" prose was built directly
+off the `FarmPlantFruitProductionSpeed`/`FarmPlantExtraProductionSpeed` id
+strings' literal "...Speed" suffix, without cross-checking the `attribute`
+sheet row itself — which disagrees with the id on both of these:
+
+| attr id | `attribute` sheet `name` | `attribute` sheet `desc` |
+|---|---|---|
+| `FarmPlantFruitProductionSpeed` (+ `Mult`) | **Germ Quantity** | "affects how many germ products will be gathered at the end of a plant growth" |
+| `FarmPlantExtraProductionSpeed` (+ `Mult`) | **Byproduct Quantity** | "affects how many non-germ products will be gathered at the end of a plant growth" |
+| `FarmPlantAllSpeed` | Growth and Production Speed | "Growth speed affects how long a plant will take to reach its gatherable state" |
+| `FarmPlantGrowthSpeed` (+ `Mult`) | Productive Metabolic Speed | "affects the duration of a plant growth without changing the hourly amount of products generated" |
+
+Both quantity rows' own `desc` explicitly disclaims changing a duration,
+and the code confirms it (below). Every "Fruit speed +X%"/"Byproduct speed
++X%" line in Finding 13/14 that traces back to one of these two attrs is
+corrected in place to "Fruit quantity +X%"/"Byproduct quantity +X%" in
+both findings; `FarmPlantAllSpeed`/`FarmPlantGrowthSpeed(Mult)` lines are
+unaffected — their own `desc` is genuinely about duration, and the code
+below confirms that distinction too.
+
+**Code confirms the quantity framing.** `updatePlots` accumulates
+`plot.progressFruit`/`plot.progressExtra` every tick the plant's
+`requires` gate passes (Finding 16), scaled by
+`(1 + FruitProductionSpeed_ARatio) * (1 + AllSpeed_ARatio)` and
+`(1 + ExtraProductionSpeed_ARatio) * (1 + AllSpeed_ARatio)` respectively
+(raw disassembly, `Farm.hx:368-369`, ops 396-431). These two counters are
+**never read again until the plant is actually harvested** —
+`gatherPlant__impl` (findex 21908) computes
+`fruitQty = Math.ceil(plot.progressFruit / plot.durationFruit)` and
+`extraQty = Math.ceil(plot.progressExtra / plot.durationExtra)`, grants
+that many items in one lump sum, then resets the plot to `EmptyPlot`. A
+higher `FruitProductionSpeed`/`ExtraProductionSpeed` ARatio doesn't make
+anything happen *sooner* — it makes the progress counter climb faster per
+unit time, which nets a **larger single harvest** for the same elapsed
+time, exactly the "how many products... gathered" framing in the
+attribute's own `desc`. (Separately, `checkProgress`'s own `NoUpdate`
+flag check means this accumulation only happens while the plant is still
+in its growing stage — the `_Gather` row stops ticking entirely, per
+Finding 16 — so both counters are effectively frozen at whatever they
+reached by the time growth finished, and harvesting converts that frozen
+total into items in one shot rather than a repeating drip. Whether
+CraftMap's own "Fruit cycle"/"Byproduct cycle" Timing-box framing — which
+currently presents these as ongoing repeating intervals rather than a
+single end-of-growth lump sum — should be reworked to match is a separate,
+larger question from the quantity-vs-speed mislabeling this finding fixes.
+That rework has since been done, with the exact yield formula derived and
+the dial/power mechanics verified alongside it: see Finding 18.)
+
+**`FarmPlantFruitProductionSpeedMult`/`FarmPlantExtraProductionSpeedMult`
+are dead code as of the current build** — confirmed at the raw-opcode
+level, not just decompiler suspicion. `updatePlots` does compute
+`progressFruitMRatio`/`progressExtraMRatio` from these two attrs
+(`Farm.hx:357`/`359`, via `getEnrichmentValue(..., true)`), but each
+`Mul` result lands only in the scratch register (`reg45`), and the very
+next opcode overwrites `reg45` with the *next* `getEnrichmentValue` call's
+result before it's ever copied back into `progressFruitMRatio`/
+`progressExtraMRatio` — no `Mov` back into the accumulator exists for
+either. Contrast with `FarmPlantGrowthSpeedMult`: its own `Mul` at
+`Farm.hx:355` (op 347) is immediately followed by `Mov reg26 = reg45` (op
+348), and the growth-progress formula on `Farm.hx:366` genuinely reads
+`reg26` afterward. `progressFruitMRatio`/`progressExtraMRatio` are never
+referenced again anywhere else in the function after their dead `Mul`,
+and `gatherPlant__impl`'s own harvest-quantity formula above doesn't
+reference them either. **Practical effect**: Spacekorn's shared "Light
+dial = UV" enrichment (Finding 14 — `FarmPlantAllSpeed +1.5` plus
+`FarmPlantExtraProductionSpeedMult ×0.8`, the latter meant as a -20%
+byproduct-quantity tradeoff for the speed gain) currently only delivers
+the speed component in actual play; the byproduct malus is present in
+`data.cdb` but has no effect in the running game.
+
+## Finding 18: Farming — exact per-harvest yield formula, dial/power mechanics, and three corrections (metabolic-slowdown = yield boost; no "no-fertilizer" gate type; EmptyPlot's +5% adjacency)
+
+Source: raw disassembly (`fn`, not `decomp` — several of these functions
+decompile mangled) of `ent.b.PlotZone.updatePlots` (22002),
+`applyPlant` (22004), `hasMinRequirement` (22005),
+`getEnrichmentValue` (22007), `isEnrichmentConditionValid` (22008),
+`ent.b.Farm.calcDuration` (21976), `serverRegularUpdate` (21891),
+`setDeployInfo` (21884), `get_tempConfig`/`setLight__impl`
+(21898/21902), `getPowerUsage` (21888), `PlotZone.getLight` (21993), and
+`ent.SpaceBase.gatherPlant__impl` (21908); plus `data.cdb`'s `attribute`
+sheet `props.farmValues` tables and the `constant` sheet's `Farm*` rows.
+The attr-name globals in `updatePlots` (`global@10054-10060`) were
+resolved to their string-pool entries (`g <idx>` + `s <idx>`) rather than
+trusting the decompiler's labeling. Extends Findings 16/17; corrects
+Findings 13/14 in three places (patched in place there, marked with
+"Finding 18").
+
+### The per-harvest yield formula (fruit and byproduct are one lump sum)
+
+Per growth tick (every `FarmZoneGrowthUpdateRate` = 30s of game time),
+for a non-seed plant whose `requires` gate passes (`Farm.hx:366-369`,
+ops 375-431 — each increment is int-cast per tick, so sub-second
+remainders truncate; negligible over real growth spans):
+
+```
+progress      += (1 + GrowthSpeedA) * GrowthSpeedM * (1 + AllSpeedA) * dt
+progressFruit += (1 + FruitProdA)                  * (1 + AllSpeedA) * dt
+progressExtra += (1 + ExtraProdA)                  * (1 + AllSpeedA) * dt
+```
+
+(A = summed additive enrichment values, M = multiplied multiplicative
+ones — `getEnrichmentValue` (22007, raw-verified if/else) sums every
+condition-passing effect for an additive attr from 0, multiplies for a
+`*Mult` attr from 1. The Fruit/Extra `*Mult` products are computed then
+discarded — Finding 17's dead code, re-confirmed.)
+
+These counters are read in exactly ONE place: `gatherPlant__impl`
+(`Farm.hx:1015-1016`) at manual harvest —
+`fruitQty = ceil(progressFruit / durationFruit)`,
+`extraQty = ceil(progressExtra / durationExtra)` — granted all at once,
+then the plot is reset to EmptyPlot. Between maturity and harvest
+nothing accrues (the `_Gather` row is `NoUpdate`-flagged, Finding 16),
+and `applyPlant` (22004) only zeroes `progressFruit`/`progressExtra`
+when the incoming stage LACKS the Gatherable flag — so the grown→Gather
+transition preserves them, and seed→grown / harvest→EmptyPlot reset
+them. Every `duration*` is `calcDuration` = `round((min +
+random()*(max-min)) * 3600)` seconds (21976, raw — the decomp mangles
+the precedence), rolled once per stage application.
+
+Substituting growth completion (`progress` reaching `duration`) into the
+fruit counter gives the closed form:
+
+```
+yield = ceil( (D_growth / D_item) * (1 + QuantityA) / ((1 + GrowthSpeedA) * GrowthSpeedM) )
+```
+
+with `D_growth`/`D_item` the independently-rolled stage durations.
+Consequences, each now load-bearing for CraftMap's Farming tab:
+
+- **`FarmPlantAllSpeed` cancels out of yield entirely** — it scales
+  growth and product accrual identically, so it means "same harvest,
+  sooner", never "more".
+- **`FarmPlantGrowthSpeed(Mult)` sits in the yield DENOMINATOR** — the
+  game's "Productive Metabolic Speed", whose own `desc` ("longer growth
+  time but higher product yield") is literally this formula. So Rockwood
+  White's Putrescent-neighbor ×0.6 and Rockwood Bitter's Dark-light ×0.8
+  (Finding 13) are not pure maluses: they're ~×1.67 and ~×1.25 yield
+  boosts (both products) paid for in growth time. Finding 13's bullets
+  corrected in place.
+- **Base yield per harvest ≈ growth_hours / cycle_hours** (e.g.
+  Spacekorn Plain: 36-40h growth ÷ 4-6h per Plain Pulp ≈ 6-10 Pulp per
+  harvest) — the fruit/extra `duration` fields are "hours of satisfied
+  growth per item", not a repeating post-maturity cycle. Stalled
+  (gate-unmet) time adds nothing to either counter.
+
+### Dial and power mechanics (the Temperature/Light dials verified)
+
+- **The 4 Temperature positions are canonical, planet-independent
+  targets**: `attribute.props.farmValues[i].temp` is a DELTA from planet
+  ambient landing every planet on the same four targets — index 0 =
+  −50°C (Cold), 1 = 0°C (Temperate), 2 = +20°C (Warm), 3 = +50°C (Hot).
+  Only the energy column varies: `FarmEnergyScale` (30) power per step
+  of distance from ambient, 0 at the nearest position (Warm is free on a
+  Hot planet, Cold is free on a Frozen one; on Inferno/Dead-Frozen even
+  the nearest costs 1 step). UV light costs flat `FarmLightEnergy` (20);
+  Natural/Dark are free (`getPowerUsage`, 21888).
+- **Dial changes are INSTANT** (`serverRegularUpdate`, 21891 raw): while
+  powered, `tempReal`/`lightReal` snap to the setting on the next server
+  tick — no ramp, no transition time (`lastTempUpdateTime` is just
+  bookkeeping). Unpowered, they snap to `defaultTempSetting`/
+  `defaultLightSetting` instead.
+- **Deploy-site defaults** (`setDeployInfo`, 21884 raw):
+  `defaultTempSetting = findTempConfigWithMinEnergy()` (the
+  ambient-nearest position); `defaultLightSetting = deployInfo.light >= 0
+  ? Natural : Dark`. And `setLight__impl` (21902) coerces a Natural
+  request to Dark whenever `defaultLightSetting == Dark` — **a farm
+  deployed somewhere without natural light has no Natural position at
+  all**; only UV or Dark.
+- **An unpowered or disabled farm fails EVERY plant's gate**
+  (`hasMinRequirement` head, 22005): before any per-plant check,
+  `!enabled || !isPowered()` → false. Combined with Finding 16, a power
+  outage stalls every plant and starts every death timer at once (while
+  also snapping the dials to ambient).
+- **Gate structure** (22005 raw): liquid (water) is a hard fail —
+  `return false` directly, never waivable. Supplements / noSupplements /
+  temperature / light / noNeighborBioTag each increment a
+  `missingCount`, and the plant passes iff `missingCount <=
+  allowMissing` — Rockwood Dream's `FarmPlantIgnoreMinRequirement`
+  neighbor tolerance (Finding 13) waives exactly one of THOSE five, and
+  only for non-seed stages (the `allowMissing` lookup is gated on
+  `!Seed`). `$Main.PREFS.farmPlantReq` is a debug bypass that passes
+  everything.
+- **The Glow-neighbor UV effect REPLACES the plot's light for all light
+  checks** (22005 ops 189-199 and 22008 case 0, both raw: `usedLight =
+  hasUniqueEffect("FarmPlantSetLightToUV") ? UV : lightReal`) —
+  requirements included, not just bonuses. A Dark-requiring plant
+  (Dreamwood is the only one) adjacent to a Glowwood would fail its own
+  light gate. Academic in normal play (Glowwood is unplaceable, Finding
+  13), but it's the true semantic of "treated as UV-lit".
+
+### Corrections
+
+1. **Metabolic-slowdown enrichments are yield boosts** — covered above;
+   Finding 13's White/Bitter bullets corrected in place.
+2. **There is no "no fertilizer of any kind" gate type.** CraftMap's
+   farming.json had marked Rockwood Glow `fertilizer_forbidden_any` from
+   a live-play impression (explicitly flagged for disassembly follow-up;
+   Finding 13's table wrote the cell as "none"). The follow-up: `requires`
+   supports only specific-item `supplements`/`noSupplements` lists, and
+   Glow's data has neither. Flag removed; Finding 13's table cell
+   corrected in place.
+3. **EmptyPlot has its own adjacency effect nothing had documented**: the
+   `farm` sheet's `EmptyPlot` row carries `adjacency: [{value: 0.05,
+   attr: FarmPlantAllSpeed, once: false}]` — every adjacent EMPTY plot
+   gives a plant +5% Growth & Production speed (yield-neutral, per the
+   formula above). A fully-packed grid therefore grows slightly slower
+   per-plant than one with gaps — mildly counterintuitive and worth
+   knowing next to Plainkorn's same-species +15%.
+
+CraftMap's Farming tab has been reworked against all of this
+(farming.json's `effects` model + per-harvest yield calculator replacing
+the old three-parallel-cycle-durations Timing box — see that repo's
+game_data_extract/farming.json `_meta.harvest_mechanism`/`_meta.effects`/
+`_meta.dial_mechanics`).
