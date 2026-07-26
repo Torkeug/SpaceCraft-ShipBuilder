@@ -1932,3 +1932,67 @@ CraftMap's Farming tab has been reworked against all of this
 the old three-parallel-cycle-durations Timing box — see that repo's
 game_data_extract/farming.json `_meta.harvest_mechanism`/`_meta.effects`/
 `_meta.dial_mechanics`).
+
+## Finding 19: Farming — a neighbor's adjacency effects start the instant it's assigned its grown variant, and keep applying through full maturity, not just while it's still growing
+
+Source: raw disassembly (`fn`, not `decomp`) of `ent.b.PlotZone.updatePlots`
+(22002, `Farm.hx:288-334`). Prompted by a direct question (does a
+companion plant need to still be growing, or even fully grown, for its
+adjacency bonus to reach its neighbor?) that neither Finding 16 nor
+Finding 18 answered — both cover *when a plot's own requires-gate and
+progress-accrual run*, not *when a neighbor's adjacency list is read*.
+Those turn out to be two different questions with two different answers.
+
+**The two checks are not the same check.** `updatePlots` loops over every
+plot `P` in `this.plots`. For each `P` it first reads `P`'s own plant's
+`props.flags` bit 0 (the NoUpdate flag — set on `_Gather`/`_Dead` rows
+per Finding 16) and, if set, skips `P` entirely for this tick
+(`Farm.hx:289`, ops 25-39: `flags & 1 != 0` → jump past the rest of the
+per-plot block, `continue`-equivalent). This is the *only* place this
+function checks a NoUpdate flag. It then calls `getNeighbors` for `P`
+(`Farm.hx:305`, op 60) and, for each neighbor `N`, resolves `N.plant` to
+its data row and reads `.adjacency` straight off it (`Farm.hx:306-307`,
+ops 74-80) — **no flags/NoUpdate check on `N` anywhere in this loop**,
+confirmed by tracing every register touched between the neighbor fetch
+(op 73) and the attr-dispatch switch (ops 106-334): `reg36` (`N`'s
+resolved row) is read for `.adjacency` (op 77) and never once for
+`.props.flags`. The dedup/target/once-flag handling that follows
+(`Farm.hx:310-316`, target-match at ops 98-105, `hasUniqueEffect` at ops
+106-111, `once`-flag immediate-consume at ops 112-116, then the
+attr-name string-compare chain from Finding 16) all operates on `N`'s
+adjacency *entries*, never on `N`'s own growth state.
+
+**What actually gates a neighbor's contribution, then, is which row
+currently occupies its plot — not that row's own progress:**
+- **Germinating seed** (`pickVariant` hasn't fired yet): `N.plant` still
+  points at the seed row (e.g. `RockwoodSeed`), and no seed row in
+  Findings 13/14's data carries an `adjacency` array of its own — every
+  documented `adjacency` entry belongs to a *grown variant* row. A
+  germinating neighbor therefore gives nothing yet (the `.length == 0`
+  short-circuit at `Farm.hx:307-308`, ops 80-82, skips it with no attr
+  ever read) — not because of a stage check, but because there's simply
+  no data to read.
+- **Grown variant, still growing** (`pickVariant` has resolved, `progress
+  < duration`): `N.plant` now points at e.g. `Rockwood`/Green, and
+  *that* row's `adjacency` array is what gets read — active from this
+  moment, not deferred until growth finishes.
+- **Grown variant, fully mature, sitting at `_Gather`** (`progress >
+  duration`, not yet harvested): still the exact same row, still the
+  exact same `adjacency` array. Nothing distinguishes "still growing"
+  from "done growing, awaiting harvest" in this read path — a mature,
+  unharvested companion keeps buffing its neighbors indefinitely.
+- **Dead** (`progressDeath` exceeded the 5h threshold, Finding 16):
+  `applyPlant` swaps `N.plant` to that variant's own `deadVariant` row
+  (e.g. a `*_Dead` id), a genuinely different row id — adjacency stops
+  here not via a special case, but because that row is presumably its
+  own (empty) data, same mechanism as the seed case above.
+
+**Practical upshot**: a Reclusive/Putrescent/blanket-adjacency pairing
+(Rockwood Green + Woolly Spacekorn, White + Bitter, Plain + Sour, etc.)
+doesn't need its two crops harvested in lockstep to keep working — the
+companion buffs its neighbor for its *entire* post-germination lifetime,
+including while sitting ready-to-harvest, right up until it's actually
+picked (which empties the plot) or dies. CraftMap's Farming tab Layouts
+view (goal_presets referencing these neighbor pairings) relies on this —
+see that repo's `game_data_extract/farming.json` `_meta`
+(`growth_death_mechanism`) for the player-facing version of this note.
