@@ -1854,6 +1854,17 @@ function updateShipStats() {
     overviewH += `</div></div>`;
   }
 
+  // Piece Count — per-part-type breakdown of everything placed on the ship.
+  const pieceCounts = new Map();
+  state.placed.forEach(e => pieceCounts.set(e.part.name, (pieceCounts.get(e.part.name) || 0) + 1));
+  overviewH += `<div class="stat-section"><div class="stat-section-label">Piece Count</div>`;
+  [...pieceCounts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .forEach(([name, count]) => {
+      overviewH += `<div class="stat-row"><span class="stat-label">${name}</span><span class="stat-val">×${count}</span></div>`;
+    });
+  overviewH += `</div>`;
+
   const spOver = req > support && support > 0;
   overviewH += `<div class="stat-section">
     <div class="stat-section-label">System Support</div>
