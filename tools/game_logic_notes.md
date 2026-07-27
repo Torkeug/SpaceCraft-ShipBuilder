@@ -1933,7 +1933,21 @@ the old three-parallel-cycle-durations Timing box — see that repo's
 game_data_extract/farming.json `_meta.harvest_mechanism`/`_meta.effects`/
 `_meta.dial_mechanics`).
 
-## Finding 19: Farming — a neighbor's adjacency effects start the instant it's assigned its grown variant, and keep applying through full maturity, not just while it's still growing
+## Finding 19: Farming — a neighbor's adjacency effects start the instant it's assigned its grown variant, and STOP the instant it finishes growing (corrected by Finding 21 — do not trust this finding's own "still the exact same row once mature" claim below, it's wrong)
+
+**CORRECTED 2026-07-28 by Finding 21, below — read that finding first.**
+This finding's own disassembly of `updatePlots` (what it actually traced)
+remains accurate and is left in place unedited; only its *conclusion*
+about the mature/`_Gather` case was wrong, because it assumed a mature
+plant's row identity never changes without actually checking the
+function that changes it (`checkProgress`, findex 22003 — outside what
+this finding disassembled). Finding 21 traces that function and shows
+the row DOES change on maturity, to one with an empty `adjacency` array
+— so "keep applying through full maturity" in this finding's own title
+is backwards: adjacency effects run ONLY while the neighbor is still
+actively growing (`progress < duration`), and stop the instant it
+finishes, not "not just while it's still growing" as originally
+(wrongly) concluded here.
 
 Source: raw disassembly (`fn`, not `decomp`) of `ent.b.PlotZone.updatePlots`
 (22002, `Farm.hx:288-334`). Prompted by a direct question (does a
@@ -1977,25 +1991,40 @@ currently occupies its plot — not that row's own progress:**
   *that* row's `adjacency` array is what gets read — active from this
   moment, not deferred until growth finishes.
 - **Grown variant, fully mature, sitting at `_Gather`** (`progress >
-  duration`, not yet harvested): still the exact same row, still the
-  exact same `adjacency` array. Nothing distinguishes "still growing"
-  from "done growing, awaiting harvest" in this read path — a mature,
-  unharvested companion keeps buffing its neighbors indefinitely.
+  duration`, not yet harvested): **WRONG AS ORIGINALLY WRITTEN — see
+  Finding 21.** This finding claimed "still the exact same row, still
+  the exact same `adjacency` array" here, reasoning that nothing in
+  `updatePlots`'s own neighbor loop checks a NoUpdate flag (true) and
+  concluding from that alone that the row must be unchanged (false,
+  and not actually checked at the time). `checkProgress` (findex 22003)
+  re-runs `pickVariant`/`applyPlant` the instant `progress > duration`,
+  swapping `N.plant` to a real, different row (the variant's own
+  `_Gather` row, e.g. `Rockwood_Gather`) — and every `_Gather` row
+  checked in `data.cdb` has `"adjacency": []`. A neighbor's contribution
+  stops the moment it finishes growing, not once it's actually picked.
 - **Dead** (`progressDeath` exceeded the 5h threshold, Finding 16):
   `applyPlant` swaps `N.plant` to that variant's own `deadVariant` row
   (e.g. a `*_Dead` id), a genuinely different row id — adjacency stops
   here not via a special case, but because that row is presumably its
   own (empty) data, same mechanism as the seed case above.
 
-**Practical upshot**: a Reclusive/Putrescent/blanket-adjacency pairing
-(Rockwood Green + Woolly Spacekorn, White + Bitter, Plain + Sour, etc.)
-doesn't need its two crops harvested in lockstep to keep working — the
-companion buffs its neighbor for its *entire* post-germination lifetime,
-including while sitting ready-to-harvest, right up until it's actually
-picked (which empties the plot) or dies. CraftMap's Farming tab Layouts
-view (goal_presets referencing these neighbor pairings) relies on this —
-see that repo's `game_data_extract/farming.json` `_meta`
-(`growth_death_mechanism`) for the player-facing version of this note.
+**Practical upshot (CORRECTED — see Finding 21):** a Reclusive/
+Putrescent/blanket-adjacency pairing (Rockwood Green + Woolly Spacekorn,
+White + Bitter, Plain + Sour, etc.) DOES need both crops actively
+growing at the same time to keep working — a companion only buffs its
+neighbor while `progress < duration` for the companion itself, and stops
+the instant the companion finishes growing (whether or not it's ever
+picked). There is no "park a mature plant as a static battery" option;
+sustaining the bonus means keeping the companion continuously replanted
+and still-growing, not simply present. CraftMap's Farming tab Layouts
+view was built assuming the original (wrong) conclusion — corrected
+2026-07-28 across `game_data_extract/farming.json`'s `_meta.
+adjacency_timing`/`exact_grid_search`/`germination_ambiguity`/
+`fertilizer_scope`/`one_way_neighbor_pairings`/`goal_presets_and_layouts`
+(no standalone `battery_technique_retracted` key was added — the
+existing keys were corrected in place instead), every affected layout/
+goal_preset, `frontend/js/farming.js`'s now-removed battery-cell
+visualization, and `tests/test_api_farming.py`.
 
 ## Finding 20: Farming — Rockwood Dream's neighbor tolerance makes a gate *pass*, not just survive; it's the only `allowMissing` source in the dataset, and it stacks with Finding 19 to let a neighbor grow on a dial its own gate would normally reject
 
@@ -2057,19 +2086,33 @@ no maturity or parking required), two concrete consequences:**
    setup. The one variant this genuinely enables rather than just
    permits is Woolly Spacekorn: its `Cold`-only gate has zero overlap
    with anything else in either crop, so under any non-Cold dial it
-   can't grow *at all* without a Dream neighbor's waiver — turning a
-   live, fully-sustainable Dream+Woolly weave into a real (if
+   can't grow *at all* without a Dream neighbor's waiver — a real (if
    non-optimal-per-plant) way to get both products off one farm.
+   **Caveat added 2026-07-28 (Finding 21):** "sustainable" here means
+   actively, continuously growing, not simply present — the granting
+   Dream neighbor's own tolerance-adjacency effect stops the instant
+   ITS `progress > duration` too (Finding 19, corrected), so this only
+   keeps working if Dream is replanted before it ever sits idle at
+   `_Gather`. Different crops' growth durations aren't naturally in
+   sync, so this needs active management, not a one-time weave.
 
 **A sharper case specifically under `Cold`** (Woolly's own native dial,
 needing no tolerance for temperature at all): Woolly's one tolerance
 slot, unused by temperature here, is free to cover a *different* miss —
 its own `noNeighborBioTag` restriction (`Putrescent`) — letting it sit
 directly next to Sour or Bitter and hand over its `+20%` Byproduct
-quantity live, no parking needed (parking, per Finding 19, is still the
-right approach under a non-Cold dial specifically, where the tolerance
-is already spent on temperature and can't also cover a Putrescent
-neighbor). Verified against the actual yield formula (Finding 18), not
+quantity live. **CORRECTED 2026-07-28 (Finding 21): there is no
+"parking" alternative under a non-Cold dial anymore** — Finding 19's own
+"park a mature companion" premise was wrong (see that finding's
+in-place correction and Finding 21 below); a Dream neighbor granting
+this tolerance must itself remain actively growing (`progress <
+duration`) the whole time, same as Woolly and the Putrescent-tagged
+neighbor it's covering for. Under a non-Cold dial there is no way to
+get Woolly this specific bonus at all (its own gate still needs `Cold`
+regardless of the tolerance, which only ever waives ONE of the five
+`hasMinRequirement` checks, and Woolly already needs its slot for the
+`noNeighborBioTag` waiver here, or for `temperature` under a non-Cold
+dial — never both). Verified against the actual yield formula (Finding 18), not
 just the gate mechanic: a White plot can take both Bitter's
 Putrescent-mult trade AND a Woolly neighbor's quantity bonus at once
 (neither is Reclusive/Putrescent to the other, so both fit on one plot
@@ -2090,3 +2133,92 @@ Reclusive/Putrescent restriction intact across 15 cells, is a real
 constraint-satisfaction problem that was judged too easy to get subtly
 wrong by hand and was not attempted) — treat them as verified-per-plot,
 not verified-per-farm, and not in-game tested at all.
+
+## Finding 21: Farming — CORRECTS Finding 19: a mature, unharvested plant's row DOES change on maturity, to one with an empty `adjacency` array AND no `bioTag` — the "parked battery" premise (Finding 19's own practical upshot, and everything built on it in CraftMap's Farming Layouts feature) is wrong
+
+Source: raw disassembly of `ent.b.PlotZone.checkProgress` (findex 22003,
+`Farm.hx:378-397`), `pickVariant` (findex 22006, `Farm.hx:472-485`),
+`applyPlant` (findex 22004, `Farm.hx:401-415`), and
+`isEnrichmentConditionValid`'s `YesNeighborBioTag` branch (findex 22008,
+`Farm.hx:517-521`) — all four cross-checked against the actual
+`data.cdb` `farm` sheet's own `_Gather` rows. Prompted directly by a
+player question ("does a mature plant lose its bio_tag?") that turned
+out to have a much bigger answer than the question itself.
+
+**What Finding 19 got right**: `updatePlots`'s own neighbor loop really
+does just read whatever row `N.plant` currently resolves to, with no
+stage/NoUpdate check anywhere in that specific loop (confirmed again
+here, unchanged). **What Finding 19 got wrong**: it stopped there and
+assumed `N.plant` itself never changes once a plant matures, without
+checking the function that actually updates it.
+
+**The maturity transition, traced in full:**
+1. `checkProgress` runs every tick for every plot whose current row
+   isn't NoUpdate-flagged. After the (unrelated) death-timer check, it
+   tests `if (duration >= progress) return` (`Farm.hx:380`) — i.e.
+   everything below this line only runs once growth has actually
+   finished.
+2. Immediately below that: `pickVariant(plot, currentRow, x, y)` is
+   called AGAIN (`Farm.hx:381`) — the exact same function used for the
+   original seed→grown-variant roll (Findings 13/14) — followed by
+   `applyPlant(plot, plot, result)` (`Farm.hx:382`).
+3. `pickVariant` (findex 22006) reads `currentRow.props.grownVariants`
+   (`Farm.hx:472-476`) — a list living on the CURRENTLY-GROWING row's
+   own props, e.g. `Plainkorn.props.grownVariants ==
+   [{"plant": "Plainkorn_Gather"}]` (verified directly against
+   `data.cdb`, same field for `Rockwood`→`Rockwood_Gather`,
+   `Sulfwood`→`Sulfwood_Gather`, `SourEinkorn`→`SourEinkorn_Gather` —
+   every grown variant checked has exactly one candidate here). It
+   filters candidates through the same `hasMinRequirement` gate check
+   used everywhere else (`Farm.hx:478`) and returns one (randomly, if
+   more than one passes — here there's only ever one). Every `_Gather`
+   row's own `requires` is `{}` (empty, always passes trivially).
+4. `applyPlant` (findex 22004) then does `SetField reg1.plant = reg3`
+   (`Farm.hx:401`, op 10) where `reg3` is the picked row's own `guid` —
+   a genuine, permanent row swap, not a flag or display state. It also
+   resets `progress = 0` and adopts the new row's own `duration`
+   (`Farm.hx:403-405`) — meaning a `_Gather` row's OWN `duration` field
+   governs how long it sits before `checkProgress` would try to
+   transition it AGAIN (moot in practice, since `_Gather` rows have
+   neither their own `grownVariants` nor `deadVariant`, and per
+   `growth_death_mechanism`/Finding 16 a plant with no unmet
+   requirement never accrues death-timer progress once its own
+   `requires` is trivial — it just sits there, correctly, until picked).
+
+**Every `_Gather` row checked in `data.cdb`'s `farm` sheet
+(`Plainkorn_Gather`, `Rockwood_Gather`, `Sulfwood_Gather`,
+`SourEinkorn_Gather`) has:**
+- `"adjacency": []` — empty. `updatePlots`'s neighbor loop
+  (`Farm.hx:306-307`, unchanged from Finding 19's own correct tracing)
+  reads exactly this field off whatever row `N.plant` resolves to — for
+  a mature, unharvested neighbor, that's now the `_Gather` row, so this
+  read returns nothing. **A mature, unharvested plant gives its
+  neighbors NOTHING — not "keeps giving indefinitely," the opposite.**
+- No `bioTag` key in `props` at all (the growing row, e.g. `Plainkorn`,
+  DOES carry one — `bioTag: 1` for Plainkorn, confirmed in `data.cdb` —
+  the `_Gather` row simply omits the field). `isEnrichmentConditionValid`'s
+  `YesNeighborBioTag` branch (findex 22008, `Farm.hx:517-521`) reads a
+  neighbor's `bioTag` via the IDENTICAL pattern —
+  `neighborPlot.plant → get() → .props.bioTag` — so this is null/absent
+  for a mature neighbor too. **A mature, unharvested plant's own
+  `bio_tag` is unreadable by neighbors checking for it, confirming the
+  player's original question directly.**
+- `"requires": {}` and `"enrichments": []` — also empty, which is the
+  ALREADY-correct half of `growth_death_mechanism`
+  ("once a plant reaches its final harvest stage, requirements stop
+  mattering entirely") — this part of the existing understanding was
+  right; only the adjacency/bioTag-still-active half was wrong.
+
+**Practical upshot, superseding Finding 19's own (wrong) one**: there is
+no "park a mature companion as a static battery" technique. A neighbor
+pairing (Reclusive/Putrescent-tag bonuses, Woolly's blanket byproduct
+bonus, Dream's `allowMissing` tolerance, all of Finding 19/20's own
+downstream claims) only works while BOTH plants are simultaneously,
+actively growing (`progress < duration` for the one granting the
+bonus) — the instant the granting plant finishes growing, its
+contribution stops, whether or not it's ever actually harvested.
+CraftMap's Farming tab Layouts feature (`game_data_extract/farming.json`)
+was built on the wrong premise; corrected 2026-07-28 across that file's
+own `_meta`, every affected layout/goal_preset, its frontend
+visualization, and its test suite — see that file's own `_meta.
+adjacency_timing`/`exact_grid_search` for the corrected model.
