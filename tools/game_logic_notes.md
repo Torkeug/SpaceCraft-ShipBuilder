@@ -1996,3 +1996,97 @@ picked (which empties the plot) or dies. CraftMap's Farming tab Layouts
 view (goal_presets referencing these neighbor pairings) relies on this —
 see that repo's `game_data_extract/farming.json` `_meta`
 (`growth_death_mechanism`) for the player-facing version of this note.
+
+## Finding 20: Farming — Rockwood Dream's neighbor tolerance makes a gate *pass*, not just survive; it's the only `allowMissing` source in the dataset, and it stacks with Finding 19 to let a neighbor grow on a dial its own gate would normally reject
+
+Source: rereading Finding 13's own already-disassembly-verified
+`hasMinRequirement` description (`Farm.hx:437-459`, findex 22005)
+alongside Finding 19 above, prompted by a direct question about whether
+Dream's tolerance could let Woolly Spacekorn grow while parked next to
+something on the "wrong" dial. No new disassembly was pulled for this
+finding — it's a rereading of two already-verified mechanics together,
+not an independent bytecode check, and the numeric consequences below
+have not been tested in actual play.
+
+**The tolerance isn't death-insurance, it's gate-passing.** Finding 13's
+own text already establishes the mechanism precisely:
+`hasMinRequirement` increments `missingCount` for each of five
+independent checks (`supplements`/`noSupplements`/`temperature`/`light`/
+`noNeighborBioTag`, `liquid` excluded — that one's a hard, never-waivable
+fail), and **the gate passes iff `missingCount <= allowMissing`**.
+Rockwood Dream's adjacency effect (`FarmPlantIgnoreMinRequirement`) is
+the only thing in this dataset that raises `allowMissing` above its
+default of 0 — checked across every variant's `enrichments`/`adjacency`
+in Findings 13/14, nothing else grants it. Raising `allowMissing` to 1
+doesn't just slow a *failing* plant's death countdown (that's Bitter's
+separate `FarmPlantDeathSpeed` effect, a different accumulator entirely,
+Finding 16) — it means a plant with exactly one of those five checks
+wrong **passes the gate as if nothing were wrong**, and keeps growing
+normally. `allowMissing` still caps at 1 regardless of neighbor count
+(Finding 13's own loophole-ruled-out note, re-confirmed by the
+`hasUniqueEffect` dedup Finding 19 already traced) — a variant needing
+two simultaneous waivers (only Rockwood Glow, needing both its
+permanently-`0` temperature and light gates covered) still can't be
+reached this way.
+
+**Combined with Finding 19 (a live, un-parked Dream already emits this —
+no maturity or parking required), two concrete consequences:**
+
+1. **Fertilizer-skipping, zero yield cost.** A "supplements" (fertilizer-
+   required) miss is one `missingCount` hit regardless of how many listed
+   items are actually missing (Finding 13's own AND-with-short-circuit
+   description) — so a Dream-adjacent plant can skip its ENTIRE required
+   list at once. Checked which required items carry no separate
+   enrichment of their own (so skipping them costs nothing beyond the
+   gate check): Rockwood Green's Neutral Fertilizer, Rockwood White's
+   Metallic Fertilizer, and Rockwood Bitter's Acidic+Metallic pair
+   (both at once, still one miss) all qualify — free savings, no output
+   change. Caveat: the tolerance is gated on non-seed stages only (per
+   Finding 13's own text) — the real fertilizer still has to be present
+   at the exact tick a seed's `pickVariant` roll resolves into that
+   variant, since the still-undecided seed doesn't get the waiver. It
+   can be pulled immediately after that moment, not before it.
+
+2. **Growing off a variant's own dial, at a real cost.** A Dream neighbor
+   can waive a `temperature` (or `light`) miss the same way, letting
+   Bitter/Plain/Sour grow on whichever of Dream's own compatible
+   positions (`Cold`/`Temperate`/`Warm` + `Dark`) doesn't match their own
+   gate — but each forfeits its own dial-triggered enrichment doing so
+   (Bitter's Hot-only Byproduct+40%, Plain's Temperate-only speed), so
+   per-plant output is always worse than growing it on its own dedicated
+   setup. The one variant this genuinely enables rather than just
+   permits is Woolly Spacekorn: its `Cold`-only gate has zero overlap
+   with anything else in either crop, so under any non-Cold dial it
+   can't grow *at all* without a Dream neighbor's waiver — turning a
+   live, fully-sustainable Dream+Woolly weave into a real (if
+   non-optimal-per-plant) way to get both products off one farm.
+
+**A sharper case specifically under `Cold`** (Woolly's own native dial,
+needing no tolerance for temperature at all): Woolly's one tolerance
+slot, unused by temperature here, is free to cover a *different* miss —
+its own `noNeighborBioTag` restriction (`Putrescent`) — letting it sit
+directly next to Sour or Bitter and hand over its `+20%` Byproduct
+quantity live, no parking needed (parking, per Finding 19, is still the
+right approach under a non-Cold dial specifically, where the tolerance
+is already spent on temperature and can't also cover a Putrescent
+neighbor). Verified against the actual yield formula (Finding 18), not
+just the gate mechanic: a White plot can take both Bitter's
+Putrescent-mult trade AND a Woolly neighbor's quantity bonus at once
+(neither is Reclusive/Putrescent to the other, so both fit on one plot
+without conflicting) — harvest Kaolinite 152 → 166 (+9%); a Sour plot
+gains a Woolly neighbor the same way — harvest Sour Pulp 20 → 22 (+10%).
+
+**Neither number changes what CraftMap actually recommends**, and this
+is the more important half of the finding. CraftMap's own farm-total
+audit (`game_data_extract/farming.json` `_meta.per_slot_vs_per_farm`)
+found that Spacekorn Plain's per-plot-superior Sour-neighbor stripe
+*loses* to a plain monoculture once weighted by how many plots each
+layout actually fits (15 vs 9) — a large per-plot gain on a much smaller
+plot count routinely fails to clear that bar in a 15-plot grid. The two
+numbers above are real at the single-plot level but have not been
+re-verified at the full-grid level (fitting enough Dream+Woolly coverage
+to enhance most or all of a variant's plots, while keeping every
+Reclusive/Putrescent restriction intact across 15 cells, is a real
+constraint-satisfaction problem that was judged too easy to get subtly
+wrong by hand and was not attempted) — treat them as verified-per-plot,
+not verified-per-farm, and not in-game tested at all.
