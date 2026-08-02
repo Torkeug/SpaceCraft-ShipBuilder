@@ -332,7 +332,7 @@ For a long time this pak entry appeared to start with raw big-endian uint16 inde
 | `tools/hmd_to_bin.py`       | Converter: `convert_prod_style()` calls hmd_parse_prod and writes .bin; `convert_g_style_auto()` handles TestPE G-style; `write_bin()` writes the .bin format. Used for hull frames/engines. |
 | `tools/hmd_convert_v2.py`   | Transform-aware converter for compound multi-part meshes (tools/modules): selects each `*LOD0` model, applies its real scale→rotate→translate, merges using the file's own material index per group. Use this for any Tools-category asset. |
 | `tools/hmd_parse.py`        | Legacy parser for TestPE G-style (disc=0x00) files                  |
-| `tools/pak_extract.py`      | Extracts both disc=0x00 and disc=0x02 files from res.pak using cumulative offset calculation. `--all` extracts every file in the pak (used to build a full local mirror for format reverse-engineering, output to `pak_out_full/`, gitignored). |
+| `tools/pak_extract.py`      | Extracts both disc=0x00 and disc=0x02 files from res.pak using cumulative offset calculation. `--all` extracts every file in the pak (used to build a full local mirror for format reverse-engineering, output to `pak_out/`, gitignored). |
 | `tools/batch_convert_hulls.py` | Batch converter for all Main_Structures hull sizes; updates `_manifest.json` |
 | `tools/batch_convert_modules.py` | Batch converter for outside-mount modules using the old heuristic path; kept for its `MODULE_SOURCES` mapping table |
 | `tools/batch_convert_modules_v2.py` | Batch converter for outside-mount modules using `hmd_convert_v2.py`; falls back to `hmd_to_bin.py` for the 3 Decoratives_Parts files whose animation/skin section isn't ported yet |

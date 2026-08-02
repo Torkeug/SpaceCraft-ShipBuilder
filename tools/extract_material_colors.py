@@ -35,7 +35,7 @@ import sys
 
 TOOLS_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = os.path.dirname(TOOLS_DIR)
-PAK_FULL = os.path.join(REPO_ROOT, 'pak_out_full')
+PAK_FULL = os.path.join(REPO_ROOT, 'pak_out')
 PAK_OUT = os.path.join(REPO_ROOT, 'pak_out', 'assets', 'Vehicules', 'Buildings_Parts')
 
 sys.path.insert(0, TOOLS_DIR)
@@ -213,7 +213,7 @@ def main():
     print(f"{len(names)} distinct material names used across Tools meshes")
     index = find_basecolor_index()
     index_lower = {k.lower(): k for k in index}
-    print(f"{len(index)} basecolor textures found in pak_out_full")
+    print(f"{len(index)} basecolor textures found in pak_out")
 
     colors = {}
     missing = []

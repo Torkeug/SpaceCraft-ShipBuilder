@@ -14,7 +14,7 @@ original code (MIT) with reference content extracted from the game itself
 
 The actual game (SpaceCraft) is installed at
 `D:\SteamLibrary\steamapps\common\SpaceCraft`. `res.pak` there is the source
-that `pak_out`/`pak_out_full` were extracted from. `hlboot.dat` in that same
+that `pak_out` was extracted from. `hlboot.dat` in that same
 directory is the compiled **HashLink bytecode** for the game's own Haxe
 logic (not just data) — use it (via `hlbc`, see
 [`tools/game_logic_notes.md`](tools/game_logic_notes.md)) whenever a question
