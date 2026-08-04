@@ -37,6 +37,17 @@ on type kind 23 again after a fresh checkout, this is why; the local
 [`tools/game_logic_notes.md`](tools/game_logic_notes.md)'s note on this
 for the full patch diff summary.
 
+**Sibling project `../Craftmap`** (`e:\Documents\Spacecraft\Craftmap`) is a
+separate app covering crafting/farming data in more depth than this repo
+needs day-to-day — most notably `Craftmap/game_data_extract/farming.json`,
+which already has exact per-crop growth/yield mechanics (enrichment values,
+exhaustively-searched optimal layouts) for every `Rockwood`/`Spacekorn`
+variant. **Check there before re-deriving farm/crop mechanics from
+`data.cdb` or `hlboot.dat` from scratch** — Finding 24 in
+`tools/game_logic_notes.md` did the re-derivation once, got a real detail
+wrong (guessed the wrong light-dial setting), and had to correct itself
+against this same file after the fact.
+
 ## Keeping the finding logs current
 
 [`tools/game_logic_notes.md`](tools/game_logic_notes.md) and
@@ -143,6 +154,57 @@ Shown in the inspector when parts are placed. Sections:
 - **Combat & Heat** — Shields, Heat gen. (fan data).
 
 Stats sourced from `part.stats` (game data in `ship_editor_data.json`) plus `statsFor(name)` (fan data in `ship_stats_data.json`).
+
+## Base Builder
+
+`basebuilder/` — separate from the ship builder. **FP (Footprint) is a
+base-building-only mechanic** (`BuildPointsCost`/`MaxBuildPoints` in
+`data.cdb`) — it does not apply to ship parts at all, which only have
+`price` + a crafting-material `cost` string. Real constraints, confirmed
+from `hlboot.dat` decompilation (see Finding 22 in
+[`tools/game_logic_notes.md`](tools/game_logic_notes.md) for the full
+source trace — don't re-derive this from scratch, it's already verified):
+
+- FP/DP are a **hard pre-construction gate**: `Deploy.checkDeployBuilding`
+  rejects a build outright (`NotEnoughBuildPoints`/`NotEnoughDecoPoints`)
+  if it would push the total over the cap — there is no "build over budget
+  and get penalized" path.
+- `MaxBuildPoints`/`MaxDecoPoints` **stack additively** across every
+  Command building on the base (`SpaceBase.getAttribute` sums across all
+  buildings) — e.g. the starter Base Command Center (60 FP) *and* the
+  Command Tower (+50) together give 110 FP, not a single fixed number
+  tied to "which command center you picked". Each Command building is
+  tagged `UniqueBuilding` (max 1 per base each) and costs 0 FP itself
+  (pure capacity-adds). Only `B_ControlBase` is tagged `MainBaseBuilding`
+  — it alone sets `ControlBaseRadius` (the placement-range constraint);
+  the others don't extend it, only the FP/DP pool.
+- Power (`EnergyOffer`/`EnergyDemand`) is **not** a simple base-wide pool —
+  `SpaceBaseNetworks` groups buildings into separate grids. Not fully
+  traced; treat any base-wide net-power total as an upper bound, not a
+  guarantee.
+- `data.cdb` ships several `BaseBuilding_*` entries that were **never
+  actually released** — player-confirmed for `B_ControlBase3PH` ("Command
+  Relay"). A `PH` id suffix, or `"[NOT IMPL]"`/`"[DEPRECATED]"` in `desc`,
+  reliably flags these (13 of 47 entries, including both "advanced" power
+  plant variants) — `extract_base_buildings.py` marks them
+  `implemented: false` and `optimize.py` excludes them by default.
+- `B_ControlBase_Corpo1` (Corporation Command Center) is player-confirmed
+  corp-base-only, capped at 1 per *corporation* (not per base) — a scope
+  no per-base attribute expresses. Left selectable by default in
+  `optimize.py` (it's real, just out of this single-base tool's tracking).
+
+- `tools/extract_base_buildings.py` — pulls all `BaseBuilding_*` items out
+  of `pak_out/data.cdb`'s `item` sheet into `basebuilder/base_buildings_data.json`,
+  including each building's `unique`/`main`/`implemented`/`corp_only`
+  flags, plus an attribute-name/unit glossary. Re-run after a `pak_out` refresh.
+- `basebuilder/optimize.py` — general-purpose CLI optimizer over that data.
+  Solves an integer LP (`scipy.optimize.milp`, unbounded knapsack for
+  non-unique buildings) to maximize/minimize a chosen attribute subject to
+  budget/min/max constraints on any other attribute. Command buildings are
+  regular decision variables (capped at 1 each) rather than an external
+  fixed budget — the FP/DP capacity rule above is baked in automatically
+  every run. `--list` / `--list-attrs` for discovery. See the script's
+  module docstring for full usage examples.
 
 ## HMD Mesh Pipeline
 

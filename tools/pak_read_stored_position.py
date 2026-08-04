@@ -11,7 +11,7 @@ Run: python tools/pak_read_stored_position.py
 """
 import struct
 import sys
-sys.path.insert(0, r'd:\Documents\Spacecraft\tools')
+sys.path.insert(0, r'e:\Documents\Spacecraft\tools')
 from pak_extract import PakReader, D02_DATA_START, PAK_PATH
 
 

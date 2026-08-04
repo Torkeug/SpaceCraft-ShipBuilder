@@ -2222,3 +2222,245 @@ was built on the wrong premise; corrected 2026-07-28 across that file's
 own `_meta`, every affected layout/goal_preset, its frontend
 visualization, and its test suite — see that file's own `_meta.
 adjacency_timing`/`exact_grid_search` for the corrected model.
+
+## Finding 22: Base building — FP/DP budget is a hard construction gate (stacks additively across Command buildings), power is NOT one global pool
+
+Source: raw disassembly of `st.service.Deploy.checkDeployBuilding`
+(findex 16971, `Deploy.hx:120-131`), `ent.SpaceBase.getAttribute`
+(findex 17182), `getMaxBuildPoints` (findex 17221), `isOverBuildLimit`
+(findex 17222), `checkBuildPoints` (findex 17220), `get_mainBuilding`
+(findex 17175), `getEffectiveRadius` (findex 17207) — all in
+`src/ent/SpaceBase.hx` — plus `ent.b.BaseBuilding.get_isMain` (findex
+5722) and `data.cdb`'s `item` sheet `props.tags` for the four
+`BaseBuilding_Command` rows. Prompted by a direct player correction
+("going over fp budget isn't possible") after `basebuilder/optimize.py`
+(see `CLAUDE.md`'s Base Builder section) was built assuming a single
+picked command center sets a fixed budget.
+
+**FP is a hard pre-construction gate, not a soft/penalized one.**
+`checkDeployBuilding` (`Deploy.hx:127`) computes
+`used = spaceBase.getAttribute("BuildPointsCost")`,
+`total = used + newBuilding.BuildPointsCost`, and rejects the deploy
+outright with error `NotEnoughBuildPoints` if
+`total > spaceBase.getMaxBuildPoints(null)` — before the building is
+ever placed. `DecoPointsCost`/`MaxDecoPoints` has the identical pattern
+(`NotEnoughDecoPoints`, same string pool neighborhood). There is no
+"build over budget and pay a penalty" path through this function.
+
+**`checkBuildPoints`/`overBuildLimit` is a separate, rarer safety net,
+not the everyday enforcement.** It's what fires when your cap *shrinks
+after* buildings already exist over the new lower cap (see next point)
+— not a normal consequence of construction, since construction itself
+can't cause that state. When `used > max`, it sets `overBuildLimit=true`
+and calls `setEnabled(false)` on every building on the base (production
+halt) until you're back under budget — it does not delete anything.
+
+**`MaxBuildPoints` (and `MaxDecoPoints`) stack additively across every
+building on the base that carries the attribute — they are not a single
+fixed number tied to "your command center choice".**
+`SpaceBase.getAttribute(k)` sums `building.getAttribute(k)` over *every*
+building on the base, and `getMaxBuildPoints` is just
+`getAttribute("MaxBuildPoints")` (+ `corpo.getAttribute("CorpoBaseFootprint")`
+if corp-owned). Only the 4 `BaseBuilding_Command` items carry
+`MaxBuildPoints`: `B_ControlBase`=60, `B_ControlBase2`("Command
+Tower")=50, `B_ControlBase3PH`("Command Relay")=100,
+`B_ControlBase_Corpo1`=100. Building more than one of these on the same
+base **adds** their caps together, not a max() or a replacement.
+(Non-`B_ControlBase` command buildings cost 0 FP themselves —
+`BuildPointsCost` is entirely absent from their `attrs`, and
+`checkDeployBuilding` short-circuits the budget check when a building's
+own cost is `<=0` — so they're pure capacity-adds, no FP spent to gain FP.)
+
+**CORRECTION (player-confirmed, same session):** `B_ControlBase3PH`
+("Command Relay") **does not exist in the shipped game** — its `PH` id
+suffix (shared with `B_Extractor1PH`, `B_AntimatterSynthPH`, `B_LaboPH`)
+marks a data.cdb entry that was never released, same signal as the
+explicit `"[NOT IMPL]"`/`"[DEPRECATED]"` markers in 9 other
+`BaseBuilding_*` `desc` fields (13 of 47 total — see
+`tools/extract_base_buildings.py`'s `is_implemented()`, which now filters
+these out by default). So the realistic personal-base ceiling below is
+wrong as stated; the real one (ignoring the corp building) is just
+**base + tower = 60+50 = 110 FP**, pending confirmation the Tower itself
+shipped (unconfirmed either way — no `PH`/`[NOT IMPL]` marker on it,
+which is the best signal available, but that's not proof).
+
+Separately, **`B_ControlBase_Corpo1` (Corporation Command Center) is
+player-confirmed corp-base-only and capped at 1 per *corporation*, not 1
+per base** like the other three — a stricter, cross-base scope no
+per-base attribute in `data.cdb` expresses. `basebuilder/optimize.py`
+leaves it selectable (it's a real building) but can't itself track
+whether your corporation's one allowance is already spent on another base.
+
+**Each of the 4 is tagged `UniqueBuilding`** in `data.cdb`
+(`item.props.tags`) — referenced only from
+`ui.win.b.SelectDeployBuilding.init`, i.e. enforced by hiding the option
+once already built rather than a server-side reject, but the practical
+effect is the same: at most one of each per base.
+
+**Only `B_ControlBase` is tagged `MainBaseBuilding`.**
+`get_mainBuilding()` finds the (sole) building with that tag, and
+`getEffectiveRadius()` reads `ControlBaseRadius` (250) **only from that
+building** — Command Tower/Relay have no `ControlBaseRadius` of their
+own and don't extend the placement radius, only the FP/DP pool.
+`checkDeployBuilding` calls `getEffectiveRadius` as a *separate* hard
+placement gate (new building's position must be within it) — independent
+of, and in addition to, the FP/DP checks.
+
+**Power is NOT a flat base-wide pool the way FP/DP are — open item, not
+fully traced.** `SpaceBase.getEnergyConsumption/getEnergyProduction`
+delegate to `st.base.SpaceBaseNetworks` (`calculateTotalDemand`,
+`calculateCurrentProduction`, `calculateTotalOffer`, `bakeNetwork`,
+`isInAnyNetwork`, `getNetwork` — all in `src/st/base/SpaceBaseNetworks.hx`),
+which groups buildings into separate `Network`s rather than summing
+`EnergyOffer`/`EnergyDemand` across the whole base unconditionally. This
+strongly suggests power only flows within a connected grid (plausibly
+tied to `Connector`/`addConnector` adjacency and `PowerTransmitter`'s
+`EnergyTransferCapacity`), meaning a generator sitting on the same base
+but outside a building's network wouldn't actually power it. **Not
+verified in depth** — network-formation logic (adjacency vs. explicit
+connector wiring, whether it's one network per base by default) wasn't
+traced. Treat any base-wide `NetPower` total (including
+`basebuilder/optimize.py`'s) as an upper-bound approximation, not a
+guarantee the game would actually let that power reach where it's needed.
+
+**Practical upshot for `basebuilder/optimize.py`:** the FP/DP budget
+should be modeled as *supplied by whichever Command buildings get
+selected* (each bounded to at most 1, per `UniqueBuilding`), not passed
+in as a fixed number from a single `--command-center` pick — a
+`sum(BuildPointsCost) <= sum(MaxBuildPoints)` constraint over the same
+decision variables, rather than an external constant. Fixed in the same
+change that added this finding.
+
+## Finding 23: Base building — Fuel Power Plant's Ethanol burn rate, Chemical Factory's Ethanol output rate, and the corp CorpoBaseFootprint permit bonus
+
+Source: raw disassembly of `ent.b.Generator.getProduceTime` (findex 24257)
+and `getPowerConsumption` (findex 24255, `Generator.hx`); `ent.b.Factory.
+getProduceTime` (findex 21580, `Factory.hx`) and `CraftUtils.getAutoTime`
+(findex 20700, `src/lib/utils/CraftUtils.hx:41-44`); cross-checked against
+`data.cdb`'s `craft` sheet (`Chemical_Ethanol` row), `Ethanol`'s own
+`item.props.compatibleBuildings`, `itemTag` sheet's `Workshop_Chemical.
+props.autoCraftTime`, and `permit` sheet's `PCorpo_L_Footprint` row.
+Prompted by a request to optimize a base with a specific fuel-generator +
+chemical-factory ratio and a corp FP bonus — required tracing a whole
+recipe/fuel layer of `data.cdb` (`craft`/`itemTag`/`item.props.
+compatibleBuildings`) that Finding 22 didn't need to touch.
+
+**Generator fuel burn**: `Generator.getProduceTime()` =
+`getItemBuildingAttribute(selectedFuelItem, thisBuildingId, "FuelConversion", 0)
+/ getAttribute("FuelConsumption")`. `FuelConversion` is *not* a flat
+per-item attribute (no item has it in its own `attributes` array, despite
+being a defined attribute name) — it's a **per-(item, building) override**
+living in `item.props.compatibleBuildings[].attributes`, read via
+`getItemBuildingAttribute`. For `Ethanol` → `B_Generator`/`B_Generator2`,
+`FuelConversion = 15000`. `B_Generator`'s own `FuelConsumption = 75`, so
+`getProduceTime = 15000/75 = 200` (seconds). Not independently confirmed
+from raw bytecode that exactly 1 fuel-item unit is consumed per full
+200s cycle (the `produce()` body itself was opaque, just a `set_pending`
+call) — inferred from context (fuel selection is a single stored item,
+no per-cycle quantity field anywhere), not proven. **Net: 1 Ethanol per
+200s, i.e. 0.005 Ethanol/s per Fuel Power Plant.**
+
+**Factory craft time** (applies to any `ent.b.Factory`-based building —
+Chemical, Smelter, Factory1/2, Bottling, Recycling): `getProduceTime()` =
+`getAttribute("ProduceTimeFactor" or 1) * baseTime * globalProduceTimeFactor`,
+where `baseTime` = `craft.props.autoTime` if set, else
+`craft.where.props.autoCraftTime` (`craft.where` resolves through the
+`itemTag` sheet, e.g. `Workshop_Chemical`) — `UseManualCraftingTime`-flagged
+buildings (only `B_SmelterSA` among current buildings) use `getManualTime`
+instead (not traced). For `Chemical_Ethanol` (`1 SpaceWheat_SourPulp → 6
+Ethanol`, `craftTimeFactor: 1`, `where: Workshop_Chemical`):
+`Workshop_Chemical.props.autoCraftTime = 180`, `B_Chemical` has no
+`ProduceTimeFactor` attribute (defaults to 1) → `getProduceTime = 180`
+(seconds). **Net: 6 Ethanol per 180s, i.e. 1/30 ≈ 0.0333 Ethanol/s per
+Chemical Factory**, consuming 1 Sour Pulp per cycle (1/180 Sour Pulp/s) —
+Sour Pulp's own supply rate from farms was not traced (see Finding 18 for
+the general per-harvest yield formula on other crops; `SpaceWheat`'s own
+variant-selection gates weren't looked at here).
+
+**Ratio**: one Chemical Factory's Ethanol output (1/30 /s) covers
+`(1/30)/(1/200) = 20/3 ≈ 6.67` Fuel Power Plants' consumption — i.e.
+`chemicalFactories ≥ 0.15 × fuelGenerators` to stay fed, rounding up.
+
+**Corp FP bonus**: `getMaxBuildPoints()` adds `corpo.getAttribute(
+"CorpoBaseFootprint")` when the base has a corp owner (Finding 22). The
+only source of that attribute in `data.cdb` is permit `PCorpo_L_Footprint`
+("Industrial Centers", cost 2000, requires `PCorpo_L_Base`), which grants
+`CorpoBaseFootprint: 50` — a flat, base-independent FP bonus once
+unlocked, stacking on top of whatever Command buildings the base itself
+has. `basebuilder/optimize.py --corp-fp 50` models this (not a building,
+so it can't be a normal decision-variable attribute like `MaxBuildPoints`).
+
+**Not modeled anywhere in `basebuilder/optimize.py`**: `data.cdb`'s
+`craftValues` sheet has a `PowerBaseCost` formula (e.g. `5` for
+`Workshop_Chemical`, `10` for `Workshop_Factory2`) that's presumably a
+per-active-craft power draw for `Factory`-based buildings — none of them
+carry a static `EnergyDemand` attribute (only `Farm`/`Extractor`-type
+Gathering/Crafting buildings do), so any base with Chemical/Smelter/
+Factory/Bottling/Recycling buildings running will draw more real power
+than `NetPower` currently accounts for. Not traced further this session.
+
+## Finding 24: Base building — Xenic Farm's actual Sour Pulp throughput, using CraftMap's already-verified `SourEinkorn`/Layout F data instead of re-deriving it (CORRECTS this finding's own first version, below)
+
+**CORRECTED — the original version of this finding (visible in git history)
+hand-derived a "baseline, no enrichments" rate from raw `data.cdb` and
+guessed at the light-dial mechanic from scratch (misreading a bitmask
+opcode as picking *Dark* for the big speed bonus). That was the wrong
+process: CraftMap (`../Craftmap/game_data_extract/farming.json`, a sibling
+project) already has `SourEinkorn` fully worked out — all 3 `Spacekorn`
+variants (Plain/Sour/Woolly = `Plainkorn`/`SourEinkorn`/`ChillyEinkorn`)
+are covered, not just Plain as this finding originally assumed — including
+its exact enrichment values, an exhaustively-searched optimal layout, and
+the live formula. Pointed at directly by the player rather than re-derived.
+Lesson: check `Craftmap/game_data_extract/farming.json`'s `crops`/`layouts`
+for a crop before reverse-engineering it from `data.cdb` again — this file
+existing and being current was already noted at the top of Finding 13, and
+should have been the first stop here too.**
+
+Source: `Craftmap/game_data_extract/farming.json` → `crops[spacekorn]
+.variants[SourEinkorn]` (enrichment values, `growth_hours`/
+`byproduct_cycle_hours` ranges) and `layouts.F` ("Sour Vault": 15-cell
+monoculture, Hot temperature + UV light dial) — both already
+cross-verified against raw disassembly per that file's own `_meta`
+(Findings 13/16/17/18 there). `SourEinkorn.extra` = `SpaceWheat_SourPulp`,
+confirming it's the right crop for Finding 23's Ethanol chain. Farm plot
+count: player-confirmed 60 plots per `B_Farm`, which farming.json's own
+`_meta.fertilizer_scope` independently corroborates — "the real Xenic Farm
+building is FOUR separate 3x5 plot groups" = 4×15 = 60.
+
+Layout F's own toggles for max output, per `SourEinkorn.goal_presets.rate.
+overall`: **UV light** (`all_speed +1.5`, i.e. growth+production at 2.5×
+speed — not Dark, correcting this finding's original guess) + **Neutral
+Fertilizer** stacked alongside the required Carbonic (`byproduct_qty +1.0`,
+doubling Sour Pulp yield — up to 3 supplements can coexist per
+`FarmZoneSupplementCount`, and neither conflicts with the other per
+farming.json's own germination-cleanliness check). Applying the documented
+formula (`growth_time = growth_hours/(1+all_speed)`,
+`yield = ceil(growth_hours*(1+byproduct_qty)/byproduct_cycle_hours)`,
+using range midpoints):
+
+- `growth_hours` avg 38h → boosted growth time = `38/2.5` = **15.2h**
+- yield per harvest ≈ `ceil(38*2/3.8)` = **20 Sour Pulp** (double the
+  unboosted baseline, from the Neutral Fertilizer toggle)
+- germination stage (`EinkornSeed`/Spacekorn seed, unaffected by
+  `SourEinkorn`'s own enrichments) avg 2.85h → full cycle ≈ **18.05h**,
+  still assuming prompt manual replant each cycle (farming is manual
+  harvest/replant, not a passive Factory-style loop — same caveat as
+  before)
+- rate per plot ≈ `20/18.05h` ≈ **1.11 Sour Pulp/hour**
+- **per Xenic Farm (60 plots, all Layout F) ≈ 66.5 Sour Pulp/hour**
+- **4 Xenic Farms ≈ 266 Sour Pulp/hour**
+
+Compared against Finding 23's Chemical Factory draw (20 Sour Pulp/hour
+each): 5 Chemical Factories need 100/hour. **266 vs. 100 — roughly 2.7×
+the required supply, comfortably sufficient** (reverses this finding's
+original "only 59% covered" conclusion, which used the unboosted rate).
+The margin is wide enough that the exact random-roll range on
+`growth_hours`/`byproduct_cycle_hours` doesn't threaten the conclusion.
+Given the surplus, 4 farms at Layout F could support well over 5 Chemical
+Factories if the base's FP budget were reallocated toward more of them —
+not pursued here since the optimizer run in Finding 23 took the farm count
+as a given input, not something to re-solve for.
+
+Still not modeled in `basebuilder/optimize.py` — this is a manual-labor
+rate (and a specific dial/fertilizer setup choice), not a building
+attribute the FP/power knapsack model can allocate against.

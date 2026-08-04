@@ -1,0 +1,822 @@
+{
+  "_source": "pak_out/data.cdb 'item' sheet, type startswith BaseBuilding_ or == BaseBuilding",
+  "attribute_glossary": {
+    "BuildPointsCost": {
+      "name": "Footprint",
+      "unit": "FP"
+    },
+    "ControlBaseRadius": {
+      "name": "Control Base Radius",
+      "unit": "np"
+    },
+    "DecoPointsCost": {
+      "name": "Deco Points",
+      "unit": "DP"
+    },
+    "DeployXP": null,
+    "DroneRouteCount": {
+      "name": "Drone Route Count",
+      "unit": null
+    },
+    "EnergyDemand": {
+      "name": "Energy Demand",
+      "unit": "MA"
+    },
+    "EnergyOffer": {
+      "name": "Energy Generation",
+      "unit": "MA"
+    },
+    "EnergyStockCapacity": {
+      "name": "Energy Capacity",
+      "unit": "MAs"
+    },
+    "EnergyTransferCapacity": {
+      "name": "Transfer Capacity",
+      "unit": "MA"
+    },
+    "FTOilStorage": {
+      "name": "Mag-Plasma Storage",
+      "unit": "L"
+    },
+    "FakeGiveTechXP": {
+      "name": "Generate Technology XP",
+      "unit": null
+    },
+    "FluidStorage": {
+      "name": "Reservoir Size",
+      "unit": "L"
+    },
+    "FuelConsumption": {
+      "name": "Fuel Consumption",
+      "unit": "Hz"
+    },
+    "InputStorage": {
+      "name": "Input Storage",
+      "unit": "su"
+    },
+    "MaxBuildPoints": {
+      "name": "Footprint Capacity",
+      "unit": "FP"
+    },
+    "MaxConnectorAmount": {
+      "name": "Max Connection",
+      "unit": null
+    },
+    "MaxDecoPoints": {
+      "name": "Decoration Capacity",
+      "unit": "DP"
+    },
+    "MaxTechXP": {
+      "name": "Experience Capacity",
+      "unit": null
+    },
+    "OutputStorage": {
+      "name": "Output Storage",
+      "unit": "su"
+    },
+    "ProduceTimeFactor": {
+      "name": "Produce Time Factor",
+      "unit": null
+    },
+    "ShuttleSlots": {
+      "name": "Shuttle Slots",
+      "unit": null
+    },
+    "SolidStorage": {
+      "name": "Solid Storage",
+      "unit": "su"
+    },
+    "UseManualCraftingTime": {
+      "name": "Use Manual Crafting Time",
+      "unit": null
+    }
+  },
+  "command_centers": [
+    {
+      "id": "B_ControlBase",
+      "name": "Base Command Center",
+      "category": "Command",
+      "price": 334,
+      "desc": "This central building provides the basic storage, electric power and administrative systems needed to operate a small land base. Deploying a base constitutes a legal claim over the area and deposits it is placed over. It also comes with basic manual smelting and crafting machines.",
+      "attrs": {
+        "ControlBaseRadius": 250,
+        "MaxBuildPoints": 60,
+        "MaxDecoPoints": 50,
+        "MaxTechXP": 400,
+        "DeployXP": 0,
+        "EnergyOffer": 50,
+        "MaxConnectorAmount": 6,
+        "SolidStorage": 500
+      },
+      "unique": true,
+      "main": true,
+      "implemented": true,
+      "corp_only": false
+    },
+    {
+      "id": "B_ControlBase2",
+      "name": "Command Tower",
+      "category": "Command",
+      "price": 2450,
+      "desc": "This building allows a base to expand over a Level 2 land area, doubling its maximum footprint and unlocking experience thresholds up to 800 points.",
+      "attrs": {
+        "MaxBuildPoints": 50,
+        "MaxDecoPoints": 50,
+        "DeployXP": 10,
+        "MaxTechXP": 400
+      },
+      "unique": true,
+      "main": false,
+      "implemented": true,
+      "corp_only": false
+    },
+    {
+      "id": "B_ControlBase3PH",
+      "name": "Command Relay",
+      "category": "Command",
+      "price": 0,
+      "desc": "This building allows a base to expand over a Level 3 land area, doubling its maximum footprint and unlocking experience thresholds up to 2000 points.",
+      "attrs": {
+        "MaxBuildPoints": 100,
+        "MaxTechXP": 1200
+      },
+      "unique": true,
+      "main": false,
+      "implemented": false,
+      "corp_only": false
+    },
+    {
+      "id": "B_ControlBase_Corpo1",
+      "name": "Corporation Command Center",
+      "category": "Command",
+      "price": 306000,
+      "desc": "A legally sanctionned corporation of importance often requires a place to centralized its operation. This building increases the maximum size of a single base of the corporation and contains crafting machines, a conference room, and many customizable space.",
+      "attrs": {
+        "MaxBuildPoints": 100,
+        "MaxDecoPoints": 100
+      },
+      "unique": true,
+      "main": false,
+      "implemented": true,
+      "corp_only": true
+    }
+  ],
+  "buildings": [
+    {
+      "id": "B_Extractor",
+      "name": "Extractor",
+      "category": "Gathering",
+      "price": 64,
+      "desc": "This building can only be assembled over a resource deposit, which it will then drill into to extract raw ore automatically.",
+      "attrs": {
+        "BuildPointsCost": 5,
+        "EnergyDemand": 20,
+        "OutputStorage": 100,
+        "DroneRouteCount": 2
+      },
+      "unique": false,
+      "main": false,
+      "implemented": true,
+      "corp_only": false
+    },
+    {
+      "id": "B_LiquidExtractor",
+      "name": "Liquid Extractor",
+      "category": "Gathering",
+      "price": 3710,
+      "desc": "This building can only be assembled over a geothermal pool, from which it will extract pure fluid automatically.",
+      "attrs": {
+        "BuildPointsCost": 5,
+        "EnergyDemand": 20
+      },
+      "unique": false,
+      "main": false,
+      "implemented": true,
+      "corp_only": false
+    },
+    {
+      "id": "B_Extractor1PH",
+      "name": "Advanced Extractor",
+      "category": "Gathering",
+      "price": 1180,
+      "desc": null,
+      "attrs": {
+        "BuildPointsCost": 5,
+        "EnergyDemand": 40,
+        "OutputStorage": 100,
+        "ProduceTimeFactor": 0.6666667,
+        "DroneRouteCount": 2
+      },
+      "unique": false,
+      "main": false,
+      "implemented": false,
+      "corp_only": false
+    },
+    {
+      "id": "B_SolarPanel",
+      "name": "Solar Plant",
+      "category": "Power",
+      "price": 424,
+      "desc": "This building converts electromagnetic radiation into electric current, supplying the base's power grid. It takes up space and must be oriented correctly, but it operates without fuel.",
+      "attrs": {
+        "BuildPointsCost": 4,
+        "DeployXP": 10,
+        "EnergyOffer": 10
+      },
+      "unique": false,
+      "main": false,
+      "implemented": true,
+      "corp_only": false
+    },
+    {
+      "id": "B_Warehouse",
+      "name": "Warehouse",
+      "category": "Storage",
+      "price": 352,
+      "desc": "This building is suitable for storing solid materials, which can be easily moved in and out by drones.",
+      "attrs": {
+        "BuildPointsCost": 3,
+        "SolidStorage": 2000,
+        "DroneRouteCount": 5
+      },
+      "unique": false,
+      "main": false,
+      "implemented": true,
+      "corp_only": false
+    },
+    {
+      "id": "B_Organiser",
+      "name": "Drone Dispatcher",
+      "category": "Logistic",
+      "price": 19.1,
+      "desc": "This building can monitor multiple drone routes and merge them into full-fledged production chains. The backbone of a well-organized pipeline.",
+      "attrs": {
+        "BuildPointsCost": 1,
+        "SolidStorage": 50,
+        "DroneRouteCount": 5
+      },
+      "unique": false,
+      "main": false,
+      "implemented": true,
+      "corp_only": false
+    },
+    {
+      "id": "B_Chest",
+      "name": "Trading Box",
+      "category": "Storage",
+      "price": 31.2,
+      "desc": "This small box let anyone from the same corporation than the base owner leave, or take, gifts.",
+      "attrs": {
+        "BuildPointsCost": 1,
+        "SolidStorage": 400,
+        "DroneRouteCount": 0
+      },
+      "unique": false,
+      "main": false,
+      "implemented": true,
+      "corp_only": false
+    },
+    {
+      "id": "B_Cistern",
+      "name": "Cistern",
+      "category": "Storage",
+      "price": 1560,
+      "desc": "This building is suitable for storing liquid or semi-fluid materials.",
+      "attrs": {
+        "BuildPointsCost": 3,
+        "FluidStorage": 4000
+      },
+      "unique": false,
+      "main": false,
+      "implemented": true,
+      "corp_only": false
+    },
+    {
+      "id": "B_FTLCistern",
+      "name": "Mag-Plasma Cistern",
+      "category": "Storage",
+      "price": 2660,
+      "desc": "This building is suitable for storing active mag-plasma.",
+      "attrs": {
+        "BuildPointsCost": 5,
+        "FTOilStorage": 2000
+      },
+      "unique": false,
+      "main": false,
+      "implemented": true,
+      "corp_only": false
+    },
+    {
+      "id": "B_FTLGatherer",
+      "name": "Cosmic Condenser",
+      "category": "Gathering",
+      "price": 142,
+      "desc": "[NOT IMPL] Building that produce mag-plasma slowly, based on some local properties (maybe proximity from other condensator, and space station reduce production)",
+      "attrs": {
+        "BuildPointsCost": 1,
+        "SolidStorage": 2000
+      },
+      "unique": false,
+      "main": false,
+      "implemented": false,
+      "corp_only": false
+    },
+    {
+      "id": "B_Crystaliser",
+      "name": "Crystallizer",
+      "category": "Crafting",
+      "price": 274,
+      "desc": "This building uses chemical solutions to generate crystals at exceptionally high speeds compared to their natural formation process.",
+      "attrs": {
+        "BuildPointsCost": 5,
+        "InputStorage": 50,
+        "OutputStorage": 50
+      },
+      "unique": false,
+      "main": false,
+      "implemented": true,
+      "corp_only": false
+    },
+    {
+      "id": "B_Farm",
+      "name": "Xenic Farm",
+      "category": "Crafting",
+      "price": 1250,
+      "desc": "This building provides an appropriate environment to cultivate living organisms.",
+      "attrs": {
+        "BuildPointsCost": 5,
+        "EnergyDemand": 10,
+        "InputStorage": 20,
+        "OutputStorage": 100
+      },
+      "unique": false,
+      "main": false,
+      "implemented": true,
+      "corp_only": false
+    },
+    {
+      "id": "B_AntimatterSynthPH",
+      "name": "Antimatter Synthesizer",
+      "category": "Crafting",
+      "price": 394,
+      "desc": "This building consumes huge amounts of electricity to produce trace amounts of antimatter, which is still rather remarkable.",
+      "attrs": {
+        "BuildPointsCost": 5,
+        "InputStorage": 20,
+        "OutputStorage": 100
+      },
+      "unique": false,
+      "main": false,
+      "implemented": false,
+      "corp_only": false
+    },
+    {
+      "id": "B_LaboPH",
+      "name": "Laboratory",
+      "category": "Misc",
+      "price": 3360,
+      "desc": "This building contains a compact Ninmah laboratory with everything needed to analyze exotic substances.",
+      "attrs": {
+        "BuildPointsCost": 1,
+        "DeployXP": 0
+      },
+      "unique": true,
+      "main": false,
+      "implemented": false,
+      "corp_only": false
+    },
+    {
+      "id": "B_Generator",
+      "name": "Fuel Power Plant",
+      "category": "Power",
+      "price": 830,
+      "desc": "This building consumes carbon-based fuel to produce electric current, supplying the base's power grid. It is effective and compact, but resource-intensive.",
+      "attrs": {
+        "BuildPointsCost": 3,
+        "EnergyOffer": 40,
+        "SolidStorage": 50,
+        "FuelConsumption": 75
+      },
+      "unique": false,
+      "main": false,
+      "implemented": true,
+      "corp_only": false
+    },
+    {
+      "id": "B_Generator2",
+      "name": "Advanced Fuel Power Plant",
+      "category": "Power",
+      "price": 251,
+      "desc": "[NOT IMPL]",
+      "attrs": {
+        "BuildPointsCost": 5,
+        "EnergyOffer": 120,
+        "SolidStorage": 50,
+        "FuelConsumption": 200
+      },
+      "unique": false,
+      "main": false,
+      "implemented": false,
+      "corp_only": false
+    },
+    {
+      "id": "B_FusionGenerator",
+      "name": "Fusion Plant",
+      "category": "Power",
+      "price": 2120,
+      "desc": "[NOT IMPL]",
+      "attrs": {
+        "BuildPointsCost": 10,
+        "EnergyOffer": 50,
+        "SolidStorage": 20
+      },
+      "unique": false,
+      "main": false,
+      "implemented": false,
+      "corp_only": false
+    },
+    {
+      "id": "B_HeatRecouper",
+      "name": "Heat Capacitor",
+      "category": "Power",
+      "price": 2120,
+      "desc": "[NOT IMPL] reduce temperature around the base. Produce power based on current temperature",
+      "attrs": {
+        "BuildPointsCost": 5,
+        "EnergyOffer": 50,
+        "SolidStorage": 20
+      },
+      "unique": false,
+      "main": false,
+      "implemented": false,
+      "corp_only": false
+    },
+    {
+      "id": "B_PowerTransmitter",
+      "name": "Power Transmitter",
+      "category": "Power",
+      "price": 510,
+      "desc": "This building exploits cutting-edge shield technology and gravitational spacetime deformation to beam electricity without loss between different bases in the same stellar system.",
+      "attrs": {
+        "BuildPointsCost": 5,
+        "EnergyTransferCapacity": 200
+      },
+      "unique": false,
+      "main": false,
+      "implemented": true,
+      "corp_only": false
+    },
+    {
+      "id": "B_Battery",
+      "name": "Battery Array",
+      "category": "Power",
+      "price": 6800,
+      "desc": "This building stores chemical energy when the power grid produces excess power. It can then readily convert that energy back to electricity during spikes in consumption.",
+      "attrs": {
+        "BuildPointsCost": 1,
+        "EnergyStockCapacity": 90000
+      },
+      "unique": false,
+      "main": false,
+      "implemented": true,
+      "corp_only": false
+    },
+    {
+      "id": "B_Factory1",
+      "name": "Assembler",
+      "category": "Crafting",
+      "price": 458,
+      "desc": "This building assembles basic resources into industrial compounds. As an automated alternative to the manual workshop, it can function continuously with no human input, which makes it appropriate for large-scale production.",
+      "attrs": {
+        "BuildPointsCost": 3,
+        "InputStorage": 50,
+        "OutputStorage": 50,
+        "FakeGiveTechXP": 1
+      },
+      "unique": false,
+      "main": false,
+      "implemented": true,
+      "corp_only": false
+    },
+    {
+      "id": "B_Factory2",
+      "name": "Factory",
+      "category": "Crafting",
+      "price": 7500,
+      "desc": "The biggest ship materials can only be built in a custom large-scale factory that consumes a lot of energy.",
+      "attrs": {
+        "BuildPointsCost": 10,
+        "InputStorage": 1000,
+        "OutputStorage": 500,
+        "FakeGiveTechXP": 1
+      },
+      "unique": false,
+      "main": false,
+      "implemented": true,
+      "corp_only": false
+    },
+    {
+      "id": "B_Smelter",
+      "name": "Smelter",
+      "category": "Crafting",
+      "price": 18.6,
+      "desc": "This building converts raw ore into industrial ingots. As an automated alternative to the manual smelter, it can function continuously with no human input, which makes it appropriate for large-scale production.",
+      "attrs": {
+        "BuildPointsCost": 3,
+        "InputStorage": 100,
+        "OutputStorage": 50,
+        "FakeGiveTechXP": 1
+      },
+      "unique": false,
+      "main": false,
+      "implemented": true,
+      "corp_only": false
+    },
+    {
+      "id": "B_SmelterSA",
+      "name": "Micro-Furnace",
+      "category": "Crafting",
+      "price": 38.6,
+      "desc": "Meitner & Karls have refined the process of turning ore into ingots with this micro-furnace. Smaller and faster than a regular smelter, it's the perfect accessory for your days of heavy manual crafting.",
+      "attrs": {
+        "BuildPointsCost": 1,
+        "InputStorage": 80,
+        "OutputStorage": 20,
+        "UseManualCraftingTime": 1,
+        "ProduceTimeFactor": 2
+      },
+      "unique": false,
+      "main": false,
+      "implemented": true,
+      "corp_only": false
+    },
+    {
+      "id": "B_Chemical",
+      "name": "Chemical Factory",
+      "category": "Crafting",
+      "price": 2880,
+      "desc": "This building assembles chemical elements into industrial compounds. It can function continuously with no human input, which makes it appropriate for large-scale production.",
+      "attrs": {
+        "BuildPointsCost": 3,
+        "InputStorage": 100,
+        "OutputStorage": 50,
+        "FakeGiveTechXP": 1
+      },
+      "unique": false,
+      "main": false,
+      "implemented": true,
+      "corp_only": false
+    },
+    {
+      "id": "B_BottlingPlant",
+      "name": "Bottling Plant",
+      "category": "Crafting",
+      "price": 403,
+      "desc": "This building packages liquid or semi-fluid products into standardized containers.",
+      "attrs": {
+        "BuildPointsCost": 1,
+        "InputStorage": 500,
+        "OutputStorage": 500
+      },
+      "unique": false,
+      "main": false,
+      "implemented": true,
+      "corp_only": false
+    },
+    {
+      "id": "B_RecyclingPlant",
+      "name": "Recycling Plant",
+      "category": "Crafting",
+      "price": 900,
+      "desc": "This building processes scraps to extract their various components and prepare them for industrial reuse.",
+      "attrs": {
+        "BuildPointsCost": 3,
+        "InputStorage": 2000,
+        "OutputStorage": 1000,
+        "FakeGiveTechXP": 1
+      },
+      "unique": false,
+      "main": false,
+      "implemented": true,
+      "corp_only": false
+    },
+    {
+      "id": "B_ShuttlePad",
+      "name": "Shuttle Landing Pad",
+      "category": "Logistic",
+      "price": 377,
+      "desc": "This platform allows a shuttle to dock on the base, transporting goods into and out of it.",
+      "attrs": {
+        "BuildPointsCost": 5,
+        "SolidStorage": 1000,
+        "DroneRouteCount": 4,
+        "ShuttleSlots": 4
+      },
+      "unique": false,
+      "main": false,
+      "implemented": true,
+      "corp_only": false
+    },
+    {
+      "id": "B_LandingPad",
+      "name": "Landing Pad",
+      "category": "Logistic",
+      "price": 138,
+      "desc": "This platform allows a ship to dock on the base and connect to its distribution system to transfer fuel or other fluids.",
+      "attrs": {
+        "BuildPointsCost": 1
+      },
+      "unique": false,
+      "main": false,
+      "implemented": true,
+      "corp_only": false
+    },
+    {
+      "id": "B_Shipyard",
+      "name": "Shipyard",
+      "category": "Logistic",
+      "price": 810,
+      "desc": "This platform allows a ship to dock on the base to have its structure modified and its modules replaced. It is similar to the shipyards of space stations.",
+      "attrs": {
+        "BuildPointsCost": 3
+      },
+      "unique": false,
+      "main": false,
+      "implemented": true,
+      "corp_only": false
+    },
+    {
+      "id": "B_StandaloneFoundation",
+      "name": "Stand-alone Foundation",
+      "category": "Misc",
+      "price": 0,
+      "desc": "[DEPRECATED]",
+      "attrs": {},
+      "unique": false,
+      "main": false,
+      "implemented": false,
+      "corp_only": false
+    },
+    {
+      "id": "B_PathwayHolder",
+      "name": "Pathway Stand",
+      "category": "Misc",
+      "price": 990,
+      "desc": "This towering structure can keep an existing spacetime tunnel stable, even in the gravitational well of a planet. A ship can travel through such a pathway with their regular FTL engine.\nRequires the deployment of a [PathwayAmmo] with a [PathwayPuncher] at the exit point.",
+      "attrs": {
+        "BuildPointsCost": 3,
+        "EnergyDemand": 15
+      },
+      "unique": false,
+      "main": false,
+      "implemented": true,
+      "corp_only": false
+    },
+    {
+      "id": "B_AtmoDome",
+      "name": "Atmo-dome Generator",
+      "category": "Misc",
+      "price": 142,
+      "desc": "[NOT IMPL] Building that reduces or negates entirely weather pattern and environmental stuff around the base and in a tube above it, up to space, allowing ship that are not equipped for it to interact with the base.",
+      "attrs": {},
+      "unique": false,
+      "main": false,
+      "implemented": false,
+      "corp_only": false
+    },
+    {
+      "id": "B_Observatory",
+      "name": "Observatory",
+      "category": "Misc",
+      "price": 142,
+      "desc": "[NOT IMPL] Building that allow either the owner or its corporation to see invisible FTL pathways and remove the required level to use an FTL pathway, up to a certain range.",
+      "attrs": {},
+      "unique": false,
+      "main": false,
+      "implemented": false,
+      "corp_only": false
+    },
+    {
+      "id": "B_Hypergate",
+      "name": "Hypergate",
+      "category": "Logistic",
+      "price": 640,
+      "desc": "[NOT IMPL] Building that allows the creation of a tunnel toward a hypergate beacon from the same corporation. Consume a lot of power.",
+      "attrs": {},
+      "unique": false,
+      "main": false,
+      "implemented": false,
+      "corp_only": false
+    },
+    {
+      "id": "B_SunStation",
+      "name": "Sun Station",
+      "category": "Misc",
+      "price": 2120,
+      "desc": "[NOT IMPL] Space Building that produce a huge amount of power from a nearby star. Damage itself when its batteries are full.",
+      "attrs": {},
+      "unique": false,
+      "main": false,
+      "implemented": false,
+      "corp_only": false
+    },
+    {
+      "id": "B_DecoTest",
+      "name": "Test deco",
+      "category": "Deco",
+      "price": 0,
+      "desc": "This building is only a decoration, but style is often the difference between good contractors and great ones.",
+      "attrs": {
+        "DecoPointsCost": 2
+      },
+      "unique": false,
+      "main": false,
+      "implemented": true,
+      "corp_only": false
+    },
+    {
+      "id": "B_DecoPirate",
+      "name": "Pirate Hologram",
+      "category": "Deco",
+      "price": 0,
+      "desc": "This building is only a decoration, but style is often the difference between good contractors and great ones.",
+      "attrs": {
+        "DecoPointsCost": 15
+      },
+      "unique": false,
+      "main": false,
+      "implemented": true,
+      "corp_only": false
+    },
+    {
+      "id": "B_DecoTranscendance",
+      "name": "Transcendance Hologram",
+      "category": "Deco",
+      "price": 0,
+      "desc": "This building is only a decoration, but style is often the difference between good contractors and great ones.",
+      "attrs": {
+        "DecoPointsCost": 15
+      },
+      "unique": false,
+      "main": false,
+      "implemented": true,
+      "corp_only": false
+    },
+    {
+      "id": "B_DecoPlanet",
+      "name": "Planet Hologram",
+      "category": "Deco",
+      "price": 0,
+      "desc": "This building is only a decoration, but style is often the difference between good contractors and great ones.",
+      "attrs": {
+        "DecoPointsCost": 15
+      },
+      "unique": false,
+      "main": false,
+      "implemented": true,
+      "corp_only": false
+    },
+    {
+      "id": "B_DecoSakura",
+      "name": "Sakura Hologram",
+      "category": "Deco",
+      "price": 0,
+      "desc": "This building is only a decoration, but style is often the difference between good contractors and great ones.",
+      "attrs": {
+        "DecoPointsCost": 15
+      },
+      "unique": false,
+      "main": false,
+      "implemented": true,
+      "corp_only": false
+    },
+    {
+      "id": "B_DecoSnake",
+      "name": "Snake Hologram",
+      "category": "Deco",
+      "price": 0,
+      "desc": "This building is only a decoration, but style is often the difference between good contractors and great ones.",
+      "attrs": {
+        "DecoPointsCost": 15
+      },
+      "unique": false,
+      "main": false,
+      "implemented": true,
+      "corp_only": false
+    },
+    {
+      "id": "B_DecoDiver",
+      "name": "Diver Hologram",
+      "category": "Deco",
+      "price": 0,
+      "desc": "This building is only a decoration, but style is often the difference between good contractors and great ones.",
+      "attrs": {
+        "DecoPointsCost": 15
+      },
+      "unique": false,
+      "main": false,
+      "implemented": true,
+      "corp_only": false
+    }
+  ]
+}

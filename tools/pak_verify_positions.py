@@ -15,7 +15,7 @@ directly from each entry) has zero known failures.
 Run: python tools/pak_verify_positions.py
 """
 import sys
-sys.path.insert(0, r'd:\Documents\Spacecraft\tools')
+sys.path.insert(0, r'e:\Documents\Spacecraft\tools')
 from pak_extract import PakReader, PAK_PATH
 
 
