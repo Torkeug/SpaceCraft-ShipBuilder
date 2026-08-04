@@ -132,6 +132,85 @@ def build_pools(sheets):
     return patch_by_level, bp_by_level
 
 
+SECONDARY_TYPE_ROOTS = ("PureComponents", "FactoredMaterial", "Luxuries")
+"""itemType root ids matching ShipWreck crates' secondaryItemTypes bitmask
+(value 14 = Material|Manufactured|LuxuryArticle) - confirmed by tracing the
+bitmask's static initializer (logic.$Loot.allSecondaryItemTypes) in raw
+HashLink opcodes, not inferred: Material->PureComponents, Manufactured->
+FactoredMaterial, LuxuryArticle->Luxuries. See game_logic_notes.md Finding
+25 Part B for the full trace and the flag table (Gathering->Minerals and
+Scrap->Scrap are the other two flags in the enum, neither ever set on a
+ShipWreck_Loot_* row so not included here)."""
+
+
+def build_secondary_item_pool(sheets):
+    """Returns secondary_by_level: {lootLevel: [{id, name, requiredMaterials}]}
+    - every item eligible for a ShipWreck crate's secondary (Material/
+    Manufactured/Luxury) loot slot, BEFORE the per-sector lootMaterial gate
+    (see compute_secondary_items_by_sector).
+
+    Mirrors build_pools' shape/pattern for Patch/Blueprint, but the
+    eligibility rule here is simpler (a plain lootLevel<=target cap, not a
+    2-level window - Loot.generate's secondary-slot loop reads
+    candidate.lootLevel<=level directly, no L-1 widening the way the
+    PRIMARY item path's generateAttemptDownUp does - see Finding 25 Part B,
+    which corrects this same file's earlier draft that conflated the two).
+
+    requiredMaterials is item.props.lootMaterial's own item-id list (raw
+    game ids, same namespace as sectors[*].secondaryMaterialPool) - a
+    manufactured item needs EVERY one of these present in a sector's own
+    lootMaterial pool to be eligible there (or none at all if the list is
+    empty/absent - see item@props.lootMaterial's own data.cdb column
+    documentation, which states this exact rule verbatim)."""
+    items = {l["id"]: l for l in sheets["item"]["lines"]}
+    item_types = {l["id"]: l for l in sheets["itemType"]["lines"]}
+
+    secondary_by_level = defaultdict(list)
+    for l in items.values():
+        if l.get("lootLevel") is None:
+            continue
+        chain = item_type_chain(item_types, l.get("type", ""))
+        if not any(root in chain for root in SECONDARY_TYPE_ROOTS):
+            continue
+        required = [m.get("item") for m in l.get("props", {}).get("lootMaterial", [])]
+        secondary_by_level[l["lootLevel"]].append(
+            {"id": l["id"], "name": l["name"], "requiredMaterials": required}
+        )
+    return secondary_by_level
+
+
+def compute_secondary_items_by_sector(sectors, secondary_by_level):
+    """Returns {sector_name: [{name, level, requiredMaterials}]} - every
+    secondary-slot item eligible in that sector: lootLevel no higher than
+    the sector's own highest reachable (already-maxLootLevel-capped) loot
+    level, AND either no requiredMaterials at all or every one of them
+    present in the sector's own secondaryMaterialPool (see
+    build_secondary_item_pool's docstring and Finding 25 Part A - this is
+    NOT a probability, just the eligible set; the actual per-crate pick is
+    a repeated best-of-2-random-draw price-budget fill, not modeled here -
+    see Finding 25 Part B's own open item)."""
+    result = {}
+    for s in sectors.values():
+        reachable = s["lootLevelProbability"]
+        if not reachable:
+            result[s["name"]] = []
+            continue
+        max_level = max(int(k) for k in reachable)
+        pool = set(s["secondaryMaterialPool"])
+        eligible = []
+        for level, candidates in secondary_by_level.items():
+            if level > max_level:
+                continue
+            for c in candidates:
+                required = c["requiredMaterials"]
+                if required and not set(required).issubset(pool):
+                    continue
+                eligible.append({"name": c["name"], "level": level, "requiredMaterials": required})
+        eligible.sort(key=lambda i: (i["level"], i["name"].lower()))
+        result[s["name"]] = eligible
+    return result
+
+
 def load_category_itl(sheets):
     """The 'itl' (Item Type Level) baseline each primary-item category is
     weighted around - read live from data.cdb's `constant` sheet (not
@@ -844,6 +923,11 @@ def main():
     sectors = build_sector_profiles(sheets)
     itl = load_category_itl(sheets)
 
+    secondary_by_level = build_secondary_item_pool(sheets)
+    secondary_items_by_sector = compute_secondary_items_by_sector(sectors, secondary_by_level)
+    for s in sectors.values():
+        s["secondaryItemPool"] = secondary_items_by_sector[s["name"]]
+
     sector_level_prob = {
         s["name"]: {int(k): v for k, v in s["lootLevelProbability"].items()} for s in sectors.values()
     }
@@ -1028,10 +1112,30 @@ def main():
                 "across the WHOLE wreck site), using the real (convolved) "
                 "crate-count distribution rather than a Poisson "
                 "approximation of expectedPerWreck.",
+                "sectors[*].secondaryItemPool: a rare crate ALSO always "
+                "attempts to fill a separate value budget with Material/"
+                "Manufactured/Luxury-category items (secondaryItemTypes==14 "
+                "on every ShipWreck_Loot_4..9 row), independent of whatever "
+                "the primary Patch/Blueprint roll produced - a second, "
+                "wholly separate generation pass Loot.generate runs after "
+                "the primary pick, see game_logic_notes.md Finding 25 Part "
+                "B. Each entry here is ELIGIBLE, not a probability: real "
+                "picks are a repeated best-of-2-random-draw loop that fills "
+                "targetPrice=Loot_RefPrice(level)*size, which this dataset "
+                "does not simulate (no per-item pct/expectedPerWreck the "
+                "way itemDropOdds/wreckSiteItemOdds have for Patch/"
+                "Blueprint). Eligibility = item's own lootLevel no higher "
+                "than this sector's own highest reachable loot level, AND "
+                "(no requiredMaterials at all OR every one of them present "
+                "in this sector's own secondaryMaterialPool) - see Finding "
+                "25 Part A for the material-gate rule, confirmed both via "
+                "raw opcodes AND item@props.lootMaterial's own data.cdb "
+                "column documentation.",
             ],
         },
         "patchPoolByLevel": {str(k): v for k, v in sorted(patch_by_level.items())},
         "blueprintPoolByLevel": {str(k): v for k, v in sorted(bp_by_level.items())},
+        "secondaryItemPoolByLevel": {str(k): v for k, v in sorted(secondary_by_level.items())},
         "sectors": sectors,
         "itemDropOdds": {"patches": patch_rows, "blueprints": bp_rows},
         "wreckSiteItemOdds": {"patches": wreck_site_patch_rows, "blueprints": wreck_site_bp_rows},

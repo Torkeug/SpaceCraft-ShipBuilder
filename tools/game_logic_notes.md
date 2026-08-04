@@ -693,6 +693,13 @@ raw crate counts — Finding continues below.
 
 ## Finding 9: Composing crate *count* (Finding 8) with crate *contents* (`itemDropOdds`) into a single per-wreck-site number
 
+**Scope note (see Finding 25): this finding and `itemDropOdds` only cover
+a rare crate's *primary* item slot (Patch/Blueprint). Finding 25 found a
+second, independent Material/Manufactured/Luxury item generation pass on
+the same crate that this finding never accounted for — "crate contents"
+here means "crate's primary-slot contents", not everything a crate
+yields.**
+
 `itemDropOdds` (the per-item Patch/Blueprint `pct` values in
 `shipwreck_loot.json`) answers "given a rare crate is already open in my
 hands, what's the chance it's item X" — a probability *conditional on* a
@@ -2464,3 +2471,199 @@ as a given input, not something to re-solve for.
 Still not modeled in `basebuilder/optimize.py` — this is a manual-labor
 rate (and a specific dial/fertilizer setup choice), not a building
 attribute the FP/power knapsack model can allocate against.
+
+## Finding 25: `sector.props.lootMaterial` gates which manufactured items are eligible for a wreck's secondary loot slot in that sector; rare loot crates ALSO roll a separate Material/Manufactured/Luxury item via a price-budget generation pass Findings 8/9/11 never covered
+
+Investigated 2026-08-04 while explaining CraftMap's Wrecks tab "Secondary
+materials" line (`sector.secondaryMaterialPool`, sourced from
+`data.cdb`'s `sector.props.lootMaterial` by `extract_shipwreck_loot.py`).
+
+**Part A — CORRECTED: `lootMaterial` is real and live, not dead data.**
+This finding's first version claimed `lootMaterial` was unused, based on
+`refto fn@1483` (the generated CDB accessor `get_lootMaterial`) returning
+zero callers. **That method was unsound and the conclusion was wrong** —
+caught by going on to trace Part B's `getItemPool@22160` in raw opcodes,
+which reads `sector.props.lootMaterial` directly.
+
+The error: `get_lootMaterial@1483`'s virtual-type signature does match
+`item.props` (`item@props`'s own column list in `data.cdb` — `flags`,
+`skills`, `uxType`, `building`, `tag`, `tags`, `compatibleSkills`,
+`deleteInstance`, `craft`, `effects`, `mustHaveAnyOf`, `mustNotHave`,
+`refDesc`, `stationDockingSpeedScale`, `stationMassRay`,
+`stationMassInnerRay`, `stationSpeedLimit`, `refKnowledge`, `iconLevel`,
+`lootMaterial`, `compatibleBuildings` — the exact same 21 fields, just
+listed in schema-declaration order there vs. alphabetical in the
+getter's printed type) — the getter itself is real and correctly typed,
+it's simply never *called*, because every real consumer (`getItemPool`,
+its filter closure) already holds `item.props` as a concrete inferred
+type at the point it reads `.lootMaterial`, so the compiler inlines a
+`Field` opcode there instead of routing through the shared generated
+accessor. Raw-disassembling `getItemPool@22160` (`fn 22160`, not `decomp` — its
+pseudocode mis-renders this whole section, inventing a nonexistent
+`.id`/`itemType` reasoning) shows the genuine access pattern: `sector.props`
+there is typed `virtual<enterMission, genLevel, lootMaterial,
+maxLootLevel, outlineColor, requirements,
+resourceRegenTimeMultiplier>` (this virtual type's own field list is the
+tell — these are unmistakably sector fields), and reading
+`.lootMaterial` off it compiles to a **direct `Field` opcode**
+(`Field reg9 = reg8.lootMaterial`), never calling any named getter at
+all. Same for `item.props.lootMaterial` inside `getItemPool`'s filter
+closure (findex 24570) — also a direct `Field` opcode, not a call.
+**Lesson for this whole tooling approach**: HashLink's structural/virtual
+typing means the compiler freely inlines field access instead of calling
+a shared generated accessor whenever it has a concrete-enough type at the
+call site — which is the *common* case for CDB row/props access, not an
+edge case. Checking a generated accessor's callers only proves that
+*specific accessor function* is unused; it says nothing about whether the
+field itself is read elsewhere via inlined access, which turned out to
+be exactly what happened here. Don't repeat the mistake: for a CDB field
+suspected dead, find the actual consuming logic (`sfile`/`infile` on the
+relevant `.hx`, then raw `fn` disassembly) rather than trusting a single
+named-accessor's `refto` as proof of non-use.
+
+**The real mechanic**: `getItemPool(maxLevel, ignoreLootMaterial, sector)`
+— the function that builds the full item candidate pool Part B's
+secondary-item generation loop draws from — filters `$Data.item.all`
+through `isInItemPool`, which besides the `lootLevel <= maxLevel` check
+also gates on materials:
+
+- If `ignoreLootMaterial` is true, skip the material gate entirely. For
+  `ShipWreck_Loot_*` rows this is **false** (`Loot.generate`'s call in
+  `getFromCDB@22158` passes `false` for both `ignoreSectorMaxLevel` and
+  `ignoreLootMaterial`), so the gate is active for wrecks.
+- Otherwise an item is eligible if: the item itself is literally one of
+  the entries in `sector.props.lootMaterial` (self-match), OR the item
+  has no `item.props.lootMaterial` requirement list of its own
+  (null/empty — unconditionally eligible), OR *every* entry in the
+  item's own `item.props.lootMaterial` list is also present in
+  `sector.props.lootMaterial`.
+
+In plain terms: `sector.props.lootMaterial` (CraftMap's "Secondary
+materials" line) is the raw-material pool actually available in that
+sector, and a manufactured item can only appear in that sector's
+secondary crate-loot slot if every raw material it's built from is one
+the sector actually has. A sector rich in Iron/Copper/Silicon yields
+secondary loot skewed toward items built from those; an item requiring a
+material absent from the sector's own pool is filtered out there
+entirely, regardless of level/type match. This directly explains why the
+UI line is meaningful and CraftMap correctly kept displaying it — it's
+not flavor text, it's a real eligibility filter for Part B's item pool.
+
+**Independent corroboration, found after the fact**: `data.cdb`'s own
+`item@props` sheet column metadata carries a `documentation` string on
+`lootMaterial` that states this exact rule almost verbatim ("The item
+will be considered in loot generation if any of the following is true:
+this list is empty / the item itself is in the sector's lootMaterial
+list / all items in this list are present in the sector's lootMaterial
+list / the loot kind is set to ignore lootMaterial") — the CDB schema's
+own editor-facing docs, not something inferred. **Process lesson for
+next time**: a `data.cdb` column's `documentation` field (visible in the
+raw JSON alongside `typeStr`/`name`) is worth checking before reaching
+for bytecode disassembly at all — it would have caught this immediately
+instead of after a wrong "dead data" conclusion and a full opcode trace.
+
+`item.props.lootMaterial` (the per-item requirement list) has not yet
+been pulled for the candidate items themselves — needed to actually
+compute Part B's per-sector eligible-item set.
+
+**Part B — a real, separate secondary item slot Finding 9 didn't cover.**
+The `loot` sheet (the table a crate's `RareLoot_lvl{N}` override actually
+resolves to — rows `ShipWreck_Loot_4` through `ShipWreck_Loot_9`, keyed by
+loot *level* 4-9, not chest tier 0/1/2 directly) has a second bitmask
+column beyond `primaryItemTypes` (Finding 9's Patch/Blueprint slot,
+confirmed `==12`): `secondaryItemTypes`, flags
+`Gathering=1, Material=2, Manufactured=4, LuxuryArticle=8, Scrap=16`.
+Every `ShipWreck_Loot_4..9` row carries `secondaryItemTypes: 14` =
+`Material | Manufactured | LuxuryArticle`.
+
+`logic.Loot.generate` (`src/logic/Loot.hx`, findex 22159 — the function
+both the primary-item path and this one run through) confirms this is a
+genuinely independent generation pass, not a rename/overlap of the
+primary slot: after resolving (or skipping) the primary Patch/Blueprint
+pick, it computes `targetPrice = getRefPrice(level) * size` (`size=0.5`
+on every `ShipWreck_Loot_*` row; `Loot_RefPrice` is a `data.cdb` `constant`
+curve keyed by level) and loops — each iteration rebuilds the eligible
+candidate list from `getItemPool`'s output (Part A's `lootLevel <= level`
++ material-gate-filtered pool), narrows it further by
+`isItemMatchingAnyType`/`isTypeMatching` against `secondaryItemTypes`
+(walking each candidate's own `itemType.parent` chain, exactly like
+`isTypeToolOrModule` does elsewhere) and excludes item kinds already
+picked this crate, then calls `pickBestLevelOf(2, ...)`: draw a uniform-
+random candidate from that list **twice** and keep whichever of the two
+has the higher `lootLevel` (a mild upward bias, not a level-range floor —
+correcting this finding's own earlier draft, which mis-read the `2` as a
+level-window bound). It then adds a randomized stack size of the chosen
+item (tuned by the `constant` sheet's `Loot_Secondary_Overflow=1.2`/
+`Loot_Secondary_SmallestStack=0.2`), and repeats until the accumulated
+value roughly reaches `targetPrice`.
+
+So a `ShipWreck` rare loot crate is not "one Patch or Blueprint, full
+stop" (Finding 9's own scope, now understood as the *primary*-slot-only
+picture) — it also always attempts to fill a separate value budget with
+Material/Manufactured/Luxury-category items, independent of whatever the
+primary roll produced.
+
+**CONFIRMED (2026-08-04) — flag-to-`itemType` mapping traced directly to
+the static initializer**, superseding this finding's original
+"open/unconfirmed, inferred by semantics" version. `Loot.hx`'s static-var
+initializers aren't attributed to that file in `hlbc`'s `infile` listing
+the way its regular methods are — they compile into the module-wide
+bytecode entrypoint (`fn <none>@42799`, ~91k opcodes) alongside every
+other class's statics, which is why they weren't found the first pass.
+Located them by: raw-disassembling `getFromCDB@22158` (`fn 22158`, not
+`decomp` — see below for why) to read off `GetGlobal reg = global@5842`,
+the one `logic.$Loot` static object every Loot function touches; then
+`refto global@5842` lists every referencing function, including 5 hits
+inside the entrypoint itself at op indices `63852/63874/63906/63928/
+63960` — exactly the 5 static fields (`maxLootLevelCache`,
+`allPrimaryItemTypes(CDBFlags)`, `allSecondaryItemTypes(CDBFlags)`) get
+initialized at. Raw-disassembling just that opcode window (`fn 42799`,
+ops ~63908-63961) shows `allSecondaryItemTypes` is built as a plain
+`Array<String>` (`alloc_array(String@13, 5)`, one `SetArray`/`GetGlobal`
+pair per element) — **not** an array of resolved `itemType` row objects
+the way `decomp`'s `itemType.id`-shaped pseudocode for
+`isTypeMatching`/`isItemMatchingAnyType` implied; that `.id` field access
+in the decompiled output was the decompiler guessing wrong about a field
+name on what's actually a bare string (a known `hlbc` decompiler weakness
+noted in this file's own tooling section — raw opcodes settle it).
+Resolving each element's `GetGlobal global@N` to its backing string
+constant (`string <idx>`, reading the string-pool index off each
+`global <idx>` header) gives, in declared bit order
+(`Gathering,Material,Manufactured,LuxuryArticle,Scrap` = bits
+`1,2,4,8,16`):
+
+| flag | value | resolves to `itemType` id |
+|---|---|---|
+| Gathering | 1 | `Minerals` |
+| Material | 2 | `PureComponents` |
+| Manufactured | 4 | `FactoredMaterial` |
+| LuxuryArticle | 8 | `Luxuries` |
+| Scrap | 16 | `Scrap` |
+
+Exactly the semantic-match hypothesis this finding originally guessed —
+nothing to correct there — but now bytecode-confirmed rather than
+inferred. Cross-checked the same method against `allPrimaryItemTypes`
+(bit order `Tool,Module,Patch,Blueprint,ShipDecorative`) as a sanity
+control: it resolves to `ShipTool, ShipModule, Patch, Blueprint,
+ShipDecorative` — `Patch`/`Blueprint` mapping to themselves (both are
+already top-level `itemType` ids with `parent: None`, needing no
+tree-walk) matches Finding 9's `primaryItemTypes==12` reading exactly,
+confirming the trace method end-to-end against a value already
+independently known correct.
+
+**So the confirmed candidate pool for a `ShipWreck` crate's secondary
+item slot** (`secondaryItemTypes: 14` = `Material|Manufactured|
+LuxuryArticle`) is every `item` sheet row whose own `type` equals, or has
+a `parent` chain reaching, `PureComponents` (`Fluid`/`Liquid`/`Gas`/
+`Plasma`/`Ingots`/`CrystalMatrix`), `FactoredMaterial`
+(`SimpleFactoredMaterial`/`ComplexFactoredMaterial`/`Bottles`/
+`BottlesFull`/`Casings`/`Automate`/`Shuttle`/`ShipAmmunition`/`Drone`), or
+`Luxuries` (a leaf, ~5 items directly) — roughly 115-120 `item` rows by
+raw type tally, before two further per-sector filters narrow it down (see
+Part A): a `lootLevel <= level` cap (the loot table row's own level, 4-9
+for `ShipWreck`, not a range starting anywhere — `pickBestLevelOf(2, ...)`
+is a best-of-2 draw bias, not a level floor) and the `item.props.
+lootMaterial` vs. `sector.props.lootMaterial` material-eligibility gate.
+Not yet cross-referenced against actual per-item `lootLevel`/
+`lootMaterial` values — that's the remaining step before this could drive
+a real drop-odds table the way `itemDropOdds` does for Patch/Blueprint.
